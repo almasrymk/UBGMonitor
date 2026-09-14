@@ -20,6 +20,8 @@ public interface IOutboxRepository
 
     Task<long> GetPendingCountAsync(CancellationToken cancellationToken = default);
 
+    Task<long> GetSentCountSinceAsync(DateTime utcTimestamp, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<MonitoringEvent>> GetRecentAsync(int count, CancellationToken cancellationToken = default);
 }
 
@@ -178,6 +180,16 @@ public sealed class OutboxRepository : IOutboxRepository
         await using var connection = await OpenConnectionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
         command.CommandText = "SELECT COUNT(*) FROM Outbox WHERE IsSent = 0;";
+        var result = await command.ExecuteScalarAsync(cancellationToken);
+        return result is long count ? count : Convert.ToInt64(result);
+    }
+
+    public async Task<long> GetSentCountSinceAsync(DateTime utcTimestamp, CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenConnectionAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT COUNT(*) FROM Outbox WHERE IsSent = 1 AND SentAt >= $start;";
+        command.Parameters.AddWithValue("$start", utcTimestamp.ToString("O"));
         var result = await command.ExecuteScalarAsync(cancellationToken);
         return result is long count ? count : Convert.ToInt64(result);
     }

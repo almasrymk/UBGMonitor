@@ -70,6 +70,8 @@ public sealed class LocalApiHost : BackgroundService
             var outbox = _rootProvider.GetRequiredService<IOutboxRepository>();
             var connectivity = _rootProvider.GetRequiredService<IConnectivityTracker>();
             var pending = await outbox.GetPendingCountAsync(ct);
+            var sentToday = await outbox.GetSentCountSinceAsync(DateTime.UtcNow.Date, ct);
+            var cache = _rootProvider.GetRequiredService<ILocalConfigCache>();
             return Results.Ok(new
             {
                 identity.AgentId,
@@ -78,7 +80,10 @@ public sealed class LocalApiHost : BackgroundService
                 identity.Uptime,
                 PendingCount = pending,
                 MadkhalConnected = connectivity.MadkhalAvailable,
-                CentralConnected = connectivity.CentralAvailable
+                CentralConnected = connectivity.CentralAvailable,
+                SentToday = sentToday,
+                ConfigVersion = cache.GetConfigVersion(),
+                LastSyncUtc = cache.GetLastSyncUtc()
             });
         });
 

@@ -7,4 +7,7 @@ public sealed record AgentStatusDto(
     TimeSpan Uptime,
     long PendingCount,
     bool MadkhalConnected,
-    bool CentralConnected);
+    bool CentralConnected,
+    long SentToday = 0,
+    string ConfigVersion = "1",
+    DateTime? LastSyncUtc = null);

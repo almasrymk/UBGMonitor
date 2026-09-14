@@ -1,11 +1,307 @@
 <UserControl x:Class="ClientAgent.UI.Views.DashboardView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:cards="clr-namespace:ClientAgent.UI.Views.Cards">
-    <UniformGrid Columns="2" Rows="2">
-        <cards:CpuCard DataContext="{Binding Cpu}" Margin="8"/>
-        <cards:RamCard DataContext="{Binding Ram}" Margin="8"/>
-        <cards:NetworkCard DataContext="{Binding Network}" Margin="8"/>
-        <cards:DiskCard DataContext="{Binding Disk}" Margin="8"/>
-    </UniformGrid>
+             xmlns:controls="clr-namespace:ClientAgent.UI.Controls">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <Grid Margin="5">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Row 4: Top cards -->
+            <Grid Grid.Row="0" Margin="5,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="1.35*"/>
+                    <ColumnDefinition Width="1.25*"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Style="{StaticResource CardBorder}" Grid.Column="0">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="CPU Usage" FontSize="16" FontWeight="Bold" Foreground="{StaticResource AccentGreenBrush}"/>
+                        <controls:SparklineControl DockPanel.Dock="Bottom" Height="32" Margin="0,10,0,0"
+                                                   Values="{Binding Cpu.History}" Stroke="{StaticResource AccentGreenBrush}"/>
+                        <Grid Margin="0,10,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <controls:CircularProgressControl Value="{Binding Cpu.UsagePercent}"
+                                                              ProgressBrush="{Binding Cpu.UsagePercent, Converter={StaticResource PercentToBrushConverter}}"
+                                                              Width="110" Height="110"/>
+                            <UniformGrid Grid.Column="1" Columns="1" Margin="12,0,0,0">
+                                <TextBlock Foreground="#AAAAAA" Text="{Binding Cpu.UsagePercent, StringFormat=Usage: {0:0}%}"/>
+                                <TextBlock Foreground="#AAAAAA" Text="{Binding Cpu.CoresText, StringFormat=Cores: {0}}"/>
+                                <TextBlock Foreground="#AAAAAA" Text="{Binding Cpu.SpeedText, StringFormat=Speed: {0}}"/>
+                                <TextBlock Foreground="#AAAAAA" Text="{Binding Cpu.Temperature, StringFormat=Temp: {0}}"/>
+                                <TextBlock Foreground="#AAAAAA" Text="{Binding Cpu.ProcessCount, StringFormat=Procs: {0}}"/>
+                                <TextBlock Foreground="#AAAAAA" Text="{Binding Cpu.Model, StringFormat=Model: {0}}" TextWrapping="Wrap"/>
+                            </UniformGrid>
+                        </Grid>
+                    </DockPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardBorder}" Grid.Column="1">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="RAM Usage" FontSize="16" FontWeight="Bold" Foreground="{StaticResource AccentBlueBrush}"/>
+                        <controls:SparklineControl DockPanel.Dock="Bottom" Height="32" Margin="0,10,0,0"
+                                                   Values="{Binding Ram.History}" Stroke="{StaticResource AccentBlueBrush}"/>
+                        <Grid Margin="0,10,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <controls:CircularProgressControl Value="{Binding Ram.UsagePercent}"
+                                                              ProgressBrush="{Binding Ram.UsagePercent, Converter={StaticResource PercentToBrushConverter}}"
+                                                              Width="110" Height="110"/>
+                            <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                                <TextBlock Foreground="#AAAAAA" Text="{Binding Ram.UsagePercent, StringFormat=Usage: {0:0}%}"/>
+                                <TextBlock Foreground="#AAAAAA" Text="{Binding Ram.TotalGb, StringFormat=Total: {0:0.0} GB}"/>
+                                <TextBlock Foreground="#AAAAAA" Text="{Binding Ram.UsedGb, StringFormat=Used: {0:0.0} GB}"/>
+                                <TextBlock Foreground="#AAAAAA" Text="{Binding Ram.FreeGb, StringFormat=Free: {0:0.0} GB}"/>
+                                <TextBlock Foreground="#AAAAAA" Text="{Binding Ram.CachedGb, StringFormat=Cached: {0:0.0} GB}"/>
+                            </StackPanel>
+                        </Grid>
+                    </DockPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardBorder}" Grid.Column="2">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="Network" FontSize="16" FontWeight="Bold" Foreground="{StaticResource AccentYellowBrush}"/>
+                        <controls:SparklineControl DockPanel.Dock="Bottom" Height="32" Margin="0,10,0,0"
+                                                   Values="{Binding Network.History}" Stroke="{StaticResource AccentYellowBrush}"/>
+                        <StackPanel Margin="0,8,0,0">
+                            <TextBlock Text="{Binding Network.StatusLine}" Foreground="#CCCCCC" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Foreground="#AAAAAA" Text="{Binding Network.IpAddress, StringFormat=IP: {0}}"/>
+                                    <TextBlock Foreground="#AAAAAA" Text="{Binding Network.Gateway, StringFormat=Gateway: {0}}"/>
+                                    <TextBlock Foreground="#AAAAAA" Text="{Binding Network.Download, StringFormat=Download: {0}}"/>
+                                    <TextBlock Foreground="#AAAAAA" Text="{Binding Network.TotalRx, StringFormat=Total RX: {0}}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Foreground="#AAAAAA" Text="{Binding Network.MacAddress, StringFormat=MAC: {0}}"/>
+                                    <TextBlock Foreground="#AAAAAA" Text="{Binding Network.Dns, StringFormat=DNS: {0}}" TextWrapping="Wrap"/>
+                                    <TextBlock Foreground="#AAAAAA" Text="{Binding Network.Upload, StringFormat=Upload: {0}}"/>
+                                    <TextBlock Foreground="#AAAAAA" Text="{Binding Network.TotalTx, StringFormat=Total TX: {0}}"/>
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Margin="0,8,0,0" Foreground="#AAAAAA">
+                                <Run Text="Ping:"/>
+                                <Run Text="{Binding Network.Ping, Mode=OneWay}"/>
+                                <Run Text=" | Packet Loss:"/>
+                                <Run Text="{Binding Network.PacketLoss, Mode=OneWay}"/>
+                            </TextBlock>
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardBorder}" Grid.Column="3">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="Disk Status" FontSize="16" FontWeight="Bold" Foreground="{StaticResource AccentRedBrush}" Margin="0,0,0,8"/>
+                        <DataGrid ItemsSource="{Binding Disk.Partitions}" HeadersVisibility="Column" MaxHeight="210">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Drive" Binding="{Binding Drive}" Width="50"/>
+                                <DataGridTextColumn Header="Label" Binding="{Binding Label}" Width="70"/>
+                                <DataGridTextColumn Header="FS" Binding="{Binding FileSystem}" Width="50"/>
+                                <DataGridTextColumn Header="Total" Binding="{Binding Total}" Width="60"/>
+                                <DataGridTextColumn Header="Used" Binding="{Binding Used}" Width="60"/>
+                                <DataGridTextColumn Header="Free" Binding="{Binding Free}" Width="60"/>
+                                <DataGridTemplateColumn Header="Usage" Width="90">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <ProgressBar Minimum="0" Maximum="100" Value="{Binding UsagePercent}" Height="8"
+                                                         Foreground="{Binding UsagePercent, Converter={StaticResource PercentToBrushConverter}}"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Status" Width="90">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Ellipse Width="8" Height="8" Margin="0,0,6,0"
+                                                         Fill="{Binding Status, Converter={StaticResource HealthToBrushConverter}}"/>
+                                                <TextBlock Text="{Binding Status}"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+                </Border>
+            </Grid>
+
+            <!-- Row 5 -->
+            <Grid Grid.Row="1" Margin="5,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="6*"/>
+                    <ColumnDefinition Width="4*"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <Border Style="{StaticResource CardBorder}">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Top" Text="Disk Status" FontSize="16" FontWeight="Bold" Foreground="{StaticResource AccentRedBrush}" Margin="0,0,0,8"/>
+                            <DataGrid ItemsSource="{Binding Disk.Partitions}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Drive" Binding="{Binding Drive}" Width="55"/>
+                                    <DataGridTextColumn Header="Label" Binding="{Binding Label}" Width="80"/>
+                                    <DataGridTextColumn Header="FS" Binding="{Binding FileSystem}" Width="55"/>
+                                    <DataGridTextColumn Header="Total" Binding="{Binding Total}" Width="70"/>
+                                    <DataGridTextColumn Header="Used" Binding="{Binding Used}" Width="70"/>
+                                    <DataGridTextColumn Header="Free" Binding="{Binding Free}" Width="70"/>
+                                    <DataGridTemplateColumn Header="Usage" Width="120">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <ProgressBar Minimum="0" Maximum="100" Value="{Binding UsagePercent}" Height="8"
+                                                             Foreground="{Binding UsagePercent, Converter={StaticResource PercentToBrushConverter}}"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTemplateColumn Header="Status" Width="*">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Ellipse Width="8" Height="8" Margin="0,0,6,0"
+                                                             Fill="{Binding Status, Converter={StaticResource HealthToBrushConverter}}"/>
+                                                    <TextBlock Text="{Binding Status}"/>
+                                                    <TextBlock Text="{Binding UsagePercent, StringFormat= ({0:0}%)}" Foreground="#AAAAAA"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </DockPanel>
+                    </Border>
+                    <Border Style="{StaticResource CardBorder}">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Top" Text="Physical Disks Info" FontSize="16" FontWeight="Bold" Foreground="White" Margin="0,0,0,8"/>
+                            <ItemsControl ItemsSource="{Binding Disk.PhysicalDisks}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BorderBrush="#3E3E42" BorderThickness="0,0,0,1" Padding="0,8">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="2*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="80"/>
+                                                    <ColumnDefinition Width="70"/>
+                                                    <ColumnDefinition Width="1.2*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding Model}" TextWrapping="Wrap"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding Type}" Foreground="#AAAAAA"/>
+                                                <StackPanel Grid.Column="2">
+                                                    <TextBlock Text="{Binding HealthPercent, StringFormat=Health {0:0}%}" FontSize="11"/>
+                                                    <ProgressBar Minimum="0" Maximum="100" Value="{Binding HealthPercent}" Height="6"
+                                                                 Foreground="{Binding HealthPercent, Converter={StaticResource HealthPercentToBrushConverter}}"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="3" Text="{Binding Temperature}" Foreground="#AAAAAA"/>
+                                                <TextBlock Grid.Column="4" Text="{Binding SmartStatus}"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </DockPanel>
+                    </Border>
+                </StackPanel>
+
+                <Border Style="{StaticResource CardBorder}" Grid.Column="1">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="Hardware &amp; OS" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                <TextBlock Text="Hardware" FontWeight="SemiBold" Foreground="{StaticResource AccentBlueBrush}" Margin="0,0,0,8"/>
+                                <TextBlock Foreground="#AAAAAA" Text="{Binding HardwareOs.Manufacturer, StringFormat=Manufacturer: {0}}"/>
+                                <TextBlock Foreground="#AAAAAA" Text="{Binding HardwareOs.Model, StringFormat=Model: {0}}"/>
+                                <TextBlock Foreground="#AAAAAA" Text="{Binding HardwareOs.Serial, StringFormat=Serial: {0}}"/>
+                                <TextBlock Foreground="#AAAAAA" Text="{Binding HardwareOs.Bios, StringFormat=BIOS: {0}}"/>
+                                <TextBlock Foreground="#AAAAAA" Text="{Binding HardwareOs.Motherboard, StringFormat=Motherboard: {0}}"/>
+                                <TextBlock Foreground="#AAAAAA" Text="{Binding HardwareOs.Gpu, StringFormat=GPU: {0}}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="OS" FontWeight="SemiBold" Foreground="{StaticResource AccentGreenBrush}" Margin="0,0,0,8"/>
+                                <TextBlock Foreground="#AAAAAA" Text="{Binding HardwareOs.OsName, StringFormat=OS: {0}}" TextWrapping="Wrap"/>
+                                <TextBlock Foreground="#AAAAAA" Text="{Binding HardwareOs.Version, StringFormat=Version: {0}}"/>
+                                <TextBlock Foreground="#AAAAAA" Text="{Binding HardwareOs.Arch, StringFormat=Arch: {0}}"/>
+                                <TextBlock Foreground="#AAAAAA" Text="{Binding HardwareOs.Installed, StringFormat=Installed: {0}}"/>
+                                <TextBlock Foreground="#AAAAAA" Text="{Binding HardwareOs.LastBoot, StringFormat=Last Boot: {0}}"/>
+                                <TextBlock Foreground="#AAAAAA" Text="{Binding HardwareOs.Timezone, StringFormat=Timezone: {0}}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Grid>
+                    </DockPanel>
+                </Border>
+            </Grid>
+
+            <!-- Row 6 -->
+            <Grid Grid.Row="2" Margin="5,0,5,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Border Style="{StaticResource CardBorder}" Grid.Column="0">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="Top Processes by CPU" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"/>
+                        <DataGrid ItemsSource="{Binding TopCpuProcesses}">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
+                                <DataGridTextColumn Header="CPU%" Binding="{Binding CpuPercent, StringFormat={}{0:0.0}}" Width="60"/>
+                                <DataGridTextColumn Header="PID" Binding="{Binding Pid}" Width="70"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+                </Border>
+                <Border Style="{StaticResource CardBorder}" Grid.Column="1">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="Top Processes by RAM" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"/>
+                        <DataGrid ItemsSource="{Binding TopRamProcesses}">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
+                                <DataGridTextColumn Header="RAM" Binding="{Binding RamMB, StringFormat={}{0:0} MB}" Width="80"/>
+                                <DataGridTextColumn Header="PID" Binding="{Binding Pid}" Width="70"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+                </Border>
+                <Border Style="{StaticResource CardBorder}" Grid.Column="2">
+                    <StackPanel>
+                        <TextBlock Text="Monitor Points Summary" FontSize="14" FontWeight="Bold" Margin="0,0,0,12"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <Ellipse Width="10" Height="10" Fill="{StaticResource AccentRedBrush}" Margin="0,0,8,0"/>
+                            <TextBlock Text="{Binding CriticalCount, StringFormat=Critical: {0}}"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <Ellipse Width="10" Height="10" Fill="{StaticResource AccentYellowBrush}" Margin="0,0,8,0"/>
+                            <TextBlock Text="{Binding WarningCount, StringFormat=Warning: {0}}"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <Ellipse Width="10" Height="10" Fill="{StaticResource AccentGreenBrush}" Margin="0,0,8,0"/>
+                            <TextBlock Text="{Binding HealthyCount, StringFormat=Healthy: {0}}"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                            <Ellipse Width="10" Height="10" Fill="{StaticResource AccentGrayBrush}" Margin="0,0,8,0"/>
+                            <TextBlock Text="{Binding UnknownCount, StringFormat=Unknown: {0}}"/>
+                        </StackPanel>
+                        <Button Style="{StaticResource FooterButton}" HorizontalAlignment="Left"
+                                Content="View All Monitor Points →"
+                                Command="{Binding ViewAllMonitorPointsCommand}"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
+    </ScrollViewer>
 </UserControl>

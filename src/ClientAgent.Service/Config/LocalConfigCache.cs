@@ -11,6 +11,8 @@ public interface ILocalConfigCache
     Task SaveConfigAsync(AgentRuntimeConfig config, CancellationToken cancellationToken = default);
 
     string GetConfigVersion();
+
+    DateTime? GetLastSyncUtc();
 }
 
 public sealed class LocalConfigCache : ILocalConfigCache
@@ -84,6 +86,16 @@ public sealed class LocalConfigCache : ILocalConfigCache
     }
 
     public string GetConfigVersion() => _current.ConfigVersion;
+
+    public DateTime? GetLastSyncUtc()
+    {
+        if (!File.Exists(_path))
+        {
+            return null;
+        }
+
+        return File.GetLastWriteTimeUtc(_path);
+    }
 
     private async Task SaveUnlockedAsync(AgentRuntimeConfig config, CancellationToken cancellationToken)
     {
