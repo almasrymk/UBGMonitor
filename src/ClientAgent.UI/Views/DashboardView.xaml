@@ -1,0 +1,11 @@
+<UserControl x:Class="ClientAgent.UI.Views.DashboardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:cards="clr-namespace:ClientAgent.UI.Views.Cards">
+    <UniformGrid Columns="2" Rows="2">
+        <cards:CpuCard DataContext="{Binding Cpu}" Margin="8"/>
+        <cards:RamCard DataContext="{Binding Ram}" Margin="8"/>
+        <cards:NetworkCard DataContext="{Binding Network}" Margin="8"/>
+        <cards:DiskCard DataContext="{Binding Disk}" Margin="8"/>
+    </UniformGrid>
+</UserControl>

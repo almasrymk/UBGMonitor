@@ -1,0 +1,13 @@
+dotnet-install/
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+TestResults/
+*.log
+*.db
+*.db-shm
+*.db-wal
