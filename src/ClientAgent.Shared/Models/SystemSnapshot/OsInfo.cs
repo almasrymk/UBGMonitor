@@ -6,6 +6,8 @@ public sealed class OsInfo
 
     public string Version { get; init; } = "Unknown";
 
+    public string Build { get; init; } = "Unknown";
+
     public string Architecture { get; init; } = "Unknown";
 
     public DateTime? InstallDate { get; init; }
@@ -15,4 +17,8 @@ public sealed class OsInfo
     public TimeSpan Uptime { get; init; }
 
     public string Timezone { get; init; } = TimeZoneInfo.Local.DisplayName;
+
+    public string Locale { get; init; } = "Unknown";
+
+    public string SystemType { get; init; } = "Unknown";
 }

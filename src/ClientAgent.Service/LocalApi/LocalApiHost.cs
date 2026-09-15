@@ -111,8 +111,21 @@ public sealed class LocalApiHost : BackgroundService
         app.MapGet(ApiRoutes.Os, async (CancellationToken ct) =>
             Results.Ok(await _rootProvider.GetRequiredService<ISystemInfoService>().GetOsAsync(ct)));
 
-        app.MapGet(ApiRoutes.ProcessesTop, async (int? count, CancellationToken ct) =>
-            Results.Ok(await _rootProvider.GetRequiredService<ISystemInfoService>().GetTopProcessesAsync(count ?? 10, ct)));
+        app.MapGet(ApiRoutes.Sensors, async (CancellationToken ct) =>
+            Results.Ok(await _rootProvider.GetRequiredService<ISystemInfoService>().GetSensorsAsync(ct)));
+
+        app.MapGet(ApiRoutes.ProcessesTop, async (int? count, string? sortBy, CancellationToken ct) =>
+        {
+            var sort = string.IsNullOrWhiteSpace(sortBy) ? "cpu" : sortBy.Trim().ToLowerInvariant();
+            if (sort is not "cpu" and not "ram" and not "network")
+            {
+                return Results.BadRequest(new { error = "sortBy must be cpu, ram, or network" });
+            }
+
+            var items = await _rootProvider.GetRequiredService<ISystemInfoService>()
+                .GetTopProcessesSortedAsync(count ?? 10, sort, ct);
+            return Results.Ok(items);
+        });
 
         app.MapGet(ApiRoutes.MonitorPoints, async (CancellationToken ct) =>
             Results.Ok((await _rootProvider.GetRequiredService<ILocalConfigCache>().GetConfigAsync(ct)).MonitorPoints));

@@ -8,9 +8,23 @@ public sealed class HardwareInfo
 
     public string SerialNumber { get; init; } = "Unknown";
 
-    public string BiosVersion { get; init; } = "Unknown";
+    public string Cpu { get; init; } = "Unknown";
+
+    public string CoresThreads { get; init; } = "Unknown";
+
+    public string CpuSpeed { get; init; } = "Unknown";
+
+    public string Ram { get; init; } = "Unknown";
+
+    public string Gpu { get; init; } = "Unknown";
+
+    public string Disk { get; init; } = "Unknown";
 
     public string Motherboard { get; init; } = "Unknown";
+
+    public string BiosVersion { get; init; } = "Unknown";
+
+    public string BiosDate { get; init; } = "Unknown";
 
     public string GpuModel { get; init; } = "Unknown";
 

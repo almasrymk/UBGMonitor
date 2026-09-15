@@ -5,6 +5,8 @@ using System.Net.Sockets;
 using System.Text.Json;
 using ClientAgent.Shared.Constants;
 using ClientAgent.Shared.Models;
+using ClientAgent.UI.Enums;
+using ClientAgent.UI.Models;
 
 namespace ClientAgent.UI.Services;
 
@@ -59,11 +61,118 @@ public sealed class AgentApiClient
     public Task<List<ProcessInfo>?> GetTopProcessesAsync(int count = 5, CancellationToken ct = default)
         => GetAsync<List<ProcessInfo>>($"{ApiRoutes.ProcessesTop}?count={count}", "processes", ct);
 
+    public async Task<TopProcessesQueryResult> GetTopProcessesAsync(ProcessSortBy sortBy, int count = 5, CancellationToken ct = default)
+    {
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        linked.CancelAfter(TimeSpan.FromSeconds(15));
+        var sort = sortBy switch
+        {
+            ProcessSortBy.Ram => "ram",
+            ProcessSortBy.Network => "network",
+            _ => "cpu"
+        };
+        var route = $"{ApiRoutes.ProcessesTop}?count={count}&sortBy={sort}";
+
+        try
+        {
+            Debug.WriteLine($"[API] Calling {route}...");
+            var response = await _http.GetAsync(route, linked.Token);
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                Debug.WriteLine($"[API] processes 404: {route}");
+                return TopProcessesQueryResult.Fail("Endpoint not found (404)");
+            }
+
+            if (response.StatusCode == HttpStatusCode.NotImplemented)
+            {
+                Debug.WriteLine($"[API] processes 501: {route}");
+                return TopProcessesQueryResult.Fail("Not implemented (501)");
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                Debug.WriteLine($"[API] processes HTTP {(int)response.StatusCode}");
+                return TopProcessesQueryResult.Fail($"Error: HTTP {(int)response.StatusCode}");
+            }
+
+            var dtos = await response.Content.ReadFromJsonAsync<List<ProcessTopDto>>(JsonOptions, linked.Token) ?? [];
+            var max = dtos.Count == 0 ? 0d : dtos.Max(d => d.Value);
+            var items = dtos.Select((dto, index) => new ProcessItem
+            {
+                Rank = index + 1,
+                Name = string.IsNullOrWhiteSpace(dto.Name) ? "-" : dto.Name,
+                Pid = dto.Pid,
+                Value = dto.Value,
+                Unit = dto.Unit,
+                Percent = sortBy == ProcessSortBy.Cpu
+                    ? Math.Clamp(dto.Value, 0, 100)
+                    : max <= 0 ? 0 : dto.Value / max * 100,
+                DisplayValue = FormatDisplayValue(dto.Value, dto.Unit)
+            }).ToList();
+            return TopProcessesQueryResult.Ok(items);
+        }
+        catch (TaskCanceledException ex)
+        {
+            Debug.WriteLine($"[API] Timeout (processes){Environment.NewLine}{ex}");
+            return TopProcessesQueryResult.Fail("Timeout");
+        }
+        catch (HttpRequestException ex)
+        {
+            Debug.WriteLine($"[API] HTTP Error (processes){Environment.NewLine}{ex}");
+            if (ex.StatusCode is null)
+            {
+                return TopProcessesQueryResult.Fail("Service not running");
+            }
+
+            return TopProcessesQueryResult.Fail($"Error: {ex.Message}");
+        }
+        catch (SocketException ex)
+        {
+            Debug.WriteLine($"[API] Socket Error (processes){Environment.NewLine}{ex}");
+            return TopProcessesQueryResult.Fail("Service not running");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[API] Unexpected Error (processes){Environment.NewLine}{ex}");
+            return TopProcessesQueryResult.Fail($"Error: {ex.Message}");
+        }
+    }
+
+    private static string FormatDisplayValue(double value, string unit)
+    {
+        if (string.Equals(unit, "%", StringComparison.Ordinal))
+        {
+            return $"{value:0}%";
+        }
+
+        if (string.Equals(unit, "MB", StringComparison.OrdinalIgnoreCase) && value >= 1024)
+        {
+            return $"{value / 1024:0.0} GB";
+        }
+
+        if (string.Equals(unit, "KB/s", StringComparison.OrdinalIgnoreCase) && value >= 1024)
+        {
+            return $"{value / 1024:0.0} MB/s";
+        }
+
+        if (string.Equals(unit, "KB/s", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"{value:0.0} KB/s";
+        }
+
+        return string.IsNullOrWhiteSpace(unit)
+            ? $"{value:0}"
+            : $"{value:0} {unit}";
+    }
+
     public Task<HardwareInfo?> GetHardwareAsync(CancellationToken ct = default)
         => GetAsync<HardwareInfo>(ApiRoutes.Hardware, "hardware", ct);
 
     public Task<OsInfo?> GetOsAsync(CancellationToken ct = default)
         => GetAsync<OsInfo>(ApiRoutes.Os, "os", ct);
+
+    public Task<SensorsInfo?> GetSensorsAsync(CancellationToken ct = default)
+        => GetAsync<SensorsInfo>(ApiRoutes.Sensors, "sensors", ct);
 
     public Task<List<MonitorPoint>?> GetMonitorPointsAsync(CancellationToken ct = default)
         => GetAsync<List<MonitorPoint>>(ApiRoutes.MonitorPoints, "monitorpoints", ct);

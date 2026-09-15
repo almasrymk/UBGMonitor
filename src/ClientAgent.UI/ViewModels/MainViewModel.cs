@@ -1,15 +1,18 @@
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
+using System.Windows;
+using System.Windows.Media;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ClientAgent.Shared.Models;
+using ClientAgent.UI.Enums;
 using ClientAgent.UI.Services;
 
 namespace ClientAgent.UI.ViewModels;
 
-public sealed partial class MainViewModel : ObservableObject
+public sealed partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly AgentApiClient _client;
     private readonly DispatcherTimer _timer;
@@ -43,6 +46,10 @@ public sealed partial class MainViewModel : ObservableObject
     public DiskViewModel Disk { get; } = new();
     public NetworkViewModel Network { get; } = new();
     public HardwareOsViewModel HardwareOs { get; } = new();
+    public SensorsViewModel Sensors { get; }
+    public ProcessListCardViewModel TopCpuCard { get; }
+    public ProcessListCardViewModel TopRamCard { get; }
+    public ProcessListCardViewModel TopNetworkCard { get; }
     public ObservableCollection<ProcessInfo> TopCpuProcesses { get; } = [];
     public ObservableCollection<ProcessInfo> TopRamProcesses { get; } = [];
     public ObservableCollection<MonitorPoint> MonitorPoints { get; } = [];
@@ -55,6 +62,10 @@ public sealed partial class MainViewModel : ObservableObject
     public MainViewModel(AgentApiClient client)
     {
         _client = client;
+        TopCpuCard = new ProcessListCardViewModel(_client, "Top 5 by CPU", ProcessSortBy.Cpu, ResourceBrush("AccentGreenBrush", Color.FromRgb(0x4C, 0xAF, 0x50)));
+        TopRamCard = new ProcessListCardViewModel(_client, "Top 5 by RAM", ProcessSortBy.Ram, ResourceBrush("ProcessBarRamBrush", Color.FromRgb(0x21, 0x96, 0xF3)));
+        TopNetworkCard = new ProcessListCardViewModel(_client, "Top 5 by Network", ProcessSortBy.Network, ResourceBrush("ProcessBarNetworkBrush", Color.FromRgb(0x9C, 0x27, 0xB0)));
+        Sensors = new SensorsViewModel(_client);
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         _timer.Tick += async (_, _) => await RefreshAsync();
         _timer.Start();
@@ -250,5 +261,24 @@ public sealed partial class MainViewModel : ObservableObject
         }
 
         return utc.Value.ToLocalTime().ToString("HH:mm");
+    }
+
+    public void Dispose()
+    {
+        _timer.Stop();
+        Sensors.Dispose();
+        TopCpuCard.Dispose();
+        TopRamCard.Dispose();
+        TopNetworkCard.Dispose();
+    }
+
+    private static Brush ResourceBrush(string key, Color fallback)
+    {
+        if (Application.Current?.TryFindResource(key) is Brush brush)
+        {
+            return brush;
+        }
+
+        return new SolidColorBrush(fallback);
     }
 }

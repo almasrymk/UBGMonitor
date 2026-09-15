@@ -23,16 +23,25 @@ public interface ISystemInfoService
 
     Task<OsInfo> GetOsAsync(CancellationToken cancellationToken = default);
 
+    Task<SensorsInfo> GetSensorsAsync(CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<ProcessInfo>> GetTopProcessesAsync(int count, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ProcessTopDto>> GetTopProcessesSortedAsync(int count, string sortBy, CancellationToken cancellationToken = default);
 }
 
 public sealed class SystemInfoService : ISystemInfoService
 {
     private readonly ILogger<SystemInfoService> _logger;
+    private readonly HardwareMonitorReader _hardwareMonitor;
+    private readonly object _networkLock = new();
+    private Dictionary<int, ulong> _lastNetworkBytes = [];
+    private long _lastNetworkTimestamp;
 
-    public SystemInfoService(ILogger<SystemInfoService> logger)
+    public SystemInfoService(ILogger<SystemInfoService> logger, HardwareMonitorReader hardwareMonitor)
     {
         _logger = logger;
+        _hardwareMonitor = hardwareMonitor;
     }
 
     public Task<SystemSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default)
@@ -86,8 +95,14 @@ public sealed class SystemInfoService : ISystemInfoService
     public Task<OsInfo> GetOsAsync(CancellationToken cancellationToken = default)
         => Task.Run(GetOsInternal, cancellationToken);
 
+    public Task<SensorsInfo> GetSensorsAsync(CancellationToken cancellationToken = default)
+        => Task.Run(_hardwareMonitor.Read, cancellationToken);
+
     public Task<IReadOnlyList<ProcessInfo>> GetTopProcessesAsync(int count, CancellationToken cancellationToken = default)
         => Task.Run<IReadOnlyList<ProcessInfo>>(() => GetTopProcessesInternal(count), cancellationToken);
+
+    public Task<IReadOnlyList<ProcessTopDto>> GetTopProcessesSortedAsync(int count, string sortBy, CancellationToken cancellationToken = default)
+        => Task.Run<IReadOnlyList<ProcessTopDto>>(() => GetTopProcessesSortedInternal(count, sortBy), cancellationToken);
 
     private CpuInfo GetCpuInternal()
     {
@@ -276,15 +291,32 @@ public sealed class SystemInfoService : ISystemInfoService
     {
         try
         {
+            var cpuName = QueryFirst("Win32_Processor", "Name") ?? "Unknown";
+            var cores = ParseInt(QueryFirst("Win32_Processor", "NumberOfCores"), Environment.ProcessorCount);
+            var threads = ParseInt(QueryFirst("Win32_Processor", "NumberOfLogicalProcessors"), Environment.ProcessorCount);
+            var maxClockMhz = ParseDouble(QueryFirst("Win32_Processor", "MaxClockSpeed"));
+            var gpuModel = QueryFirst("Win32_VideoController", "Name") ?? "Unknown";
+            var gpuVramGb = Round(BytesToGb(ParseLong(QueryFirst("Win32_VideoController", "AdapterRAM"))));
+            var boardMfr = QueryFirst("Win32_BaseBoard", "Manufacturer") ?? string.Empty;
+            var boardProduct = QueryFirst("Win32_BaseBoard", "Product") ?? "Unknown";
+            var biosDate = ParseWmiDate(QueryFirst("Win32_BIOS", "ReleaseDate"));
+
             return new HardwareInfo
             {
                 Manufacturer = QueryFirst("Win32_ComputerSystem", "Manufacturer") ?? "Unknown",
                 Model = QueryFirst("Win32_ComputerSystem", "Model") ?? "Unknown",
                 SerialNumber = QueryFirst("Win32_BIOS", "SerialNumber") ?? "Unknown",
+                Cpu = cpuName.Trim(),
+                CoresThreads = $"{cores} / {threads}",
+                CpuSpeed = maxClockMhz > 0 ? $"{maxClockMhz / 1000:0.0} GHz" : "Unknown",
+                Ram = FormatRamModules(),
+                Gpu = gpuVramGb > 0 ? $"{gpuModel} ({gpuVramGb:0}GB)" : gpuModel,
+                Disk = FormatPrimaryDisk(),
+                Motherboard = string.IsNullOrWhiteSpace(boardMfr) ? boardProduct : $"{boardMfr} {boardProduct}".Trim(),
                 BiosVersion = QueryFirst("Win32_BIOS", "SMBIOSBIOSVersion") ?? "Unknown",
-                Motherboard = QueryFirst("Win32_BaseBoard", "Product") ?? "Unknown",
-                GpuModel = QueryFirst("Win32_VideoController", "Name") ?? "Unknown",
-                GpuVramGB = Round(BytesToGb(ParseLong(QueryFirst("Win32_VideoController", "AdapterRAM"))))
+                BiosDate = biosDate?.ToString("yyyy-MM-dd") ?? "Unknown",
+                GpuModel = gpuModel,
+                GpuVramGB = gpuVramGb
             };
         }
         catch (Exception ex)
@@ -304,11 +336,15 @@ public sealed class SystemInfoService : ISystemInfoService
             {
                 Name = QueryFirst("Win32_OperatingSystem", "Caption") ?? Environment.OSVersion.ToString(),
                 Version = QueryFirst("Win32_OperatingSystem", "Version") ?? Environment.OSVersion.Version.ToString(),
-                Architecture = Environment.Is64BitOperatingSystem ? "x64" : "x86",
+                Build = QueryFirst("Win32_OperatingSystem", "BuildNumber") ?? "Unknown",
+                Architecture = QueryFirst("Win32_OperatingSystem", "OSArchitecture")
+                               ?? (Environment.Is64BitOperatingSystem ? "x64" : "x86"),
                 InstallDate = installDate,
                 LastBoot = lastBoot,
                 Uptime = lastBoot.HasValue ? DateTime.Now - lastBoot.Value : TimeSpan.Zero,
-                Timezone = TimeZoneInfo.Local.DisplayName
+                Timezone = QueryFirst("Win32_TimeZone", "Caption") ?? TimeZoneInfo.Local.DisplayName,
+                Locale = FormatLocale(QueryFirst("Win32_OperatingSystem", "Locale")),
+                SystemType = QueryFirst("Win32_ComputerSystem", "SystemType") ?? "Unknown"
             };
         }
         catch (Exception ex)
@@ -355,6 +391,168 @@ public sealed class SystemInfoService : ISystemInfoService
             _logger.LogWarning(ex, "Failed to collect process info");
             return [];
         }
+    }
+
+    private List<ProcessTopDto> GetTopProcessesSortedInternal(int count, string sortBy)
+    {
+        var take = Math.Max(1, count);
+        var key = sortBy.ToLowerInvariant();
+        try
+        {
+            return key switch
+            {
+                "cpu" => CollectByCpu(take),
+                "network" => CollectByNetwork(take),
+                _ => CollectByRam(take)
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to collect sorted process info for {SortBy}", sortBy);
+            return [];
+        }
+    }
+
+    private List<ProcessTopDto> CollectByRam(int take)
+    {
+        return SnapshotProcesses()
+            .OrderByDescending(row => row.RamMb)
+            .Take(take)
+            .Select(row => new ProcessTopDto
+            {
+                Name = row.Name,
+                Pid = row.Pid,
+                Value = row.RamMb,
+                Unit = "MB"
+            })
+            .ToList();
+    }
+
+    private List<ProcessTopDto> CollectByCpu(int take)
+    {
+        var first = CaptureCpuTimes();
+        Thread.Sleep(200);
+        var cores = Math.Max(1, Environment.ProcessorCount);
+        var rows = new List<(string Name, int Pid, double Cpu, double RamMb)>(first.Count);
+        foreach (var (process, cpu0, ram) in first)
+        {
+            try
+            {
+                var deltaMs = (process.TotalProcessorTime - cpu0).TotalMilliseconds;
+                var cpuPercent = Math.Clamp(deltaMs / (200d * cores) * 100d, 0, 100);
+                rows.Add((process.ProcessName, process.Id, Math.Round(cpuPercent, 1), ram));
+            }
+            catch
+            {
+                // Process may have exited during sampling.
+            }
+            finally
+            {
+                process.Dispose();
+            }
+        }
+
+        return rows
+            .OrderByDescending(row => row.Cpu)
+            .ThenByDescending(row => row.RamMb)
+            .Take(take)
+            .Select(row => new ProcessTopDto
+            {
+                Name = row.Name,
+                Pid = row.Pid,
+                Value = row.Cpu,
+                Unit = "%"
+            })
+            .ToList();
+    }
+
+    private List<ProcessTopDto> CollectByNetwork(int take)
+    {
+        Dictionary<int, ulong> current = [];
+        try
+        {
+            current = ProcessNetworkSampler.ReadBytesByPid(TimeSpan.FromMilliseconds(1200));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Failed to sample process network usage");
+        }
+
+        var rates = new Dictionary<int, double>();
+        lock (_networkLock)
+        {
+            var now = Stopwatch.GetTimestamp();
+            if (_lastNetworkTimestamp > 0)
+            {
+                var elapsedSec = (now - _lastNetworkTimestamp) / (double)Stopwatch.Frequency;
+                if (elapsedSec > 0.05)
+                {
+                    foreach (var (pid, bytes) in current)
+                    {
+                        var previous = _lastNetworkBytes.GetValueOrDefault(pid);
+                        var delta = bytes > previous ? bytes - previous : 0;
+                        rates[pid] = Math.Round(delta / elapsedSec / 1024d, 1);
+                    }
+                }
+            }
+
+            _lastNetworkBytes = current;
+            _lastNetworkTimestamp = now;
+        }
+
+        return SnapshotProcesses()
+            .Select(row => (row.Name, row.Pid, row.RamMb, Rate: rates.GetValueOrDefault(row.Pid)))
+            .OrderByDescending(row => row.Rate)
+            .ThenByDescending(row => row.RamMb)
+            .Take(take)
+            .Select(row => new ProcessTopDto
+            {
+                Name = row.Name,
+                Pid = row.Pid,
+                Value = row.Rate,
+                Unit = "KB/s"
+            })
+            .ToList();
+    }
+
+    private static List<(Process Process, TimeSpan Cpu, double RamMb)> CaptureCpuTimes()
+    {
+        var samples = new List<(Process Process, TimeSpan Cpu, double RamMb)>();
+        foreach (var process in Process.GetProcesses())
+        {
+            try
+            {
+                samples.Add((process, process.TotalProcessorTime, Math.Round(process.WorkingSet64 / 1024d / 1024d, 1)));
+            }
+            catch
+            {
+                process.Dispose();
+            }
+        }
+
+        return samples;
+    }
+
+    private static List<(string Name, int Pid, double RamMb)> SnapshotProcesses()
+    {
+        var rows = new List<(string Name, int Pid, double RamMb)>();
+        foreach (var process in Process.GetProcesses())
+        {
+            try
+            {
+                rows.Add((process.ProcessName, process.Id, Math.Round(process.WorkingSet64 / 1024d / 1024d, 1)));
+            }
+            catch
+            {
+                // Ignore processes that cannot be inspected.
+            }
+            finally
+            {
+                process.Dispose();
+            }
+        }
+
+        return rows;
     }
 
     private static double ReadCpuUsage()
@@ -533,6 +731,100 @@ public sealed class SystemInfoService : ISystemInfoService
         }
 
         return null;
+    }
+
+    private static string FormatRamModules()
+    {
+        long totalBytes = 0;
+        int speed = 0;
+        int type = 0;
+        try
+        {
+            foreach (var obj in Query("Win32_PhysicalMemory"))
+            {
+                using (obj)
+                {
+                    totalBytes += ParseLong(obj["Capacity"]?.ToString());
+                    if (speed == 0)
+                    {
+                        speed = ParseInt(obj["Speed"]?.ToString(), 0);
+                    }
+
+                    if (type == 0)
+                    {
+                        type = ParseInt(obj["SMBIOSMemoryType"]?.ToString(), 0);
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Fall back to computer-system total below.
+        }
+
+        if (totalBytes <= 0)
+        {
+            totalBytes = ParseLong(QueryFirst("Win32_ComputerSystem", "TotalPhysicalMemory"));
+        }
+
+        var gb = Math.Round(BytesToGb(totalBytes), 0);
+        var kind = type switch
+        {
+            20 => "DDR",
+            21 => "DDR2",
+            24 => "DDR3",
+            26 => "DDR4",
+            34 => "DDR5",
+            _ => "RAM"
+        };
+        return speed > 0 ? $"{gb:0} GB {kind} {speed}MHz" : $"{gb:0} GB {kind}";
+    }
+
+    private static string FormatPrimaryDisk()
+    {
+        try
+        {
+            foreach (var obj in Query("Win32_DiskDrive"))
+            {
+                using (obj)
+                {
+                    var model = obj["Model"]?.ToString() ?? "Unknown";
+                    var sizeGb = Round(BytesToGb(ParseLong(obj["Size"]?.ToString())));
+                    var iface = obj["InterfaceType"]?.ToString();
+                    return string.IsNullOrWhiteSpace(iface)
+                        ? $"{model} {sizeGb:0}GB"
+                        : $"{model} {sizeGb:0}GB {iface}";
+                }
+            }
+        }
+        catch
+        {
+            // Ignore disk query failures.
+        }
+
+        return "Unknown";
+    }
+
+    private static string FormatLocale(string? locale)
+    {
+        if (string.IsNullOrWhiteSpace(locale))
+        {
+            return "Unknown";
+        }
+
+        if (int.TryParse(locale, System.Globalization.NumberStyles.HexNumber, null, out var lcid))
+        {
+            try
+            {
+                return System.Globalization.CultureInfo.GetCultureInfo(lcid).Name;
+            }
+            catch
+            {
+                // Keep the WMI locale code.
+            }
+        }
+
+        return locale;
     }
 
     private static string FormatMac(string raw)

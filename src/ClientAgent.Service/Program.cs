@@ -39,6 +39,7 @@ try
 
     builder.Services.AddSingleton<IAgentIdentity, AgentIdentity>();
     builder.Services.AddSingleton<IOutboxRepository, OutboxRepository>();
+    builder.Services.AddSingleton<HardwareMonitorReader>();
     builder.Services.AddSingleton<ISystemInfoService, SystemInfoService>();
     builder.Services.AddSingleton<IMonitoringEventBus, MonitoringEventBus>();
     builder.Services.AddSingleton<IEventPublisher, EventPublisher>();

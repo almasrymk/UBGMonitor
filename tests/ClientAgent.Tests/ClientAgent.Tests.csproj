@@ -22,6 +22,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\ClientAgent.Service\ClientAgent.Service.csproj" />
     <ProjectReference Include="..\..\src\ClientAgent.Shared\ClientAgent.Shared.csproj" />
+    <ProjectReference Include="..\..\src\ClientAgent.UI\ClientAgent.UI.csproj" />
   </ItemGroup>
 
 </Project>

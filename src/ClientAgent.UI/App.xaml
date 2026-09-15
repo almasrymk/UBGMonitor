@@ -4,6 +4,11 @@
              xmlns:converters="clr-namespace:ClientAgent.UI.Converters"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Colors.xaml"/>
+                <ResourceDictionary Source="Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
         <Color x:Key="BackgroundDark">#1E1E1E</Color>
         <Color x:Key="SurfaceDark">#252526</Color>
         <Color x:Key="SurfaceDarkAlt">#2D2D30</Color>
@@ -37,6 +42,7 @@
         <converters:ByteSizeConverter x:Key="ByteSizeConverter"/>
         <converters:HealthPercentToBrushConverter x:Key="HealthPercentToBrushConverter"/>
         <converters:PauseLabelConverter x:Key="PauseLabelConverter"/>
+        <converters:SensorHealthToBrushConverter x:Key="SensorHealthToBrushConverter"/>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
 
         <Style TargetType="Window">
@@ -174,5 +180,6 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -1,0 +1,14 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Color x:Key="ProcessBarCpuHigh">#F44336</Color>
+    <Color x:Key="ProcessBarCpuMid">#FFC107</Color>
+    <Color x:Key="ProcessBarCpuLow">#4CAF50</Color>
+    <Color x:Key="ProcessBarRam">#2196F3</Color>
+    <Color x:Key="ProcessBarNetwork">#9C27B0</Color>
+
+    <SolidColorBrush x:Key="ProcessBarCpuHighBrush" Color="{StaticResource ProcessBarCpuHigh}"/>
+    <SolidColorBrush x:Key="ProcessBarCpuMidBrush" Color="{StaticResource ProcessBarCpuMid}"/>
+    <SolidColorBrush x:Key="ProcessBarCpuLowBrush" Color="{StaticResource ProcessBarCpuLow}"/>
+    <SolidColorBrush x:Key="ProcessBarRamBrush" Color="{StaticResource ProcessBarRam}"/>
+    <SolidColorBrush x:Key="ProcessBarNetworkBrush" Color="{StaticResource ProcessBarNetwork}"/>
+</ResourceDictionary>

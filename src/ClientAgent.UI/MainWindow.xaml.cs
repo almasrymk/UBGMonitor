@@ -18,4 +18,10 @@ public partial class MainWindow : Window
         => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
 
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
+
+    protected override void OnClosed(EventArgs e)
+    {
+        (DataContext as IDisposable)?.Dispose();
+        base.OnClosed(e);
+    }
 }
