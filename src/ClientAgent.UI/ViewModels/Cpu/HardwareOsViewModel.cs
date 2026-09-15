@@ -1,87 +1,214 @@
 using System.Collections.ObjectModel;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using ClientAgent.Shared.Models;
 using ClientAgent.UI.Enums;
+using ClientAgent.UI.Services;
 
 namespace ClientAgent.UI.ViewModels;
 
-public sealed partial class HardwareOsViewModel : ObservableObject
+public sealed partial class HardwareOsViewModel : ObservableObject, IDisposable
 {
-    [ObservableProperty] private bool _isHardwareExpanded = true;
-    [ObservableProperty] private bool _isOsExpanded;
+    private readonly AgentApiClient _client;
+    private readonly DispatcherTimer _staticTimer;
+    private readonly DispatcherTimer _sensorsTimer;
+    private readonly DispatcherTimer _networkTimer;
 
-    public ObservableCollection<InfoRowViewModel> HardwareRows { get; } =
-    [
-        new("Manufacturer"),
-        new("Model"),
-        new("Serial"),
-        new("CPU"),
-        new("Cores/Threads"),
-        new("CPU Speed"),
-        new("RAM"),
-        new("GPU"),
-        new("Disk"),
-        new("Motherboard"),
-        new("BIOS Version"),
-        new("BIOS Date")
-    ];
+    [ObservableProperty] private bool _isLevel1Expanded;
+    [ObservableProperty] private bool _isLevel2Expanded;
+    [ObservableProperty] private bool _isLevel3Expanded;
+    [ObservableProperty] private bool _isLevel4Expanded;
+    [ObservableProperty] private bool _isLevel5Expanded;
 
-    public ObservableCollection<InfoRowViewModel> OsRows { get; } =
-    [
-        new("OS"),
-        new("Version"),
-        new("Build"),
-        new("Arch"),
-        new("Installed"),
-        new("Last Boot"),
-        new("Uptime"),
-        new("Timezone"),
-        new("Locale"),
-        new("System Type")
-    ];
+    [ObservableProperty] private int _level1Count = 14;
+    [ObservableProperty] private int _level2Count = 16;
+    [ObservableProperty] private int _level3Count = 16;
+    [ObservableProperty] private int _level4Count = 24;
+    [ObservableProperty] private int _level5Count = 21;
 
-    public void Update(HardwareInfo hardware, OsInfo os)
+    public ObservableCollection<InfoRowViewModel> Level1Rows { get; } = [];
+    public ObservableCollection<InfoRowViewModel> Level2Rows { get; } = [];
+    public ObservableCollection<InfoRowViewModel> Level3Rows { get; } = [];
+    public ObservableCollection<InfoRowViewModel> Level4Rows { get; } = [];
+    public ObservableCollection<InfoRowViewModel> Level5Rows { get; } = [];
+
+    public HardwareOsViewModel(AgentApiClient client)
     {
-        Set(HardwareRows, 0, hardware.Manufacturer);
-        Set(HardwareRows, 1, hardware.Model);
-        Set(HardwareRows, 2, hardware.SerialNumber);
-        Set(HardwareRows, 3, hardware.Cpu);
-        Set(HardwareRows, 4, hardware.CoresThreads);
-        Set(HardwareRows, 5, hardware.CpuSpeed);
-        Set(HardwareRows, 6, hardware.Ram);
-        Set(HardwareRows, 7, string.IsNullOrWhiteSpace(hardware.Gpu) ? hardware.GpuModel : hardware.Gpu);
-        Set(HardwareRows, 8, hardware.Disk);
-        Set(HardwareRows, 9, hardware.Motherboard);
-        Set(HardwareRows, 10, hardware.BiosVersion);
-        Set(HardwareRows, 11, hardware.BiosDate);
-
-        Set(OsRows, 0, os.Name);
-        Set(OsRows, 1, os.Version);
-        Set(OsRows, 2, os.Build);
-        Set(OsRows, 3, os.Architecture);
-        Set(OsRows, 4, os.InstallDate?.ToString("yyyy-MM-dd") ?? "-");
-        Set(OsRows, 5, os.LastBoot?.ToString("yyyy-MM-dd") ?? "-");
-        Set(OsRows, 6, FormatUptime(os.Uptime));
-        Set(OsRows, 7, os.Timezone);
-        Set(OsRows, 8, os.Locale);
-        Set(OsRows, 9, os.SystemType);
+        _client = client;
+        _staticTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
+        _sensorsTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        _networkTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+        _staticTimer.Tick += async (_, _) => await RefreshStaticAsync();
+        _sensorsTimer.Tick += async (_, _) => await RefreshLevelAsync(3);
+        _networkTimer.Tick += async (_, _) => await RefreshLevelAsync(5);
+        _staticTimer.Start();
+        _ = RefreshStaticAsync();
     }
 
-    private static void Set(ObservableCollection<InfoRowViewModel> rows, int index, string? value)
-        => rows[index].Set(string.IsNullOrWhiteSpace(value) || value == "Unknown" ? "-" : value, SensorHealth.Ok);
-
-    private static string FormatUptime(TimeSpan uptime)
+    partial void OnIsLevel3ExpandedChanged(bool value)
     {
-        if (uptime <= TimeSpan.Zero)
+        if (value)
         {
-            return "-";
+            _ = RefreshLevelAsync(3);
+            _sensorsTimer.Start();
+            return;
         }
 
-        if (uptime.TotalDays >= 1)
+        _sensorsTimer.Stop();
+    }
+
+    partial void OnIsLevel5ExpandedChanged(bool value)
+    {
+        if (value)
         {
-            return $"{(int)uptime.TotalDays}d {uptime.Hours}h";
+            _ = RefreshLevelAsync(5);
+            _networkTimer.Start();
+            return;
         }
 
-        return $"{uptime.Hours}h {uptime.Minutes}m";
+        _networkTimer.Stop();
+    }
+
+    private async Task RefreshStaticAsync()
+    {
+        try
+        {
+            var response = await _client.GetHardwareLevelsAsync();
+            if (response?.Levels is null)
+            {
+                return;
+            }
+
+            foreach (var level in response.Levels)
+            {
+                Apply(level);
+            }
+        }
+        catch
+        {
+            // Keep last known rows.
+        }
+    }
+
+    private async Task RefreshLevelAsync(int level)
+    {
+        if (level == 3 && !IsLevel3Expanded)
+        {
+            return;
+        }
+
+        if (level == 5 && !IsLevel5Expanded)
+        {
+            return;
+        }
+
+        try
+        {
+            var dto = await _client.GetHardwareLevelAsync(level);
+            if (dto is not null)
+            {
+                Apply(dto);
+            }
+        }
+        catch
+        {
+            // Keep last known rows.
+        }
+    }
+
+    private void Apply(HardwareLevelDto level)
+    {
+        var rows = level.Level switch
+        {
+            1 => Level1Rows,
+            2 => Level2Rows,
+            3 => Level3Rows,
+            4 => Level4Rows,
+            5 => Level5Rows,
+            _ => null
+        };
+        if (rows is null)
+        {
+            return;
+        }
+
+        Replace(rows, level.Items ?? [], level.Level);
+        switch (level.Level)
+        {
+            case 1: Level1Count = level.ItemCount; break;
+            case 2: Level2Count = level.ItemCount; break;
+            case 3: Level3Count = level.ItemCount; break;
+            case 4: Level4Count = level.ItemCount; break;
+            case 5: Level5Count = level.ItemCount; break;
+        }
+    }
+
+    private static void Replace(ObservableCollection<InfoRowViewModel> rows, List<HardwareItemDto> items, int level)
+    {
+        if (rows.Count == items.Count && LabelsMatch(rows, items))
+        {
+            for (var i = 0; i < items.Count; i++)
+            {
+                ApplyRow(rows[i], items[i], level);
+            }
+
+            return;
+        }
+
+        rows.Clear();
+        foreach (var item in items)
+        {
+            var row = new InfoRowViewModel(item.Name);
+            ApplyRow(row, item, level);
+            rows.Add(row);
+        }
+    }
+
+    private static void ApplyRow(InfoRowViewModel row, HardwareItemDto item, int level)
+    {
+        var isMac = IsMacRow(item.Name);
+        row.Set(
+            item.Value,
+            ToHealth(item.Status),
+            IsNetworkIdentityRow(item.Name),
+            IsOsIdentityRow(item.Name),
+            isMac && level is 2 or 5);
+    }
+
+    private static bool LabelsMatch(ObservableCollection<InfoRowViewModel> rows, List<HardwareItemDto> items)
+    {
+        for (var i = 0; i < items.Count; i++)
+        {
+            if (!string.Equals(rows[i].Label, items[i].Name, StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool IsNetworkIdentityRow(string name)
+        => name is "Public IP" or "Local IP" or "IPv4 Address";
+
+    private static bool IsMacRow(string name)
+        => name is "MAC Address";
+
+    private static bool IsOsIdentityRow(string name)
+        => name is "Windows Edition" or "Windows Version";
+
+    private static SensorHealth ToHealth(string? status) => status switch
+    {
+        "Green" => SensorHealth.Ok,
+        "Yellow" => SensorHealth.Warning,
+        "Red" => SensorHealth.Critical,
+        _ => SensorHealth.Unknown
+    };
+
+    public void Dispose()
+    {
+        _staticTimer.Stop();
+        _sensorsTimer.Stop();
+        _networkTimer.Stop();
     }
 }

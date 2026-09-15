@@ -5,6 +5,7 @@ using ClientAgent.Service.Outbox;
 using ClientAgent.Service.Runtime;
 using ClientAgent.Service.SystemInfo;
 using ClientAgent.Shared.Constants;
+using ClientAgent.Shared.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -97,7 +98,7 @@ public sealed class LocalApiHost : BackgroundService
             Results.Ok(await _rootProvider.GetRequiredService<ISystemInfoService>().GetRamAsync(ct)));
 
         app.MapGet(ApiRoutes.Network, async (CancellationToken ct) =>
-            Results.Ok(await _rootProvider.GetRequiredService<ISystemInfoService>().GetNetworkAsync(ct)));
+            Results.Ok(await _rootProvider.GetRequiredService<INetworkService>().GetNetworkAsync(ct)));
 
         app.MapGet(ApiRoutes.DiskPartitions, async (CancellationToken ct) =>
             Results.Ok(await _rootProvider.GetRequiredService<ISystemInfoService>().GetPartitionsAsync(ct)));
@@ -106,13 +107,29 @@ public sealed class LocalApiHost : BackgroundService
             Results.Ok(await _rootProvider.GetRequiredService<ISystemInfoService>().GetPhysicalDisksAsync(ct)));
 
         app.MapGet(ApiRoutes.Hardware, async (CancellationToken ct) =>
-            Results.Ok(await _rootProvider.GetRequiredService<ISystemInfoService>().GetHardwareAsync(ct)));
+            Results.Ok(await _rootProvider.GetRequiredService<IHardwareService>().GetHardwareAsync(ct)));
+
+        app.MapGet(ApiRoutes.HardwareLevels, async (CancellationToken ct) =>
+            Results.Ok(await _rootProvider.GetRequiredService<IHardwareService>().GetStaticLevelsAsync(ct)));
+
+        app.MapGet($"{ApiRoutes.HardwareLevels}/{{level:int}}", async (int level, CancellationToken ct) =>
+        {
+            HardwareLevelDto? dto = level switch
+            {
+                1 or 2 or 4 => await _rootProvider.GetRequiredService<IHardwareService>().GetLevelAsync(level, ct),
+                3 => await _rootProvider.GetRequiredService<ISensorsService>().GetLevelAsync(ct),
+                5 => await _rootProvider.GetRequiredService<INetworkService>().GetLevelAsync(ct),
+                _ => null
+            };
+
+            return dto is null ? Results.BadRequest(new { error = "level must be 1-5" }) : Results.Ok(dto);
+        });
 
         app.MapGet(ApiRoutes.Os, async (CancellationToken ct) =>
-            Results.Ok(await _rootProvider.GetRequiredService<ISystemInfoService>().GetOsAsync(ct)));
+            Results.Ok(await _rootProvider.GetRequiredService<IHardwareService>().GetOsAsync(ct)));
 
         app.MapGet(ApiRoutes.Sensors, async (CancellationToken ct) =>
-            Results.Ok(await _rootProvider.GetRequiredService<ISystemInfoService>().GetSensorsAsync(ct)));
+            Results.Ok(await _rootProvider.GetRequiredService<ISensorsService>().GetSensorsAsync(ct)));
 
         app.MapGet(ApiRoutes.ProcessesTop, async (int? count, string? sortBy, CancellationToken ct) =>
         {

@@ -17,9 +17,23 @@ public sealed partial class InfoRowViewModel : ObservableObject
 
     [ObservableProperty] private SensorHealth _health = SensorHealth.Ok;
 
-    public void Set(string value, SensorHealth health = SensorHealth.Ok)
+    public void Set(
+        string value,
+        SensorHealth health = SensorHealth.Ok,
+        bool isHighlighted = false,
+        bool isOsHighlighted = false,
+        bool isMacHighlighted = false)
     {
         Value = string.IsNullOrWhiteSpace(value) ? "-" : value;
         Health = health;
+        IsHighlighted = isHighlighted;
+        IsOsHighlighted = isOsHighlighted;
+        IsMacHighlighted = isMacHighlighted;
     }
+
+    [ObservableProperty] private bool _isHighlighted;
+
+    [ObservableProperty] private bool _isOsHighlighted;
+
+    [ObservableProperty] private bool _isMacHighlighted;
 }

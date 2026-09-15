@@ -19,11 +19,20 @@ public sealed class HardwareMonitorReader : IDisposable
         _logger = logger;
     }
 
+    public void Warmup()
+    {
+        lock (_lock)
+        {
+            EnsureOpen();
+        }
+    }
+
     public SensorsInfo Read()
     {
         var monitor = ReadMonitor();
-        var (level, health) = ReadBattery();
+        var (level, health, status) = ReadBattery();
         var acpiTemps = ReadAcpiTemps();
+        var disk = ReadDiskFallback();
 
         return new SensorsInfo
         {
@@ -38,7 +47,11 @@ public sealed class HardwareMonitorReader : IDisposable
             Rail33V = monitor.Rail33V,
             PowerDrawW = monitor.PowerDrawW,
             BatteryLevelPercent = monitor.BatteryLevelPercent ?? level,
-            BatteryHealthPercent = monitor.BatteryHealthPercent ?? health
+            BatteryStatus = status,
+            BatteryHealthPercent = monitor.BatteryHealthPercent ?? health,
+            DiskTempC = monitor.DiskTempC,
+            DiskHealth = monitor.DiskHealth ?? disk.Health,
+            DiskPowerOn = monitor.DiskPowerOn ?? disk.PowerOn
         };
     }
 
@@ -191,7 +204,12 @@ public sealed class HardwareMonitorReader : IDisposable
             PowerDrawW = PickPower(readings, "package", "cores", "cpu")
                          ?? Pick(readings, SensorType.Power, IsCpu)
                          ?? Pick(readings, SensorType.Power, _ => true),
-            BatteryLevelPercent = Pick(readings, SensorType.Level, t => t == HardwareType.Battery)
+            BatteryLevelPercent = Pick(readings, SensorType.Level, t => t == HardwareType.Battery),
+            DiskTempC = Pick(readings, SensorType.Temperature, t => t == HardwareType.Storage)
+                        ?? PickByName(readings, SensorType.Temperature, "hdd", "ssd", "drive", "storage"),
+            DiskHealth = FormatOptional(Pick(readings, SensorType.Level, t => t == HardwareType.Storage)
+                                        ?? PickByName(readings, SensorType.Level, "life", "health", "remaining"), "{0:0}%"),
+            DiskPowerOn = FormatStorageNamed(readings, "power on", "power-on", "hours")
         };
     }
 
@@ -307,13 +325,59 @@ public sealed class HardwareMonitorReader : IDisposable
         return null;
     }
 
-    private static (double? Level, double? Health) ReadBattery()
+    private static string? FormatOptional(double? value, string format)
+        => value is null ? null : string.Format(format, value.Value);
+
+    private static string? FormatStorageNamed(List<Reading> readings, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            var match = readings.FirstOrDefault(r =>
+                r.Hw == HardwareType.Storage
+                && r.Name.Contains(name, StringComparison.OrdinalIgnoreCase));
+            if (match is not null)
+            {
+                return match.Name.Contains("hour", StringComparison.OrdinalIgnoreCase)
+                    ? $"{match.Value:0} h"
+                    : $"{match.Value:0.##}";
+            }
+        }
+
+        return null;
+    }
+
+    private static (string? Health, string? PowerOn) ReadDiskFallback()
+    {
+        try
+        {
+            using var searcher = new ManagementObjectSearcher(@"root\cimv2", "SELECT Status FROM Win32_DiskDrive");
+            foreach (ManagementObject obj in searcher.Get())
+            {
+                using (obj)
+                {
+                    var status = obj["Status"]?.ToString();
+                    if (!string.IsNullOrWhiteSpace(status))
+                    {
+                        return (status, null);
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Ignore disk WMI fallback failures.
+        }
+
+        return (null, null);
+    }
+
+    private static (double? Level, double? Health, string? Status) ReadBattery()
     {
         try
         {
             using var searcher = new ManagementObjectSearcher(
                 @"root\cimv2",
-                "SELECT EstimatedChargeRemaining, DesignCapacity, FullChargeCapacity FROM Win32_Battery");
+                "SELECT EstimatedChargeRemaining, DesignCapacity, FullChargeCapacity, BatteryStatus FROM Win32_Battery");
             foreach (ManagementObject obj in searcher.Get())
             {
                 using (obj)
@@ -337,7 +401,7 @@ public sealed class HardwareMonitorReader : IDisposable
                         health = ReadPortableBatteryHealth();
                     }
 
-                    return (level, health);
+                    return (level, health, MapBatteryStatus(obj["BatteryStatus"]?.ToString()));
                 }
             }
         }
@@ -346,8 +410,24 @@ public sealed class HardwareMonitorReader : IDisposable
             // Desktops often have no battery.
         }
 
-        return (null, ReadPortableBatteryHealth());
+        return (null, ReadPortableBatteryHealth(), null);
     }
+
+    private static string? MapBatteryStatus(string? raw) => raw switch
+    {
+        "1" => "Other",
+        "2" => "Unknown",
+        "3" => "Fully Charged",
+        "4" => "Low",
+        "5" => "Critical",
+        "6" => "Charging",
+        "7" => "Charging and High",
+        "8" => "Charging and Low",
+        "9" => "Charging and Critical",
+        "10" => "Undefined",
+        "11" => "Partially Charged",
+        _ => string.IsNullOrWhiteSpace(raw) ? null : raw
+    };
 
     private static double? ReadPortableBatteryHealth()
     {

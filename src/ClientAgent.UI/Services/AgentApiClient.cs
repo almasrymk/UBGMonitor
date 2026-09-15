@@ -168,6 +168,12 @@ public sealed class AgentApiClient
     public Task<HardwareInfo?> GetHardwareAsync(CancellationToken ct = default)
         => GetAsync<HardwareInfo>(ApiRoutes.Hardware, "hardware", ct);
 
+    public Task<HardwareResponseDto?> GetHardwareLevelsAsync(CancellationToken ct = default)
+        => GetAsync<HardwareResponseDto>(ApiRoutes.HardwareLevels, "hardware-levels", ct);
+
+    public Task<HardwareLevelDto?> GetHardwareLevelAsync(int level, CancellationToken ct = default)
+        => GetAsync<HardwareLevelDto>($"{ApiRoutes.HardwareLevels}/{level}", $"hardware-level-{level}", ct);
+
     public Task<OsInfo?> GetOsAsync(CancellationToken ct = default)
         => GetAsync<OsInfo>(ApiRoutes.Os, "os", ct);
 

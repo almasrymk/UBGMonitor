@@ -24,5 +24,13 @@ public sealed class SensorsInfo
 
     public double? BatteryLevelPercent { get; init; }
 
+    public string? BatteryStatus { get; init; }
+
     public double? BatteryHealthPercent { get; init; }
+
+    public double? DiskTempC { get; init; }
+
+    public string? DiskHealth { get; init; }
+
+    public string? DiskPowerOn { get; init; }
 }

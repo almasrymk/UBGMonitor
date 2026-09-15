@@ -9,6 +9,7 @@ public sealed partial class NetworkViewModel : ObservableObject
     [ObservableProperty] private string _activeInterface = "Unknown";
     [ObservableProperty] private string _statusLine = "-";
     [ObservableProperty] private string _ipAddress = "-";
+    [ObservableProperty] private string _publicIp = "-";
     [ObservableProperty] private string _macAddress = "-";
     [ObservableProperty] private string _gateway = "-";
     [ObservableProperty] private string _dns = "-";
@@ -27,6 +28,7 @@ public sealed partial class NetworkViewModel : ObservableObject
         Status = network.Status;
         StatusLine = $"Interface: {network.ActiveInterface} | Status: ● {network.Status} | Speed: {network.DownloadMbps:0.##} Mbps";
         IpAddress = string.IsNullOrWhiteSpace(network.IpAddress) ? "-" : network.IpAddress;
+        PublicIp = string.IsNullOrWhiteSpace(network.PublicIp) ? "-" : network.PublicIp;
         MacAddress = string.IsNullOrWhiteSpace(network.MacAddress) ? "-" : network.MacAddress;
         Gateway = string.IsNullOrWhiteSpace(network.Gateway) ? "-" : network.Gateway;
         Dns = network.DnsServers.Length == 0 ? "-" : string.Join(", ", network.DnsServers.Take(2));
@@ -35,7 +37,7 @@ public sealed partial class NetworkViewModel : ObservableObject
         TotalRx = $"{network.TotalRxGB:0.0} GB";
         TotalTx = $"{network.TotalTxGB:0.0} GB";
         Ping = network.PingMs.HasValue ? $"{network.PingMs:0} ms" : "N/A";
-        PacketLoss = network.PingMs.HasValue ? "0%" : "N/A";
+        PacketLoss = network.PacketLossPercent.HasValue ? $"{network.PacketLossPercent:0}%" : "N/A";
         CpuViewModel.Push(History, network.DownloadMbps);
     }
 }

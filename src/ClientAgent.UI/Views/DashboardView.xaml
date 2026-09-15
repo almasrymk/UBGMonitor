@@ -5,6 +5,8 @@
              xmlns:enums="clr-namespace:ClientAgent.UI.Enums"
              xmlns:views="clr-namespace:ClientAgent.UI.Views">
     <UserControl.Resources>
+        <SolidColorBrush x:Key="NetworkIdentityBrush" Color="#4FC3F7"/>
+        <SolidColorBrush x:Key="MacAddressBrush" Color="#2196F3"/>
         <DataTemplate x:Key="InfoRowTemplate">
             <Grid Margin="0,0,0,6">
                 <Grid.ColumnDefinitions>
@@ -13,22 +15,55 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" Text="{Binding Label}" Foreground="#9A9AA5" Margin="0,0,16,0"/>
-                <TextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap" Foreground="#E0E0E0"/>
-                <TextBlock Grid.Column="2" Text="✓" FontWeight="Bold" Margin="12,0,10,0"
-                           Foreground="{Binding Health, Converter={StaticResource SensorHealthToBrushConverter}}"/>
+                <TextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="#E0E0E0"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsHighlighted}" Value="True">
+                                    <Setter Property="Foreground" Value="{StaticResource NetworkIdentityBrush}"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsOsHighlighted}" Value="True">
+                                    <Setter Property="Foreground" Value="{StaticResource ProcessBarNetworkBrush}"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsMacHighlighted}" Value="True">
+                                    <Setter Property="Foreground" Value="{StaticResource AccentYellowBrush}"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <Ellipse Grid.Column="2" Width="10" Height="10" Margin="12,0,10,0" VerticalAlignment="Center"
+                         Fill="{Binding Health, Converter={StaticResource SensorHealthToBrushConverter}}"/>
             </Grid>
         </DataTemplate>
-        <DataTemplate x:Key="SensorRowTemplate">
+        <DataTemplate x:Key="NetworkRowTemplate">
             <Grid Margin="0,0,0,6">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" SharedSizeGroup="InfoLabel"/>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" Text="{Binding Label}" Foreground="#9A9AA5" Margin="0,0,16,0"/>
-                <TextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap" Foreground="#E0E0E0"/>
-                <Ellipse Grid.Column="2" Width="10" Height="10" Margin="12,0,10,0" VerticalAlignment="Center"
-                         Fill="{Binding Health, Converter={StaticResource SensorHealthToBrushConverter}}"/>
+                <TextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="#E0E0E0"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsHighlighted}" Value="True">
+                                    <Setter Property="Foreground" Value="{StaticResource NetworkIdentityBrush}"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsMacHighlighted}" Value="True">
+                                    <Setter Property="Foreground" Value="{StaticResource MacAddressBrush}"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
             </Grid>
         </DataTemplate>
     </UserControl.Resources>
@@ -134,7 +169,8 @@
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0">
-                                            <TextBlock Foreground="#AAAAAA" FontSize="11" Text="{Binding Network.IpAddress, StringFormat=IP: {0}}"/>
+                                            <TextBlock Foreground="#AAAAAA" FontSize="11" Text="{Binding Network.IpAddress, StringFormat=Local IP: {0}}"/>
+                                            <TextBlock Foreground="#AAAAAA" FontSize="11" Text="{Binding Network.PublicIp, StringFormat=Public IP: {0}}"/>
                                             <TextBlock Foreground="#AAAAAA" FontSize="11" Text="{Binding Network.Gateway, StringFormat=Gateway: {0}}"/>
                                             <TextBlock Foreground="#AAAAAA" FontSize="11" Text="{Binding Network.Download, StringFormat=Download: {0}}"/>
                                             <TextBlock Foreground="#AAAAAA" FontSize="11" Text="{Binding Network.TotalRx, StringFormat=Total RX: {0}}"/>
@@ -249,55 +285,91 @@
                         <TextBlock Text="Hardware &amp; OS" FontSize="16" FontWeight="SemiBold" Foreground="#E0E0E0" Margin="0,0,0,12"/>
 
                         <Expander Style="{StaticResource SectionExpanderStyle}"
-                                  IsExpanded="{Binding HardwareOs.IsHardwareExpanded, Mode=TwoWay}">
+                                  IsExpanded="{Binding HardwareOs.IsLevel1Expanded, Mode=TwoWay}">
                             <Expander.Header>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="Hardware" FontSize="14" FontWeight="SemiBold"
-                                               Foreground="{StaticResource AccentBlueBrush}"/>
-                                    <TextBlock Grid.Column="1" Text="[12]" FontSize="11" Foreground="#9A9AA5"/>
-                                </Grid>
-                            </Expander.Header>
-                            <ItemsControl ItemsSource="{Binding HardwareOs.HardwareRows}" ItemTemplate="{StaticResource InfoRowTemplate}"/>
-                        </Expander>
-
-                        <Border Height="1" Background="#3A3A4D" Margin="0,8"/>
-
-                        <Expander Style="{StaticResource SectionExpanderStyle}"
-                                  IsExpanded="{Binding HardwareOs.IsOsExpanded, Mode=TwoWay}">
-                            <Expander.Header>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="OS" FontSize="14" FontWeight="SemiBold"
+                                    <TextBlock Grid.Column="0" Text="Basic Hardware" FontSize="14" FontWeight="SemiBold"
                                                Foreground="{StaticResource AccentGreenBrush}"/>
-                                    <TextBlock Grid.Column="1" Text="[10]" FontSize="11" Foreground="#9A9AA5"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding HardwareOs.Level1Count, StringFormat=[{0}]}" FontSize="11" Foreground="#9A9AA5"/>
                                 </Grid>
                             </Expander.Header>
-                            <ItemsControl ItemsSource="{Binding HardwareOs.OsRows}" ItemTemplate="{StaticResource InfoRowTemplate}"/>
+                            <ItemsControl ItemsSource="{Binding HardwareOs.Level1Rows}" ItemTemplate="{StaticResource InfoRowTemplate}"/>
                         </Expander>
 
                         <Border Height="1" Background="#3A3A4D" Margin="0,8"/>
 
                         <Expander Style="{StaticResource SectionExpanderStyle}"
-                                  IsExpanded="{Binding Sensors.IsExpanded, Mode=TwoWay}">
+                                  IsExpanded="{Binding HardwareOs.IsLevel2Expanded, Mode=TwoWay}">
                             <Expander.Header>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="Sensors" FontSize="14" FontWeight="SemiBold"
+                                    <TextBlock Grid.Column="0" Text="Extended Hardware" FontSize="14" FontWeight="SemiBold"
                                                Foreground="{StaticResource AccentYellowBrush}"/>
-                                    <TextBlock Grid.Column="1" Text="[12]" FontSize="11" Foreground="#9A9AA5"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding HardwareOs.Level2Count, StringFormat=[{0}]}" FontSize="11" Foreground="#9A9AA5"/>
                                 </Grid>
                             </Expander.Header>
-                            <ItemsControl ItemsSource="{Binding Sensors.Rows}" ItemTemplate="{StaticResource SensorRowTemplate}"/>
+                            <ItemsControl ItemsSource="{Binding HardwareOs.Level2Rows}" ItemTemplate="{StaticResource InfoRowTemplate}"/>
+                        </Expander>
+
+                        <Border Height="1" Background="#3A3A4D" Margin="0,8"/>
+
+                        <Expander Style="{StaticResource SectionExpanderStyle}"
+                                  IsExpanded="{Binding HardwareOs.IsLevel5Expanded, Mode=TwoWay}">
+                            <Expander.Header>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Network" FontSize="14" FontWeight="SemiBold"
+                                               Foreground="{StaticResource AccentBlueBrush}"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding HardwareOs.Level5Count, StringFormat=[{0}]}" FontSize="11" Foreground="#9A9AA5"/>
+                                </Grid>
+                            </Expander.Header>
+                            <ItemsControl ItemsSource="{Binding HardwareOs.Level5Rows}" ItemTemplate="{StaticResource NetworkRowTemplate}"/>
+                        </Expander>
+
+                        <Border Height="1" Background="#3A3A4D" Margin="0,8"/>
+
+                        <Expander Style="{StaticResource SectionExpanderStyle}"
+                                  IsExpanded="{Binding HardwareOs.IsLevel4Expanded, Mode=TwoWay}">
+                            <Expander.Header>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Detailed Info" FontSize="14" FontWeight="SemiBold"
+                                               Foreground="{StaticResource ProcessBarNetworkBrush}"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding HardwareOs.Level4Count, StringFormat=[{0}]}" FontSize="11" Foreground="#9A9AA5"/>
+                                </Grid>
+                            </Expander.Header>
+                            <ItemsControl ItemsSource="{Binding HardwareOs.Level4Rows}" ItemTemplate="{StaticResource InfoRowTemplate}"/>
+                        </Expander>
+
+                        <Border Height="1" Background="#3A3A4D" Margin="0,8"/>
+
+                        <Expander Style="{StaticResource SectionExpanderStyle}"
+                                  IsExpanded="{Binding HardwareOs.IsLevel3Expanded, Mode=TwoWay}">
+                            <Expander.Header>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Live Sensors" FontSize="14" FontWeight="SemiBold"
+                                               Foreground="{StaticResource AccentRedBrush}"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding HardwareOs.Level3Count, StringFormat=[{0}]}" FontSize="11" Foreground="#9A9AA5"/>
+                                </Grid>
+                            </Expander.Header>
+                            <ItemsControl ItemsSource="{Binding HardwareOs.Level3Rows}" ItemTemplate="{StaticResource InfoRowTemplate}"/>
                         </Expander>
                     </StackPanel>
                 </Border>

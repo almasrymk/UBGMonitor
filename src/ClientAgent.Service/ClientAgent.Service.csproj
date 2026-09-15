@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <OutputType>Exe</OutputType>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
     <UserSecretsId>dotnet-ClientAgent.Service-4e68a577-9774-46f0-83b3-9fa3ab9825c2</UserSecretsId>
   </PropertyGroup>
 

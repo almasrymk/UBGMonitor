@@ -45,8 +45,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public RamViewModel Ram { get; } = new();
     public DiskViewModel Disk { get; } = new();
     public NetworkViewModel Network { get; } = new();
-    public HardwareOsViewModel HardwareOs { get; } = new();
-    public SensorsViewModel Sensors { get; }
+    public HardwareOsViewModel HardwareOs { get; }
     public ProcessListCardViewModel TopCpuCard { get; }
     public ProcessListCardViewModel TopRamCard { get; }
     public ProcessListCardViewModel TopNetworkCard { get; }
@@ -65,7 +64,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         TopCpuCard = new ProcessListCardViewModel(_client, "Top 5 by CPU", ProcessSortBy.Cpu, ResourceBrush("AccentGreenBrush", Color.FromRgb(0x4C, 0xAF, 0x50)));
         TopRamCard = new ProcessListCardViewModel(_client, "Top 5 by RAM", ProcessSortBy.Ram, ResourceBrush("ProcessBarRamBrush", Color.FromRgb(0x21, 0x96, 0xF3)));
         TopNetworkCard = new ProcessListCardViewModel(_client, "Top 5 by Network", ProcessSortBy.Network, ResourceBrush("ProcessBarNetworkBrush", Color.FromRgb(0x9C, 0x27, 0xB0)));
-        Sensors = new SensorsViewModel(_client);
+        HardwareOs = new HardwareOsViewModel(_client);
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         _timer.Tick += async (_, _) => await RefreshAsync();
         _timer.Start();
@@ -144,7 +143,6 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Ram.Update(snapshot.Ram);
         Disk.Update(snapshot.Partitions, snapshot.PhysicalDisks);
         Network.Update(snapshot.Network);
-        HardwareOs.Update(snapshot.Hardware, snapshot.Os);
         Replace(TopRamProcesses, snapshot.TopProcesses.Take(5));
         Replace(TopCpuProcesses, snapshot.TopProcesses.OrderByDescending(p => p.CpuPercent).ThenByDescending(p => p.RamMB).Take(5));
     }
@@ -155,15 +153,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         var ram = await _client.GetRamAsync();
         var partitions = await _client.GetPartitionsAsync();
         var network = await _client.GetNetworkAsync();
-        var hardware = await _client.GetHardwareAsync();
-        var os = await _client.GetOsAsync();
         var processes = await _client.GetTopProcessesAsync(10);
 
         if (cpu is not null) Cpu.Update(cpu);
         if (ram is not null) Ram.Update(ram);
         if (partitions is not null) Disk.Update(partitions, []);
         if (network is not null) Network.Update(network);
-        if (hardware is not null && os is not null) HardwareOs.Update(hardware, os);
         if (processes is not null)
         {
             Replace(TopRamProcesses, processes.Take(5));
@@ -266,7 +261,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         _timer.Stop();
-        Sensors.Dispose();
+        HardwareOs.Dispose();
         TopCpuCard.Dispose();
         TopRamCard.Dispose();
         TopNetworkCard.Dispose();

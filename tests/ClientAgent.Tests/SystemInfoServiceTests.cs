@@ -8,9 +8,7 @@ public sealed class SystemInfoServiceTests
     [Fact]
     public async Task GetSnapshotAsync_DoesNotThrow()
     {
-        var sut = new SystemInfoService(NullLogger<SystemInfoService>.Instance, new HardwareMonitorReader());
-
-        var snapshot = await sut.GetSnapshotAsync();
+        var snapshot = await CreateSut().GetSnapshotAsync();
 
         Assert.NotNull(snapshot);
         Assert.True(snapshot.Cpu.LogicalCores >= 0);
@@ -24,9 +22,7 @@ public sealed class SystemInfoServiceTests
     [Fact]
     public async Task GetTopProcessesAsync_ReturnsRequestedCountOrLess()
     {
-        var sut = new SystemInfoService(NullLogger<SystemInfoService>.Instance, new HardwareMonitorReader());
-
-        var processes = await sut.GetTopProcessesAsync(5);
+        var processes = await CreateSut().GetTopProcessesAsync(5);
 
         Assert.NotNull(processes);
         Assert.True(processes.Count <= 5);
@@ -35,9 +31,7 @@ public sealed class SystemInfoServiceTests
     [Fact]
     public async Task GetTopProcessesSortedAsync_Cpu_ReturnsRequestedCountOrLess()
     {
-        var sut = new SystemInfoService(NullLogger<SystemInfoService>.Instance, new HardwareMonitorReader());
-
-        var processes = await sut.GetTopProcessesSortedAsync(5, "cpu");
+        var processes = await CreateSut().GetTopProcessesSortedAsync(5, "cpu");
 
         Assert.NotNull(processes);
         Assert.True(processes.Count <= 5);
@@ -47,9 +41,7 @@ public sealed class SystemInfoServiceTests
     [Fact]
     public async Task GetTopProcessesSortedAsync_Ram_UsesMegabytes()
     {
-        var sut = new SystemInfoService(NullLogger<SystemInfoService>.Instance, new HardwareMonitorReader());
-
-        var processes = await sut.GetTopProcessesSortedAsync(5, "ram");
+        var processes = await CreateSut().GetTopProcessesSortedAsync(5, "ram");
 
         Assert.NotNull(processes);
         Assert.True(processes.Count <= 5);
@@ -59,12 +51,19 @@ public sealed class SystemInfoServiceTests
     [Fact]
     public async Task GetTopProcessesSortedAsync_Network_UsesKilobytesPerSecond()
     {
-        var sut = new SystemInfoService(NullLogger<SystemInfoService>.Instance, new HardwareMonitorReader());
-
-        var processes = await sut.GetTopProcessesSortedAsync(5, "network");
+        var processes = await CreateSut().GetTopProcessesSortedAsync(5, "network");
 
         Assert.NotNull(processes);
         Assert.True(processes.Count <= 5);
         Assert.All(processes, item => Assert.Equal("KB/s", item.Unit));
+    }
+
+    internal static SystemInfoService CreateSut()
+    {
+        var reader = new HardwareMonitorReader();
+        var hardware = new HardwareService(NullLogger<HardwareService>.Instance);
+        var sensors = new SensorsService(reader);
+        var network = new NetworkService(NullLogger<NetworkService>.Instance);
+        return new SystemInfoService(NullLogger<SystemInfoService>.Instance, hardware, sensors, network);
     }
 }

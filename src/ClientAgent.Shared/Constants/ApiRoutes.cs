@@ -10,6 +10,7 @@ public static class ApiRoutes
     public const string DiskPartitions = "/api/disks/partitions";
     public const string DiskPhysical = "/api/disks/physical";
     public const string Hardware = "/api/hardware";
+    public const string HardwareLevels = "/api/hardware/levels";
     public const string Os = "/api/os";
     public const string Sensors = "/api/sensors";
     public const string ProcessesTop = "/api/processes/top";

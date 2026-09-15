@@ -8,6 +8,8 @@ public sealed class NetworkInfo
 
     public string IpAddress { get; init; } = string.Empty;
 
+    public string PublicIp { get; init; } = string.Empty;
+
     public string MacAddress { get; init; } = string.Empty;
 
     public string Gateway { get; init; } = string.Empty;
@@ -23,4 +25,6 @@ public sealed class NetworkInfo
     public double TotalTxGB { get; init; }
 
     public double? PingMs { get; init; }
+
+    public double? PacketLossPercent { get; init; }
 }

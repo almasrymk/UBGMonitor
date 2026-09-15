@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Management;
-using System.Net.NetworkInformation;
 using ClientAgent.Shared.Models;
 
 namespace ClientAgent.Service.SystemInfo;
@@ -33,15 +32,23 @@ public interface ISystemInfoService
 public sealed class SystemInfoService : ISystemInfoService
 {
     private readonly ILogger<SystemInfoService> _logger;
-    private readonly HardwareMonitorReader _hardwareMonitor;
+    private readonly IHardwareService _hardware;
+    private readonly ISensorsService _sensors;
+    private readonly INetworkService _network;
     private readonly object _networkLock = new();
     private Dictionary<int, ulong> _lastNetworkBytes = [];
     private long _lastNetworkTimestamp;
 
-    public SystemInfoService(ILogger<SystemInfoService> logger, HardwareMonitorReader hardwareMonitor)
+    public SystemInfoService(
+        ILogger<SystemInfoService> logger,
+        IHardwareService hardware,
+        ISensorsService sensors,
+        INetworkService network)
     {
         _logger = logger;
-        _hardwareMonitor = hardwareMonitor;
+        _hardware = hardware;
+        _sensors = sensors;
+        _network = network;
     }
 
     public Task<SystemSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default)
@@ -87,16 +94,16 @@ public sealed class SystemInfoService : ISystemInfoService
         => Task.Run<IReadOnlyList<PhysicalDisk>>(GetPhysicalDisksInternal, cancellationToken);
 
     public Task<NetworkInfo> GetNetworkAsync(CancellationToken cancellationToken = default)
-        => Task.Run(GetNetworkInternal, cancellationToken);
+        => _network.GetNetworkAsync(cancellationToken);
 
     public Task<HardwareInfo> GetHardwareAsync(CancellationToken cancellationToken = default)
-        => Task.Run(GetHardwareInternal, cancellationToken);
+        => _hardware.GetHardwareAsync(cancellationToken);
 
     public Task<OsInfo> GetOsAsync(CancellationToken cancellationToken = default)
-        => Task.Run(GetOsInternal, cancellationToken);
+        => _hardware.GetOsAsync(cancellationToken);
 
     public Task<SensorsInfo> GetSensorsAsync(CancellationToken cancellationToken = default)
-        => Task.Run(_hardwareMonitor.Read, cancellationToken);
+        => _sensors.GetSensorsAsync(cancellationToken);
 
     public Task<IReadOnlyList<ProcessInfo>> GetTopProcessesAsync(int count, CancellationToken cancellationToken = default)
         => Task.Run<IReadOnlyList<ProcessInfo>>(() => GetTopProcessesInternal(count), cancellationToken);
@@ -241,121 +248,6 @@ public sealed class SystemInfoService : ISystemInfoService
         }
 
         return disks;
-    }
-
-    private NetworkInfo GetNetworkInternal()
-    {
-        try
-        {
-            var nic = NetworkInterface.GetAllNetworkInterfaces()
-                .Where(n => n.OperationalStatus == OperationalStatus.Up
-                            && n.NetworkInterfaceType != NetworkInterfaceType.Loopback)
-                .OrderByDescending(n => n.GetIPStatistics().BytesReceived)
-                .FirstOrDefault();
-
-            if (nic is null)
-            {
-                return new NetworkInfo();
-            }
-
-            var props = nic.GetIPProperties();
-            var ip = props.UnicastAddresses
-                .FirstOrDefault(a => a.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
-                ?.Address.ToString() ?? string.Empty;
-            var gateway = props.GatewayAddresses.FirstOrDefault()?.Address.ToString() ?? string.Empty;
-            var stats = nic.GetIPStatistics();
-
-            return new NetworkInfo
-            {
-                ActiveInterface = nic.Name,
-                Status = nic.OperationalStatus.ToString(),
-                IpAddress = ip,
-                MacAddress = FormatMac(nic.GetPhysicalAddress().ToString()),
-                Gateway = gateway,
-                DnsServers = props.DnsAddresses.Select(a => a.ToString()).ToArray(),
-                DownloadMbps = nic.Speed > 0 ? Math.Round(nic.Speed / 1_000_000d, 1) : 0,
-                UploadMbps = nic.Speed > 0 ? Math.Round(nic.Speed / 1_000_000d, 1) : 0,
-                TotalRxGB = Round(BytesToGb(stats.BytesReceived)),
-                TotalTxGB = Round(BytesToGb(stats.BytesSent)),
-                PingMs = ProbeGateway(gateway)
-            };
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to collect network info");
-            return new NetworkInfo();
-        }
-    }
-
-    private HardwareInfo GetHardwareInternal()
-    {
-        try
-        {
-            var cpuName = QueryFirst("Win32_Processor", "Name") ?? "Unknown";
-            var cores = ParseInt(QueryFirst("Win32_Processor", "NumberOfCores"), Environment.ProcessorCount);
-            var threads = ParseInt(QueryFirst("Win32_Processor", "NumberOfLogicalProcessors"), Environment.ProcessorCount);
-            var maxClockMhz = ParseDouble(QueryFirst("Win32_Processor", "MaxClockSpeed"));
-            var gpuModel = QueryFirst("Win32_VideoController", "Name") ?? "Unknown";
-            var gpuVramGb = Round(BytesToGb(ParseLong(QueryFirst("Win32_VideoController", "AdapterRAM"))));
-            var boardMfr = QueryFirst("Win32_BaseBoard", "Manufacturer") ?? string.Empty;
-            var boardProduct = QueryFirst("Win32_BaseBoard", "Product") ?? "Unknown";
-            var biosDate = ParseWmiDate(QueryFirst("Win32_BIOS", "ReleaseDate"));
-
-            return new HardwareInfo
-            {
-                Manufacturer = QueryFirst("Win32_ComputerSystem", "Manufacturer") ?? "Unknown",
-                Model = QueryFirst("Win32_ComputerSystem", "Model") ?? "Unknown",
-                SerialNumber = QueryFirst("Win32_BIOS", "SerialNumber") ?? "Unknown",
-                Cpu = cpuName.Trim(),
-                CoresThreads = $"{cores} / {threads}",
-                CpuSpeed = maxClockMhz > 0 ? $"{maxClockMhz / 1000:0.0} GHz" : "Unknown",
-                Ram = FormatRamModules(),
-                Gpu = gpuVramGb > 0 ? $"{gpuModel} ({gpuVramGb:0}GB)" : gpuModel,
-                Disk = FormatPrimaryDisk(),
-                Motherboard = string.IsNullOrWhiteSpace(boardMfr) ? boardProduct : $"{boardMfr} {boardProduct}".Trim(),
-                BiosVersion = QueryFirst("Win32_BIOS", "SMBIOSBIOSVersion") ?? "Unknown",
-                BiosDate = biosDate?.ToString("yyyy-MM-dd") ?? "Unknown",
-                GpuModel = gpuModel,
-                GpuVramGB = gpuVramGb
-            };
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to collect hardware info");
-            return new HardwareInfo();
-        }
-    }
-
-    private OsInfo GetOsInternal()
-    {
-        try
-        {
-            var lastBoot = ParseWmiDate(QueryFirst("Win32_OperatingSystem", "LastBootUpTime"));
-            var installDate = ParseWmiDate(QueryFirst("Win32_OperatingSystem", "InstallDate"));
-            return new OsInfo
-            {
-                Name = QueryFirst("Win32_OperatingSystem", "Caption") ?? Environment.OSVersion.ToString(),
-                Version = QueryFirst("Win32_OperatingSystem", "Version") ?? Environment.OSVersion.Version.ToString(),
-                Build = QueryFirst("Win32_OperatingSystem", "BuildNumber") ?? "Unknown",
-                Architecture = QueryFirst("Win32_OperatingSystem", "OSArchitecture")
-                               ?? (Environment.Is64BitOperatingSystem ? "x64" : "x86"),
-                InstallDate = installDate,
-                LastBoot = lastBoot,
-                Uptime = lastBoot.HasValue ? DateTime.Now - lastBoot.Value : TimeSpan.Zero,
-                Timezone = QueryFirst("Win32_TimeZone", "Caption") ?? TimeZoneInfo.Local.DisplayName,
-                Locale = FormatLocale(QueryFirst("Win32_OperatingSystem", "Locale")),
-                SystemType = QueryFirst("Win32_ComputerSystem", "SystemType") ?? "Unknown"
-            };
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to collect OS info");
-            return new OsInfo
-            {
-                Name = Environment.OSVersion.ToString(),
-                Architecture = Environment.Is64BitOperatingSystem ? "x64" : "x86"
-            };
-        }
     }
 
     private List<ProcessInfo> GetTopProcessesInternal(int count)
@@ -685,25 +577,6 @@ public sealed class SystemInfoService : ISystemInfoService
         return letters;
     }
 
-    private static double? ProbeGateway(string gateway)
-    {
-        if (string.IsNullOrWhiteSpace(gateway))
-        {
-            return null;
-        }
-
-        try
-        {
-            using var ping = new Ping();
-            var reply = ping.Send(gateway, 1000);
-            return reply.Status == IPStatus.Success ? reply.RoundtripTime : null;
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
     private static IEnumerable<ManagementObject> Query(string className, string scope = @"root\cimv2")
     {
         using var searcher = new ManagementObjectSearcher(scope, $"SELECT * FROM {className}");
@@ -731,127 +604,6 @@ public sealed class SystemInfoService : ISystemInfoService
         }
 
         return null;
-    }
-
-    private static string FormatRamModules()
-    {
-        long totalBytes = 0;
-        int speed = 0;
-        int type = 0;
-        try
-        {
-            foreach (var obj in Query("Win32_PhysicalMemory"))
-            {
-                using (obj)
-                {
-                    totalBytes += ParseLong(obj["Capacity"]?.ToString());
-                    if (speed == 0)
-                    {
-                        speed = ParseInt(obj["Speed"]?.ToString(), 0);
-                    }
-
-                    if (type == 0)
-                    {
-                        type = ParseInt(obj["SMBIOSMemoryType"]?.ToString(), 0);
-                    }
-                }
-            }
-        }
-        catch
-        {
-            // Fall back to computer-system total below.
-        }
-
-        if (totalBytes <= 0)
-        {
-            totalBytes = ParseLong(QueryFirst("Win32_ComputerSystem", "TotalPhysicalMemory"));
-        }
-
-        var gb = Math.Round(BytesToGb(totalBytes), 0);
-        var kind = type switch
-        {
-            20 => "DDR",
-            21 => "DDR2",
-            24 => "DDR3",
-            26 => "DDR4",
-            34 => "DDR5",
-            _ => "RAM"
-        };
-        return speed > 0 ? $"{gb:0} GB {kind} {speed}MHz" : $"{gb:0} GB {kind}";
-    }
-
-    private static string FormatPrimaryDisk()
-    {
-        try
-        {
-            foreach (var obj in Query("Win32_DiskDrive"))
-            {
-                using (obj)
-                {
-                    var model = obj["Model"]?.ToString() ?? "Unknown";
-                    var sizeGb = Round(BytesToGb(ParseLong(obj["Size"]?.ToString())));
-                    var iface = obj["InterfaceType"]?.ToString();
-                    return string.IsNullOrWhiteSpace(iface)
-                        ? $"{model} {sizeGb:0}GB"
-                        : $"{model} {sizeGb:0}GB {iface}";
-                }
-            }
-        }
-        catch
-        {
-            // Ignore disk query failures.
-        }
-
-        return "Unknown";
-    }
-
-    private static string FormatLocale(string? locale)
-    {
-        if (string.IsNullOrWhiteSpace(locale))
-        {
-            return "Unknown";
-        }
-
-        if (int.TryParse(locale, System.Globalization.NumberStyles.HexNumber, null, out var lcid))
-        {
-            try
-            {
-                return System.Globalization.CultureInfo.GetCultureInfo(lcid).Name;
-            }
-            catch
-            {
-                // Keep the WMI locale code.
-            }
-        }
-
-        return locale;
-    }
-
-    private static string FormatMac(string raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw) || raw.Length != 12)
-        {
-            return raw;
-        }
-
-        return string.Join(":", Enumerable.Range(0, 6).Select(i => raw.Substring(i * 2, 2)));
-    }
-
-    private static DateTime? ParseWmiDate(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value) || value.Length < 14)
-        {
-            return null;
-        }
-
-        try
-        {
-            return ManagementDateTimeConverter.ToDateTime(value);
-        }
-        catch
-        {
-            return null;
-        }
     }
 
     private static double BytesToGb(long bytes) => bytes / 1024d / 1024d / 1024d;

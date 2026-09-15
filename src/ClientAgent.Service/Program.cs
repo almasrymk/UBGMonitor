@@ -40,6 +40,9 @@ try
     builder.Services.AddSingleton<IAgentIdentity, AgentIdentity>();
     builder.Services.AddSingleton<IOutboxRepository, OutboxRepository>();
     builder.Services.AddSingleton<HardwareMonitorReader>();
+    builder.Services.AddSingleton<IHardwareService, HardwareService>();
+    builder.Services.AddSingleton<ISensorsService, SensorsService>();
+    builder.Services.AddSingleton<INetworkService, NetworkService>();
     builder.Services.AddSingleton<ISystemInfoService, SystemInfoService>();
     builder.Services.AddSingleton<IMonitoringEventBus, MonitoringEventBus>();
     builder.Services.AddSingleton<IEventPublisher, EventPublisher>();
@@ -62,6 +65,7 @@ try
 
     var host = builder.Build();
     await host.Services.GetRequiredService<IOutboxRepository>().InitializeDatabaseAsync();
+    _ = host.Services.GetRequiredService<ISensorsService>();
     await host.RunAsync();
 }
 catch (Exception ex)
