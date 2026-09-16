@@ -61,24 +61,37 @@ public sealed class SparklineControl : FrameworkElement
         var max = points.Max();
         var range = Math.Max(1, max - min);
         var stepX = ActualWidth / (points.Count - 1);
-        var geo = new StreamGeometry();
-        using (var ctx = geo.Open())
+        var mapped = points.Select((v, i) => new Point(
+            i * stepX,
+            ActualHeight - ((v - min) / range * ActualHeight))).ToList();
+
+        var fill = new StreamGeometry();
+        using (var ctx = fill.Open())
         {
-            for (var i = 0; i < points.Count; i++)
+            ctx.BeginFigure(new Point(mapped[0].X, ActualHeight), true, true);
+            foreach (var point in mapped)
             {
-                var x = i * stepX;
-                var y = ActualHeight - ((points[i] - min) / range * ActualHeight);
-                if (i == 0)
-                {
-                    ctx.BeginFigure(new Point(x, y), false, false);
-                }
-                else
-                {
-                    ctx.LineTo(new Point(x, y), true, true);
-                }
+                ctx.LineTo(point, true, true);
+            }
+
+            ctx.LineTo(new Point(mapped[^1].X, ActualHeight), true, false);
+        }
+
+        Brush fillBrush = Stroke is SolidColorBrush solid
+            ? new SolidColorBrush(solid.Color) { Opacity = 0.22 }
+            : new SolidColorBrush(Color.FromArgb(0x38, 0x21, 0x96, 0xF3));
+        drawingContext.DrawGeometry(fillBrush, null, fill);
+
+        var line = new StreamGeometry();
+        using (var ctx = line.Open())
+        {
+            ctx.BeginFigure(mapped[0], false, false);
+            for (var i = 1; i < mapped.Count; i++)
+            {
+                ctx.LineTo(mapped[i], true, true);
             }
         }
 
-        drawingContext.DrawGeometry(null, new Pen(Stroke, 1.6) { LineJoin = PenLineJoin.Round }, geo);
+        drawingContext.DrawGeometry(null, new Pen(Stroke, 1.6) { LineJoin = PenLineJoin.Round }, line);
     }
 }

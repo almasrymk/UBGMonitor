@@ -14,7 +14,7 @@ public interface INetworkService
     Task<HardwareLevelDto> GetLevelAsync(CancellationToken cancellationToken = default);
 }
 
-public sealed class NetworkService : INetworkService
+public sealed class NetworkService : BackgroundService, INetworkService
 {
     private static readonly IPAddress PingTarget = IPAddress.Parse("8.8.8.8");
     private static readonly TimeSpan PingCacheTtl = TimeSpan.FromSeconds(8);
@@ -30,9 +30,9 @@ public sealed class NetworkService : INetworkService
     private readonly ILogger<NetworkService> _logger;
     private readonly object _lock = new();
     private readonly SemaphoreSlim _pingGate = new(1, 1);
-    private string? _lastInterfaceId;
-    private long _lastRx;
-    private long _lastTx;
+    private readonly Dictionary<string, (PerformanceCounter Rx, PerformanceCounter Tx)> _perfCounters = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, (long Rx, long Tx)> _lastBytes = new(StringComparer.OrdinalIgnoreCase);
+    private bool _countersPrimed;
     private long _lastTimestamp;
     private double _downloadMbps;
     private double _uploadMbps;
@@ -46,6 +46,35 @@ public sealed class NetworkService : INetworkService
     public NetworkService(ILogger<NetworkService> logger)
     {
         _logger = logger;
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        SampleThroughput();
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        try
+        {
+            while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false))
+            {
+                SampleThroughput();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Host is stopping.
+        }
+    }
+
+    public override void Dispose()
+    {
+        foreach (var pair in _perfCounters.Values)
+        {
+            pair.Rx.Dispose();
+            pair.Tx.Dispose();
+        }
+
+        _perfCounters.Clear();
+        base.Dispose();
     }
 
     public Task<NetworkInfo> GetNetworkAsync(CancellationToken cancellationToken = default)
@@ -87,26 +116,7 @@ public sealed class NetworkService : INetworkService
             double upload;
             lock (_lock)
             {
-                var now = Stopwatch.GetTimestamp();
-                var id = nic.Id;
-                if (_lastTimestamp > 0 && _lastInterfaceId == id)
-                {
-                    var elapsed = (now - _lastTimestamp) / (double)Stopwatch.Frequency;
-                    if (elapsed > 0.05)
-                    {
-                        var rxDelta = stats.BytesReceived - _lastRx;
-                        var txDelta = stats.BytesSent - _lastTx;
-                        if (rxDelta < 0) rxDelta = 0;
-                        if (txDelta < 0) txDelta = 0;
-                        _downloadMbps = rxDelta * 8d / elapsed / 1_000_000d;
-                        _uploadMbps = txDelta * 8d / elapsed / 1_000_000d;
-                    }
-                }
-
-                _lastInterfaceId = id;
-                _lastRx = stats.BytesReceived;
-                _lastTx = stats.BytesSent;
-                _lastTimestamp = now;
+                SampleThroughputUnlocked();
                 download = Math.Round(_downloadMbps, 2);
                 upload = Math.Round(_uploadMbps, 2);
             }
@@ -154,6 +164,146 @@ public sealed class NetworkService : INetworkService
         {
             _logger.LogWarning(ex, "Failed to collect network info");
             return new Sample();
+        }
+    }
+
+    private void SampleThroughput()
+    {
+        lock (_lock)
+        {
+            SampleThroughputUnlocked();
+        }
+    }
+
+    private void SampleThroughputUnlocked()
+    {
+        var now = Stopwatch.GetTimestamp();
+        var elapsed = _lastTimestamp > 0 ? (now - _lastTimestamp) / (double)Stopwatch.Frequency : 0;
+        if (elapsed > 0 && elapsed < 0.2)
+        {
+            return;
+        }
+
+        EnsurePerfCountersUnlocked();
+        var (deltaRx, deltaTx) = ReadDeltaMbps(elapsed);
+        var (perfRx, perfTx) = ReadPerfMbps();
+        _downloadMbps = Math.Max(0, Math.Max(deltaRx, perfRx));
+        _uploadMbps = Math.Max(0, Math.Max(deltaTx, perfTx));
+        _lastTimestamp = now;
+    }
+
+    private (double Rx, double Tx) ReadDeltaMbps(double elapsed)
+    {
+        var current = new Dictionary<string, (long Rx, long Tx)>(StringComparer.OrdinalIgnoreCase);
+        foreach (var nic in ActiveInterfaces())
+        {
+            current[nic.Id] = ReadBytes(nic);
+        }
+
+        double rxMbps = 0;
+        double txMbps = 0;
+        if (elapsed > 0.05)
+        {
+            long rxDelta = 0;
+            long txDelta = 0;
+            foreach (var (id, bytes) in current)
+            {
+                if (_lastBytes.TryGetValue(id, out var previous))
+                {
+                    rxDelta += Math.Max(0, bytes.Rx - previous.Rx);
+                    txDelta += Math.Max(0, bytes.Tx - previous.Tx);
+                }
+            }
+
+            rxMbps = rxDelta * 8d / elapsed / 1_000_000d;
+            txMbps = txDelta * 8d / elapsed / 1_000_000d;
+        }
+
+        _lastBytes.Clear();
+        foreach (var pair in current)
+        {
+            _lastBytes[pair.Key] = pair.Value;
+        }
+
+        return (rxMbps, txMbps);
+    }
+
+    private (double Rx, double Tx) ReadPerfMbps()
+    {
+        if (_perfCounters.Count == 0)
+        {
+            return (0, 0);
+        }
+
+        double rx = 0;
+        double tx = 0;
+        foreach (var pair in _perfCounters.Values)
+        {
+            try
+            {
+                rx += pair.Rx.NextValue();
+                tx += pair.Tx.NextValue();
+            }
+            catch
+            {
+                // Adapter may have disappeared.
+            }
+        }
+
+        return (rx * 8d / 1_000_000d, tx * 8d / 1_000_000d);
+    }
+
+    private void EnsurePerfCountersUnlocked()
+    {
+        if (_countersPrimed)
+        {
+            return;
+        }
+
+        _countersPrimed = true;
+        try
+        {
+            var category = new PerformanceCounterCategory("Network Interface");
+            foreach (var instance in category.GetInstanceNames())
+            {
+                if (instance.Contains("Loopback", StringComparison.OrdinalIgnoreCase)
+                    || instance.Contains("_Total", StringComparison.OrdinalIgnoreCase)
+                    || instance.Contains("isatap", StringComparison.OrdinalIgnoreCase)
+                    || instance.Contains("Teredo", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var rx = new PerformanceCounter("Network Interface", "Bytes Received/sec", instance, readOnly: true);
+                var tx = new PerformanceCounter("Network Interface", "Bytes Sent/sec", instance, readOnly: true);
+                rx.NextValue();
+                tx.NextValue();
+                _perfCounters[instance] = (rx, tx);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Network performance counters are unavailable");
+        }
+    }
+
+    private static IEnumerable<NetworkInterface> ActiveInterfaces()
+        => NetworkInterface.GetAllNetworkInterfaces()
+            .Where(n => n.OperationalStatus == OperationalStatus.Up
+                        && n.NetworkInterfaceType != NetworkInterfaceType.Loopback
+                        && n.NetworkInterfaceType != NetworkInterfaceType.Tunnel);
+
+    private static (long Rx, long Tx) ReadBytes(NetworkInterface nic)
+    {
+        try
+        {
+            var stats = nic.GetIPv4Statistics();
+            return (stats.BytesReceived, stats.BytesSent);
+        }
+        catch
+        {
+            var stats = nic.GetIPStatistics();
+            return (stats.BytesReceived, stats.BytesSent);
         }
     }
 

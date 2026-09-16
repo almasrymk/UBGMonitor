@@ -1,3 +1,5 @@
+using System.Windows.Media;
+
 namespace ClientAgent.UI.Models;
 
 public sealed class ProcessItem
@@ -15,4 +17,6 @@ public sealed class ProcessItem
     public double Percent { get; init; }
 
     public string DisplayValue { get; init; } = string.Empty;
+
+    public ImageSource? Icon { get; init; }
 }

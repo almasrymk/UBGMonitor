@@ -42,7 +42,9 @@ try
     builder.Services.AddSingleton<HardwareMonitorReader>();
     builder.Services.AddSingleton<IHardwareService, HardwareService>();
     builder.Services.AddSingleton<ISensorsService, SensorsService>();
-    builder.Services.AddSingleton<INetworkService, NetworkService>();
+    builder.Services.AddSingleton<NetworkService>();
+    builder.Services.AddSingleton<INetworkService>(sp => sp.GetRequiredService<NetworkService>());
+    builder.Services.AddHostedService(sp => sp.GetRequiredService<NetworkService>());
     builder.Services.AddSingleton<ISystemInfoService, SystemInfoService>();
     builder.Services.AddSingleton<IMonitoringEventBus, MonitoringEventBus>();
     builder.Services.AddSingleton<IEventPublisher, EventPublisher>();

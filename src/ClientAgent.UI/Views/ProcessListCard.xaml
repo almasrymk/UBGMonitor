@@ -31,11 +31,13 @@
                                 <ColumnDefinition Width="52"/>
                                 <ColumnDefinition Width="56"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0"
-                                       Text="{Binding Rank}"
-                                       Foreground="#AAAAAA"
-                                       FontSize="11"
-                                       VerticalAlignment="Center"/>
+                            <Image Grid.Column="0"
+                                   Source="{Binding Icon}"
+                                   Width="16"
+                                   Height="16"
+                                   Margin="0,0,2,0"
+                                   VerticalAlignment="Center"
+                                   RenderOptions.BitmapScalingMode="HighQuality"/>
                             <TextBlock Grid.Column="1"
                                        Text="{Binding Name}"
                                        FontSize="12"

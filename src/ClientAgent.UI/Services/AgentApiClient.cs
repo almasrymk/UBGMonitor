@@ -107,7 +107,8 @@ public sealed class AgentApiClient
                 Percent = sortBy == ProcessSortBy.Cpu
                     ? Math.Clamp(dto.Value, 0, 100)
                     : max <= 0 ? 0 : dto.Value / max * 100,
-                DisplayValue = FormatDisplayValue(dto.Value, dto.Unit)
+                DisplayValue = FormatDisplayValue(dto.Value, dto.Unit),
+                Icon = ProcessIconCache.Get(dto.Pid, dto.Name)
             }).ToList();
             return TopProcessesQueryResult.Ok(items);
         }

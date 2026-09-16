@@ -134,7 +134,7 @@
                                     <controls:CircularProgressControl Value="{Binding Ram.UsagePercent}"
                                                                       ProgressBrush="{Binding Ram.UsagePercent, Converter={StaticResource PercentToBrushConverter}}"
                                                                       Width="90" Height="90"/>
-                                    <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                                    <StackPanel Grid.Column="1" Margin="28,0,0,0">
                                         <TextBlock Foreground="#AAAAAA" FontSize="12" Text="{Binding Ram.UsagePercent, StringFormat=Usage: {0:0}%}"/>
                                         <TextBlock Foreground="#AAAAAA" FontSize="12" Text="{Binding Ram.TotalGb, StringFormat=Total: {0:0.0} GB}"/>
                                         <TextBlock Foreground="#AAAAAA" FontSize="12" Text="{Binding Ram.UsedGb, StringFormat=Used: {0:0.0} GB}"/>
@@ -158,37 +158,39 @@
                     <DockPanel LastChildFill="False">
                         <Grid DockPanel.Dock="Top" Height="200">
                             <DockPanel>
-                                <TextBlock DockPanel.Dock="Top" Text="Network" FontSize="16" FontWeight="Bold" Foreground="{StaticResource AccentYellowBrush}"/>
+                                <TextBlock DockPanel.Dock="Top" Text="Internet &amp; Network" FontSize="16" FontWeight="Bold" Foreground="#E0E0E0"/>
                                 <controls:SparklineControl DockPanel.Dock="Bottom" Height="28" Margin="0,8,0,0"
-                                                           Values="{Binding Network.History}" Stroke="{StaticResource AccentYellowBrush}"/>
-                                <StackPanel Margin="0,6,0,0">
-                                    <TextBlock Text="{Binding Network.StatusLine}" Foreground="#CCCCCC" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,6"/>
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel Grid.Column="0">
-                                            <TextBlock Foreground="#AAAAAA" FontSize="11" Text="{Binding Network.IpAddress, StringFormat=Local IP: {0}}"/>
-                                            <TextBlock Foreground="#AAAAAA" FontSize="11" Text="{Binding Network.PublicIp, StringFormat=Public IP: {0}}"/>
-                                            <TextBlock Foreground="#AAAAAA" FontSize="11" Text="{Binding Network.Gateway, StringFormat=Gateway: {0}}"/>
-                                            <TextBlock Foreground="#AAAAAA" FontSize="11" Text="{Binding Network.Download, StringFormat=Download: {0}}"/>
-                                            <TextBlock Foreground="#AAAAAA" FontSize="11" Text="{Binding Network.TotalRx, StringFormat=Total RX: {0}}"/>
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="1">
-                                            <TextBlock Foreground="#AAAAAA" FontSize="11" Text="{Binding Network.MacAddress, StringFormat=MAC: {0}}"/>
-                                            <TextBlock Foreground="#AAAAAA" FontSize="11" Text="{Binding Network.Dns, StringFormat=DNS: {0}}" TextWrapping="Wrap"/>
-                                            <TextBlock Foreground="#AAAAAA" FontSize="11" Text="{Binding Network.Upload, StringFormat=Upload: {0}}"/>
-                                            <TextBlock Foreground="#AAAAAA" FontSize="11" Text="{Binding Network.TotalTx, StringFormat=Total TX: {0}}"/>
-                                        </StackPanel>
-                                    </Grid>
-                                    <TextBlock Margin="0,4,0,0" Foreground="#AAAAAA" FontSize="11">
-                                        <Run Text="Ping:"/>
-                                        <Run Text="{Binding Network.Ping, Mode=OneWay}"/>
-                                        <Run Text=" | Packet Loss:"/>
-                                        <Run Text="{Binding Network.PacketLoss, Mode=OneWay}"/>
-                                    </TextBlock>
-                                </StackPanel>
+                                                           Values="{Binding Network.History}" Stroke="{StaticResource AccentBlueBrush}"/>
+                                <Grid Margin="0,4,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <controls:GaugeControl Grid.Column="0"
+                                                           Width="168" Height="132"
+                                                           Value="{Binding Network.DownloadMbps}"
+                                                           Maximum="{Binding Network.GaugeMaximum}"
+                                                           Unit="Mbps"
+                                                           Subtitle="{Binding Network.ThroughputText}"
+                                                           NeedleBrush="White"
+                                                           VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Margin="28,8,0,0" VerticalAlignment="Center">
+                                        <TextBlock Foreground="#AAAAAA" FontSize="12" Margin="0,0,0,4"
+                                                   Text="{Binding Network.PublicIp, StringFormat=Public IP: {0}}"/>
+                                        <TextBlock Foreground="#AAAAAA" FontSize="12" Margin="0,0,0,4"
+                                                   Text="{Binding Network.IpAddress, StringFormat=Local IP: {0}}"/>
+                                        <TextBlock Foreground="#AAAAAA" FontSize="12" Margin="0,0,0,4"
+                                                   Text="{Binding Network.Gateway, StringFormat=Gateway: {0}}"/>
+                                        <TextBlock Foreground="#AAAAAA" FontSize="12" Margin="0,0,0,4"
+                                                   Text="{Binding Network.Dns, StringFormat=DNS: {0}}" TextWrapping="Wrap"/>
+                                        <TextBlock Foreground="#AAAAAA" FontSize="12">
+                                            <Run Text="Ping:"/>
+                                            <Run Text="{Binding Network.Ping, Mode=OneWay}"/>
+                                            <Run Text=" | Loss:"/>
+                                            <Run Text="{Binding Network.PacketLoss, Mode=OneWay}"/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Grid>
                             </DockPanel>
                         </Grid>
                         <Border DockPanel.Dock="Top" Height="1" Background="#3A3A4D"/>
@@ -196,7 +198,7 @@
                                                VerticalAlignment="Top"
                                                Title="Top 5 by Network"
                                                SortBy="{x:Static enums:ProcessSortBy.Network}"
-                                               AccentColor="{StaticResource ProcessBarNetworkBrush}"
+                                               AccentColor="White"
                                                DataContext="{Binding TopNetworkCard}"/>
                     </DockPanel>
                 </Border>

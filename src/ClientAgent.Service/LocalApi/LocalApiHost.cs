@@ -98,7 +98,7 @@ public sealed class LocalApiHost : BackgroundService
             Results.Ok(await _rootProvider.GetRequiredService<ISystemInfoService>().GetRamAsync(ct)));
 
         app.MapGet(ApiRoutes.Network, async (CancellationToken ct) =>
-            Results.Ok(await _rootProvider.GetRequiredService<INetworkService>().GetNetworkAsync(ct)));
+            Results.Ok(await _rootProvider.GetRequiredService<ISystemInfoService>().GetNetworkAsync(ct)));
 
         app.MapGet(ApiRoutes.DiskPartitions, async (CancellationToken ct) =>
             Results.Ok(await _rootProvider.GetRequiredService<ISystemInfoService>().GetPartitionsAsync(ct)));
