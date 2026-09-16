@@ -5,8 +5,22 @@
              xmlns:enums="clr-namespace:ClientAgent.UI.Enums"
              xmlns:views="clr-namespace:ClientAgent.UI.Views">
     <UserControl.Resources>
-        <SolidColorBrush x:Key="NetworkIdentityBrush" Color="#4FC3F7"/>
-        <SolidColorBrush x:Key="MacAddressBrush" Color="#2196F3"/>
+        <SolidColorBrush x:Key="MacAddressBrush" Color="#64B5F6"/>
+        <SolidColorBrush x:Key="ValueYellowBrush" Color="#FFD54F"/>
+        <SolidColorBrush x:Key="ValuePurpleBrush" Color="#BA68C8"/>
+        <Style x:Key="CopyHintToolTip" TargetType="ToolTip">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="HasDropShadow" Value="True"/>
+        </Style>
+        <ToolTip x:Key="ClickToCopyHint" x:Shared="False" Style="{StaticResource CopyHintToolTip}">
+            <TextBlock Text="Click to copy" Foreground="Black" FontWeight="Bold" FontSize="12"/>
+        </ToolTip>
         <DataTemplate x:Key="InfoRowTemplate">
             <Grid Margin="0,0,0,6">
                 <Grid.ColumnDefinitions>
@@ -15,21 +29,27 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" Text="{Binding Label}" Foreground="#9A9AA5" Margin="0,0,16,0"/>
-                <TextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap">
+                <TextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap"
+                           MouseLeftButtonUp="CopyInfoRow_OnMouseLeftButtonUp">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
-                            <Setter Property="Foreground" Value="#E0E0E0"/>
+                            <Setter Property="Foreground" Value="#F0F0F0"/>
+                            <Setter Property="Cursor" Value="Arrow"/>
                             <Style.Triggers>
+                                <DataTrigger Binding="{Binding CanCopy}" Value="True">
+                                    <Setter Property="Cursor" Value="Hand"/>
+                                    <Setter Property="ToolTip" Value="{StaticResource ClickToCopyHint}"/>
+                                </DataTrigger>
                                 <DataTrigger Binding="{Binding IsHighlighted}" Value="True">
-                                    <Setter Property="Foreground" Value="{StaticResource NetworkIdentityBrush}"/>
+                                    <Setter Property="Foreground" Value="{StaticResource MacAddressBrush}"/>
                                     <Setter Property="FontWeight" Value="SemiBold"/>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding IsOsHighlighted}" Value="True">
-                                    <Setter Property="Foreground" Value="{StaticResource ProcessBarNetworkBrush}"/>
+                                    <Setter Property="Foreground" Value="{StaticResource ValuePurpleBrush}"/>
                                     <Setter Property="FontWeight" Value="SemiBold"/>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding IsMacHighlighted}" Value="True">
-                                    <Setter Property="Foreground" Value="{StaticResource AccentYellowBrush}"/>
+                                    <Setter Property="Foreground" Value="{StaticResource ValueYellowBrush}"/>
                                     <Setter Property="FontWeight" Value="SemiBold"/>
                                 </DataTrigger>
                             </Style.Triggers>
@@ -47,13 +67,19 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" Text="{Binding Label}" Foreground="#9A9AA5" Margin="0,0,16,0"/>
-                <TextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap">
+                <TextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap"
+                           MouseLeftButtonUp="CopyInfoRow_OnMouseLeftButtonUp">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
-                            <Setter Property="Foreground" Value="#E0E0E0"/>
+                            <Setter Property="Foreground" Value="#F0F0F0"/>
+                            <Setter Property="Cursor" Value="Arrow"/>
                             <Style.Triggers>
+                                <DataTrigger Binding="{Binding CanCopy}" Value="True">
+                                    <Setter Property="Cursor" Value="Hand"/>
+                                    <Setter Property="ToolTip" Value="{StaticResource ClickToCopyHint}"/>
+                                </DataTrigger>
                                 <DataTrigger Binding="{Binding IsHighlighted}" Value="True">
-                                    <Setter Property="Foreground" Value="{StaticResource NetworkIdentityBrush}"/>
+                                    <Setter Property="Foreground" Value="{StaticResource MacAddressBrush}"/>
                                     <Setter Property="FontWeight" Value="SemiBold"/>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding IsMacHighlighted}" Value="True">
@@ -175,10 +201,20 @@
                                                            NeedleBrush="White"
                                                            VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Margin="28,8,0,0" VerticalAlignment="Center">
-                                        <TextBlock Foreground="#AAAAAA" FontSize="12" Margin="0,0,0,4"
-                                                   Text="{Binding Network.PublicIp, StringFormat=Public IP: {0}}"/>
-                                        <TextBlock Foreground="#AAAAAA" FontSize="12" Margin="0,0,0,4"
-                                                   Text="{Binding Network.IpAddress, StringFormat=Local IP: {0}}"/>
+                                        <TextBlock FontSize="12" Margin="0,0,0,4" Cursor="Hand"
+                                                   ToolTip="{StaticResource ClickToCopyHint}"
+                                                   Tag="PublicIp"
+                                                   MouseLeftButtonUp="CopyNetworkValue_OnMouseLeftButtonUp">
+                                            <Run Text="Public IP: " Foreground="#AAAAAA"/>
+                                            <Run Text="{Binding Network.PublicIp, Mode=OneWay}" Foreground="{StaticResource MacAddressBrush}" FontWeight="SemiBold"/>
+                                        </TextBlock>
+                                        <TextBlock FontSize="12" Margin="0,0,0,4" Cursor="Hand"
+                                                   ToolTip="{StaticResource ClickToCopyHint}"
+                                                   Tag="LocalIp"
+                                                   MouseLeftButtonUp="CopyNetworkValue_OnMouseLeftButtonUp">
+                                            <Run Text="Local IP: " Foreground="#AAAAAA"/>
+                                            <Run Text="{Binding Network.IpAddress, Mode=OneWay}" Foreground="{StaticResource MacAddressBrush}" FontWeight="SemiBold"/>
+                                        </TextBlock>
                                         <TextBlock Foreground="#AAAAAA" FontSize="12" Margin="0,0,0,4"
                                                    Text="{Binding Network.Gateway, StringFormat=Gateway: {0}}"/>
                                         <TextBlock Foreground="#AAAAAA" FontSize="12" Margin="0,0,0,4"
@@ -219,7 +255,12 @@
                     <Border Grid.Row="0" Style="{StaticResource CardBorder}" Margin="0,0,0,10">
                         <DockPanel>
                             <TextBlock DockPanel.Dock="Top" Text="Disk Status" FontSize="16" FontWeight="Bold" Foreground="{StaticResource AccentRedBrush}" Margin="0,0,0,8"/>
-                            <DataGrid ItemsSource="{Binding Disk.Partitions}" HorizontalScrollBarVisibility="Auto">
+                            <DataGrid ItemsSource="{Binding Disk.Partitions}"
+                                      SelectedItem="{Binding Disk.SelectedPartition}"
+                                      Cursor="Hand"
+                                      HorizontalScrollBarVisibility="Auto"
+                                      MouseDoubleClick="DiskPartitions_OnMouseDoubleClick"
+                                      MouseLeave="DiskPartitions_OnMouseLeave">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Drive" Binding="{Binding Drive}" Width="55"/>
                                     <DataGridTextColumn Header="Label" Binding="{Binding Label}" Width="80"/>

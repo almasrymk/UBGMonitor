@@ -1,7 +1,9 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using ClientAgent.UI.Enums;
+using ClientAgent.UI.ViewModels;
 
 namespace ClientAgent.UI.Views;
 
@@ -37,5 +39,41 @@ public partial class ProcessListCard : UserControl
     {
         get => (ProcessSortBy)GetValue(SortByProperty);
         set => SetValue(SortByProperty, value);
+    }
+
+    private void Processes_OnMouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (FindParent<ListBoxItem>(e.OriginalSource as DependencyObject) is null)
+        {
+            return;
+        }
+
+        if (DataContext is ProcessListCardViewModel vm)
+        {
+            vm.OpenSelectedProcessCommand.Execute(null);
+        }
+    }
+
+    private void Processes_OnMouseLeave(object sender, MouseEventArgs e)
+    {
+        if (DataContext is ProcessListCardViewModel vm)
+        {
+            vm.SelectedItem = null;
+        }
+    }
+
+    private static T? FindParent<T>(DependencyObject? child) where T : DependencyObject
+    {
+        while (child is not null)
+        {
+            if (child is T match)
+            {
+                return match;
+            }
+
+            child = VisualTreeHelper.GetParent(child);
+        }
+
+        return null;
     }
 }

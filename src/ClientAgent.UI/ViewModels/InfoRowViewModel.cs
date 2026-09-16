@@ -1,4 +1,6 @@
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using ClientAgent.UI.Enums;
 
 namespace ClientAgent.UI.ViewModels;
@@ -17,6 +19,14 @@ public sealed partial class InfoRowViewModel : ObservableObject
 
     [ObservableProperty] private SensorHealth _health = SensorHealth.Ok;
 
+    [ObservableProperty] private bool _isHighlighted;
+
+    [ObservableProperty] private bool _isOsHighlighted;
+
+    [ObservableProperty] private bool _isMacHighlighted;
+
+    [ObservableProperty] private bool _canCopy;
+
     public void Set(
         string value,
         SensorHealth health = SensorHealth.Ok,
@@ -29,11 +39,28 @@ public sealed partial class InfoRowViewModel : ObservableObject
         IsHighlighted = isHighlighted;
         IsOsHighlighted = isOsHighlighted;
         IsMacHighlighted = isMacHighlighted;
+        CanCopy = (isHighlighted || isOsHighlighted || isMacHighlighted)
+            && !string.Equals(Value, "-", StringComparison.Ordinal);
     }
 
-    [ObservableProperty] private bool _isHighlighted;
+    [RelayCommand]
+    private void Copy() => TryCopy();
 
-    [ObservableProperty] private bool _isOsHighlighted;
+    public bool TryCopy()
+    {
+        if (!CanCopy)
+        {
+            return false;
+        }
 
-    [ObservableProperty] private bool _isMacHighlighted;
+        try
+        {
+            Clipboard.SetText(Value);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 }

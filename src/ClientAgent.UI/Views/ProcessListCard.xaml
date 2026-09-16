@@ -16,14 +16,50 @@
                        FontWeight="Bold"
                        Foreground="{Binding AccentColor, ElementName=Root}"
                        Margin="0,8,0,8"/>
-            <ItemsControl ItemsSource="{Binding Items}"
-                          DockPanel.Dock="Top"
-                          VerticalAlignment="Top"
-                          ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                <ItemsControl.ItemTemplate>
+            <ListBox ItemsSource="{Binding Items}"
+                     SelectedItem="{Binding SelectedItem}"
+                     DockPanel.Dock="Top"
+                     VerticalAlignment="Top"
+                     BorderThickness="0"
+                     Background="Transparent"
+                     Padding="0"
+                     Cursor="Hand"
+                     ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     MouseDoubleClick="Processes_OnMouseDoubleClick"
+                     MouseLeave="Processes_OnMouseLeave">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="Padding" Value="4,4"/>
+                        <Setter Property="Margin" Value="0,0,0,2"/>
+                        <Setter Property="Cursor" Value="Hand"/>
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListBoxItem">
+                                    <Border x:Name="Bd"
+                                            Background="Transparent"
+                                            CornerRadius="4"
+                                            Padding="{TemplateBinding Padding}">
+                                        <ContentPresenter/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="#333338"/>
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="#2F4A38"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <Grid Margin="0,0,0,6">
+                        <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="18"/>
                                 <ColumnDefinition Width="*"/>
@@ -70,8 +106,8 @@
                             </ProgressBar>
                         </Grid>
                     </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+                </ListBox.ItemTemplate>
+            </ListBox>
         </DockPanel>
         <TextBlock Text="{Binding ErrorMessage}"
                    Foreground="#AAAAAA"

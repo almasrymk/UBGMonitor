@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using ClientAgent.UI.Enums;
 using ClientAgent.UI.Models;
 using ClientAgent.UI.Services;
@@ -21,6 +22,8 @@ public sealed partial class ProcessListCardViewModel : ObservableObject, IDispos
     [ObservableProperty] private Brush _accentColor = Brushes.Gray;
 
     public ObservableCollection<ProcessItem> Items { get; } = [];
+
+    [ObservableProperty] private ProcessItem? _selectedItem;
 
     public bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);
 
@@ -61,6 +64,7 @@ public sealed partial class ProcessListCardViewModel : ObservableObject, IDispos
                 return;
             }
 
+            var selectedPid = SelectedItem?.Pid;
             Items.Clear();
             if (result.Error is not null)
             {
@@ -75,6 +79,11 @@ public sealed partial class ProcessListCardViewModel : ObservableObject, IDispos
                 Items.Add(item);
             }
 
+            if (selectedPid is int pid)
+            {
+                SelectedItem = Items.FirstOrDefault(item => item.Pid == pid);
+            }
+
             OnPropertyChanged(nameof(HasError));
         }
         catch (Exception ex)
@@ -86,6 +95,7 @@ public sealed partial class ProcessListCardViewModel : ObservableObject, IDispos
             }
 
             Items.Clear();
+            SelectedItem = null;
             ErrorMessage = $"Error: {ex.Message}";
             OnPropertyChanged(nameof(HasError));
         }
@@ -105,6 +115,36 @@ public sealed partial class ProcessListCardViewModel : ObservableObject, IDispos
         _disposed = true;
         _cts.Cancel();
         _cts.Dispose();
+    }
+
+    [RelayCommand]
+    private void OpenSelectedProcess()
+    {
+        if (SelectedItem is null)
+        {
+            return;
+        }
+
+        try
+        {
+            using var process = Process.GetProcessById(SelectedItem.Pid);
+            var path = process.MainModule?.FileName;
+            if (string.IsNullOrWhiteSpace(path) || !System.IO.File.Exists(path))
+            {
+                return;
+            }
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "explorer.exe",
+                Arguments = "/select,\"" + path.Replace("\"", string.Empty) + "\"",
+                UseShellExecute = true
+            });
+        }
+        catch
+        {
+            // Some system processes cannot expose a path to open.
+        }
     }
 
     private async Task RunAsync()
