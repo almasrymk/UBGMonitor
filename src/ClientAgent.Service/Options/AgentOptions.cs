@@ -7,6 +7,4 @@ public sealed class AgentOptions
     public string AgentId { get; set; } = string.Empty;
 
     public string Version { get; set; } = "1.0.0";
-
-    public int HeartbeatIntervalSeconds { get; set; } = 60;
 }

@@ -51,7 +51,11 @@ public sealed class LocalConfigCache : ILocalConfigCache
                 var loaded = JsonSerializer.Deserialize<AgentRuntimeConfig>(json, JsonOptions);
                 if (loaded is not null)
                 {
-                    _current = loaded;
+                    _current = UpgradeLegacySample(loaded);
+                    if (!ReferenceEquals(_current, loaded))
+                    {
+                        await SaveUnlockedAsync(_current, cancellationToken);
+                    }
                 }
             }
             else
@@ -118,27 +122,59 @@ public sealed class LocalConfigCache : ILocalConfigCache
             [
                 new MonitorPoint
                 {
-                    MonitorPointId = "camera-01",
-                    DisplayName = "Entrance Camera",
+                    MonitorPointId = "main-point-a",
+                    DisplayName = "Main Point A",
                     Type = MonitorPointType.Device,
                     Address = "127.0.0.1",
-                    Location = "Gate",
-                    Model = "IP Camera",
+                    Location = "HQ",
+                    Model = "Server",
                     Enabled = true,
                     IntervalSeconds = 15
                 },
                 new MonitorPoint
                 {
-                    MonitorPointId = "barrier-01",
-                    DisplayName = "Barrier Gate",
+                    MonitorPointId = "regional-point-b",
+                    DisplayName = "Regional Point B",
                     Type = MonitorPointType.Device,
                     Address = "127.0.0.1",
-                    Location = "Gate",
-                    Model = "Barrier",
+                    Location = "Region",
+                    Model = "Satellite",
+                    Enabled = true,
+                    IntervalSeconds = 15
+                },
+                new MonitorPoint
+                {
+                    MonitorPointId = "remote-point-c",
+                    DisplayName = "Remote Point C",
+                    Type = MonitorPointType.Device,
+                    Address = "192.0.2.1",
+                    Location = "Remote",
+                    Model = "IP Camera",
                     Enabled = true,
                     IntervalSeconds = 15
                 }
             ]
+        };
+    }
+
+    private AgentRuntimeConfig UpgradeLegacySample(AgentRuntimeConfig loaded)
+    {
+        var ids = loaded.MonitorPoints.Select(p => p.MonitorPointId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (!ids.Contains("camera-01") || ids.Count > 2)
+        {
+            return loaded;
+        }
+
+        var upgraded = CreateDefault();
+        return new AgentRuntimeConfig
+        {
+            ConfigVersion = loaded.ConfigVersion,
+            AgentId = string.IsNullOrWhiteSpace(loaded.AgentId) ? upgraded.AgentId : loaded.AgentId,
+            CpuCriticalThreshold = loaded.CpuCriticalThreshold,
+            RamCriticalThreshold = loaded.RamCriticalThreshold,
+            DiskCriticalThreshold = loaded.DiskCriticalThreshold,
+            DatabaseConnectionString = loaded.DatabaseConnectionString,
+            MonitorPoints = upgraded.MonitorPoints
         };
     }
 }

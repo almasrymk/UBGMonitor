@@ -41,9 +41,9 @@
         <converters:HealthToBrushConverter x:Key="HealthToBrushConverter"/>
         <converters:ByteSizeConverter x:Key="ByteSizeConverter"/>
         <converters:HealthPercentToBrushConverter x:Key="HealthPercentToBrushConverter"/>
-        <converters:PauseLabelConverter x:Key="PauseLabelConverter"/>
         <converters:SensorHealthToBrushConverter x:Key="SensorHealthToBrushConverter"/>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis"/>
 
         <Style TargetType="Window">
             <Setter Property="FontFamily" Value="Segoe UI"/>
@@ -66,9 +66,9 @@
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Width" Value="46"/>
-            <Setter Property="Height" Value="50"/>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Width" Value="40"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="FontSize" Value="12"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -128,6 +128,59 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <Style x:Key="NavButton" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="#AAAAAA"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="4,8"/>
+            <Setter Property="Margin" Value="4,3"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Bd"
+                                Background="Transparent"
+                                BorderBrush="Transparent"
+                                BorderThickness="0,0,0,2"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                                <TextBlock x:Name="Icon"
+                                           Text="{TemplateBinding Tag}"
+                                           FontFamily="Segoe MDL2 Assets"
+                                           FontSize="22"
+                                           Foreground="#AAAAAA"
+                                           HorizontalAlignment="Center"
+                                           Margin="0,0,0,6"/>
+                                <TextBlock x:Name="Label"
+                                           Text="{TemplateBinding Content}"
+                                           FontSize="10"
+                                           Foreground="#AAAAAA"
+                                           TextAlignment="Center"
+                                           TextWrapping="Wrap"
+                                           HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#333338"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentGreenBrush}"/>
+                                <Setter TargetName="Icon" Property="Foreground" Value="{StaticResource AccentGreenBrush}"/>
+                                <Setter TargetName="Label" Property="Foreground" Value="{StaticResource AccentGreenBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Icon" Property="Foreground" Value="White"/>
+                                <Setter TargetName="Label" Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <Style x:Key="FooterButton" TargetType="Button">
             <Setter Property="Background" Value="#3C3C3C"/>
             <Setter Property="Foreground" Value="White"/>
@@ -136,6 +189,36 @@
             <Setter Property="Margin" Value="6,0,0,0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="FontFamily" Value="Segoe UI"/>
+        </Style>
+        <Style x:Key="MonitorPointNavButton" TargetType="RepeatButton">
+            <Setter Property="Width" Value="24"/>
+            <Setter Property="Height" Value="52"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#333338"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Delay" Value="400"/>
+            <Setter Property="Interval" Value="80"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#44444A"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#1B1B20"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
         <Style TargetType="ProgressBar">
             <Setter Property="Height" Value="8"/>

@@ -1,6 +1,4 @@
 using System.Collections.ObjectModel;
-using System.IO;
-using System.Text.Json;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -26,20 +24,18 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private string _madkhalStatus = "Unknown";
     [ObservableProperty] private string _centralStatus = "Unknown";
     [ObservableProperty] private string _uptime = "-";
-    [ObservableProperty] private long _pendingCount;
-    [ObservableProperty] private string _pendingText = "0 events";
-    [ObservableProperty] private string _sentTodayText = "0";
+    [ObservableProperty] private string _cpuModelText = "CPU: -";
+    [ObservableProperty] private string _ramTotalText = "RAM: -";
+    [ObservableProperty] private string _osVersionText = "OS: -";
     [ObservableProperty] private string _agentVersion = "Agent v1.0.0";
     [ObservableProperty] private string _configVersionText = "Config v1";
     [ObservableProperty] private string _lastSyncText = "Last Sync: never";
-    [ObservableProperty] private string _lastUpdate = "Never";
-    [ObservableProperty] private string _refreshIntervalText = "3s";
-    [ObservableProperty] private string _connectionMessage = string.Empty;
-    [ObservableProperty] private bool _isPaused;
     [ObservableProperty] private int _criticalCount;
     [ObservableProperty] private int _warningCount;
     [ObservableProperty] private int _healthyCount;
     [ObservableProperty] private int _unknownCount;
+    [ObservableProperty] private bool _hasCurrentIssues;
+    [ObservableProperty] private string? _selectedMonitorPointId;
 
     public CpuViewModel Cpu { get; } = new();
     public RamViewModel Ram { get; } = new();
@@ -51,8 +47,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public ProcessListCardViewModel TopNetworkCard { get; }
     public ObservableCollection<ProcessInfo> TopCpuProcesses { get; } = [];
     public ObservableCollection<ProcessInfo> TopRamProcesses { get; } = [];
-    public ObservableCollection<MonitorPoint> MonitorPoints { get; } = [];
-    public ObservableCollection<MonitoringEvent> RecentEvents { get; } = [];
+    public ObservableCollection<MonitorPointStatusDto> MonitorPoints { get; } = [];
+    public ObservableCollection<DashboardMonitorPointViewModel> DashboardMonitorPoints { get; } = [];
+    public ObservableCollection<AgentIssueDto> CurrentIssues { get; } = [];
 
     public MainViewModel() : this(new AgentApiClient())
     {
@@ -75,20 +72,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private void SelectTab(string tab)
     {
         SelectedTab = tab;
-        if (tab == "Config")
-        {
-            // Settings button also lands here.
-        }
     }
 
     [RelayCommand]
     private async Task RefreshAsync()
     {
-        if (IsPaused)
-        {
-            return;
-        }
-
         try
         {
             var status = await _client.GetStatusAsync();
@@ -106,13 +94,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             MadkhalStatus = status.MadkhalConnected ? "Connected" : "Offline";
             CentralStatus = status.CentralConnected ? "Connected" : "Offline";
             Uptime = FormatUptime(status.Uptime);
-            PendingCount = status.PendingCount;
-            PendingText = $"{status.PendingCount:N0} events";
-            SentTodayText = $"{status.SentToday:N0}";
             AgentVersion = $"Agent v{status.Version}";
             ConfigVersionText = $"Config v{status.ConfigVersion}";
             LastSyncText = $"Last Sync: {FormatSync(status.LastSyncUtc)}";
-            ConnectionMessage = string.Empty;
 
             var snapshot = await _client.GetSnapshotAsync();
             if (snapshot is null)
@@ -125,11 +109,17 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             }
 
             var points = await _client.GetMonitorPointsAsync() ?? [];
-            var events = await _client.GetRecentEventsAsync(100) ?? [];
             Replace(MonitorPoints, points);
-            Replace(RecentEvents, events);
-            UpdatePointSummary(points, events);
-            LastUpdate = DateTime.Now.ToString("HH:mm:ss");
+            Replace(DashboardMonitorPoints, OrderDashboardPoints(points).Select(DashboardMonitorPointViewModel.From));
+            ApplyMonitorPointSelection(SelectedMonitorPointId);
+            UpdatePointSummary(points);
+
+            var issues = await _client.GetIssuesAsync();
+            if (issues is not null)
+            {
+                Replace(CurrentIssues, issues);
+                HasCurrentIssues = issues.Count > 0;
+            }
         }
         catch (Exception)
         {
@@ -143,6 +133,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Ram.Update(snapshot.Ram);
         Disk.Update(snapshot.Partitions, snapshot.PhysicalDisks);
         Network.Update(snapshot.Network);
+        UpdateHardwareStatus(snapshot.Cpu, snapshot.Ram, snapshot.Os);
         Replace(TopRamProcesses, snapshot.TopProcesses.Take(5));
         Replace(TopCpuProcesses, snapshot.TopProcesses.OrderByDescending(p => p.CpuPercent).ThenByDescending(p => p.RamMB).Take(5));
     }
@@ -159,6 +150,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (ram is not null) Ram.Update(ram);
         if (partitions is not null) Disk.Update(partitions, []);
         if (network is not null) Network.Update(network);
+        UpdateHardwareStatus(cpu, ram, await _client.GetOsAsync());
         if (processes is not null)
         {
             Replace(TopRamProcesses, processes.Take(5));
@@ -170,57 +162,88 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         AgentStatus = "Service Not Responding";
         ServiceRunning = false;
-        ConnectionMessage = "Service Not Responding";
     }
 
     [RelayCommand]
-    private void Pause()
+    private void SelectMonitorPoint(DashboardMonitorPointViewModel? point)
     {
-        IsPaused = !IsPaused;
-    }
-
-    [RelayCommand]
-    private async Task ExportAsync()
-    {
-        try
+        if (point is null)
         {
-            var snapshot = await _client.GetSnapshotAsync();
-            if (snapshot is null)
-            {
-                return;
-            }
-
-            var path = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
-                $"ubg-monitor-{DateTime.Now:yyyyMMdd-HHmmss}.json");
-            await File.WriteAllTextAsync(path, JsonSerializer.Serialize(snapshot, new JsonSerializerOptions { WriteIndented = true }));
+            return;
         }
-        catch
+
+        ApplyMonitorPointSelection(point.MonitorPointId);
+    }
+
+    private void ApplyMonitorPointSelection(string? id)
+    {
+        if (string.IsNullOrWhiteSpace(id) || DashboardMonitorPoints.All(p => p.MonitorPointId != id))
         {
-            ConnectionMessage = "Export failed";
+            id = DashboardMonitorPoints.FirstOrDefault()?.MonitorPointId;
+        }
+
+        SelectedMonitorPointId = id;
+        foreach (var item in DashboardMonitorPoints)
+        {
+            item.IsSelected = item.MonitorPointId == id;
         }
     }
-
-    [RelayCommand]
-    private void OpenSettings() => SelectedTab = "Config";
 
     [RelayCommand]
     private void ViewAllMonitorPoints() => SelectedTab = "Monitor Points";
 
-    private void UpdatePointSummary(IReadOnlyList<MonitorPoint> points, IReadOnlyList<MonitoringEvent> events)
+    private void UpdateHardwareStatus(CpuInfo? cpu, RamInfo? ram, OsInfo? os)
     {
-        var latest = events
-            .GroupBy(e => e.MonitorPointId)
-            .ToDictionary(g => g.Key, g => g.OrderByDescending(e => e.TimestampUtc).First().Severity, StringComparer.OrdinalIgnoreCase);
+        CpuModelText = $"CPU: {(string.IsNullOrWhiteSpace(cpu?.Model) ? "-" : cpu.Model)}";
+        RamTotalText = ram is null ? "RAM: -" : $"RAM: {ram.TotalGB:0.0} GB";
+        var osName = os?.Name;
+        var osVersion = os?.Version;
+        OsVersionText = string.IsNullOrWhiteSpace(osName) && string.IsNullOrWhiteSpace(osVersion)
+            ? "OS: -"
+            : $"OS: {osName} {osVersion}".Trim();
+    }
 
-        CriticalCount = points.Count(p => latest.TryGetValue(p.MonitorPointId, out var s) && s == Severity.Critical);
-        WarningCount = points.Count(p => latest.TryGetValue(p.MonitorPointId, out var s) && s == Severity.Warning);
-        HealthyCount = points.Count(p => !latest.TryGetValue(p.MonitorPointId, out var s) || s == Severity.Info);
-        UnknownCount = Math.Max(0, points.Count - CriticalCount - WarningCount - HealthyCount);
-        if (points.Count == 0)
+    private static IEnumerable<MonitorPointStatusDto> OrderDashboardPoints(IEnumerable<MonitorPointStatusDto> points)
+        => points
+            .OrderBy(DashboardRank)
+            .ThenBy(p => p.DisplayName, StringComparer.OrdinalIgnoreCase);
+
+    private static int DashboardRank(MonitorPointStatusDto point)
+    {
+        if (!point.Enabled || IsStopped(point.Status))
         {
-            HealthyCount = 0;
+            return 0;
         }
+
+        if (point.IsUp == false || IsOffline(point.Status))
+        {
+            return 0;
+        }
+
+        if (string.Equals(point.Status, "Unknown", StringComparison.OrdinalIgnoreCase))
+        {
+            return 1;
+        }
+
+        return 2;
+    }
+
+    private static bool IsOffline(string status)
+        => ContainsStatus(status, "Critical", "Offline", "Down");
+
+    private static bool IsStopped(string status)
+        => ContainsStatus(status, "Stop", "Stopped", "Disabled");
+
+    private static bool ContainsStatus(string status, params string[] tokens)
+        => tokens.Any(token => status.Contains(token, StringComparison.OrdinalIgnoreCase));
+
+    private void UpdatePointSummary(IReadOnlyList<MonitorPointStatusDto> points)
+    {
+        CriticalCount = points.Count(p => string.Equals(p.Status, "Critical", StringComparison.OrdinalIgnoreCase));
+        WarningCount = points.Count(p => string.Equals(p.Status, "Warning", StringComparison.OrdinalIgnoreCase));
+        HealthyCount = points.Count(p => string.Equals(p.Status, "Healthy", StringComparison.OrdinalIgnoreCase));
+        UnknownCount = points.Count(p => string.Equals(p.Status, "Unknown", StringComparison.OrdinalIgnoreCase)
+                                         || string.IsNullOrWhiteSpace(p.Status));
     }
 
     private static void Replace<T>(ObservableCollection<T> target, IEnumerable<T> items)

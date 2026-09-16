@@ -3,10 +3,10 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="clr-namespace:ClientAgent.UI.Views"
         Title="{Binding WindowTitle}"
-        Width="1400"
-        Height="900"
-        MinWidth="1100"
-        MinHeight="700"
+        Width="1280"
+        Height="780"
+        MinWidth="1000"
+        MinHeight="620"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         ResizeMode="CanResize"
@@ -15,7 +15,7 @@
         UseLayoutRounding="True"
         SnapsToDevicePixels="True">
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="50"
+        <WindowChrome CaptionHeight="36"
                       ResizeBorderThickness="6"
                       GlassFrameThickness="0"
                       CornerRadius="0"
@@ -24,14 +24,16 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="50"/>
-            <RowDefinition Height="35"/>
-            <RowDefinition Height="110"/>
+            <RowDefinition Height="36"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="35"/>
+            <RowDefinition Height="28"/>
         </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="92"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
 
-        <Border Grid.Row="0" Background="{StaticResource SurfaceDarkBrush}">
+        <Border Grid.Row="0" Grid.ColumnSpan="2" Background="{StaticResource SurfaceDarkBrush}">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                     <Button Style="{StaticResource CaptionButton}" Content="─" Click="Minimize_Click"
@@ -41,76 +43,250 @@
                     <Button Style="{StaticResource CloseButton}" Content="✕" Click="Close_Click"
                             WindowChrome.IsHitTestVisibleInChrome="True"/>
                 </StackPanel>
-                <TextBlock Text="{Binding WindowTitle}" FontSize="20" FontWeight="Bold" Foreground="White"
-                           VerticalAlignment="Center" Margin="16,0,0,0"/>
+                <TextBlock Text="{Binding WindowTitle}" FontSize="14" FontWeight="SemiBold" Foreground="White"
+                           VerticalAlignment="Center" Margin="12,0,0,0"/>
             </DockPanel>
         </Border>
 
-        <Border Grid.Row="1" Background="{StaticResource SurfaceDarkBrush}" BorderBrush="{StaticResource BorderColorBrush}" BorderThickness="0,1,0,0">
-            <StackPanel Orientation="Horizontal">
-                <RadioButton Style="{StaticResource TabButton}" Content="Dashboard" GroupName="MainTabs"
+        <Border Grid.Row="1" Grid.Column="0"
+                Background="{StaticResource SurfaceDarkBrush}"
+                BorderBrush="{StaticResource BorderColorBrush}"
+                BorderThickness="0,0,1,0">
+            <StackPanel Margin="0,8,0,8">
+                <RadioButton Style="{StaticResource NavButton}" Content="Dashboard" Tag="&#xE80F;" GroupName="MainTabs"
                              Command="{Binding SelectTabCommand}" CommandParameter="Dashboard"
                              IsChecked="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter=Dashboard, Mode=OneWay}"/>
-                <RadioButton Style="{StaticResource TabButton}" Content="Monitor Points" GroupName="MainTabs"
+                <RadioButton Style="{StaticResource NavButton}" Content="Monitor Points" Tag="&#xE707;" GroupName="MainTabs"
                              Command="{Binding SelectTabCommand}" CommandParameter="Monitor Points"
                              IsChecked="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter=Monitor Points, Mode=OneWay}"/>
-                <RadioButton Style="{StaticResource TabButton}" Content="Events" GroupName="MainTabs"
-                             Command="{Binding SelectTabCommand}" CommandParameter="Events"
-                             IsChecked="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter=Events, Mode=OneWay}"/>
-                <RadioButton Style="{StaticResource TabButton}" Content="Logs" GroupName="MainTabs"
+                <RadioButton Style="{StaticResource NavButton}" Content="Logs" Tag="&#xE8A5;" GroupName="MainTabs"
                              Command="{Binding SelectTabCommand}" CommandParameter="Logs"
                              IsChecked="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter=Logs, Mode=OneWay}"/>
-                <RadioButton Style="{StaticResource TabButton}" Content="Config" GroupName="MainTabs"
+                <RadioButton Style="{StaticResource NavButton}" Content="Config" Tag="&#xE713;" GroupName="MainTabs"
                              Command="{Binding SelectTabCommand}" CommandParameter="Config"
                              IsChecked="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter=Config, Mode=OneWay}"/>
-                <RadioButton Style="{StaticResource TabButton}" Content="Diagnostics" GroupName="MainTabs"
+                <RadioButton Style="{StaticResource NavButton}" Content="Diagnostics" Tag="&#xE90F;" GroupName="MainTabs"
                              Command="{Binding SelectTabCommand}" CommandParameter="Diagnostics"
                              IsChecked="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter=Diagnostics, Mode=OneWay}"/>
-                <RadioButton Style="{StaticResource TabButton}" Content="About" GroupName="MainTabs"
+                <RadioButton Style="{StaticResource NavButton}" Content="About" Tag="&#xE946;" GroupName="MainTabs"
                              Command="{Binding SelectTabCommand}" CommandParameter="About"
                              IsChecked="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter=About, Mode=OneWay}"/>
             </StackPanel>
         </Border>
 
-        <Border Grid.Row="2" Background="{StaticResource SurfaceDarkAltBrush}" CornerRadius="5" Margin="10"
-                BorderBrush="{StaticResource BorderColorBrush}" BorderThickness="1">
-            <Grid Margin="16,8">
+        <Grid Grid.Row="1" Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+        <Border Grid.Row="0"
+                Background="{StaticResource SurfaceDarkAltBrush}"
+                CornerRadius="5"
+                Margin="8"
+                Padding="16,12"
+                BorderBrush="{StaticResource BorderColorBrush}"
+                BorderThickness="1">
+            <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="1.4*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="0.8*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="1.5*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="1.1*"/>
                 </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                    <StackPanel Orientation="Horizontal" Margin="0,2">
-                        <Ellipse Width="8" Height="8" Margin="0,0,8,0" Fill="{Binding ServiceRunning, Converter={StaticResource BoolToStatusBrushConverter}}"/>
-                        <TextBlock Text="{Binding AgentStatus, StringFormat=Service: {0}}"/>
+
+                <StackPanel Grid.Column="0" Margin="0,0,10,0" VerticalAlignment="Top">
+                    <TextBlock Text="Service Status" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Grid Width="36" Height="36" Margin="0,0,10,0">
+                            <Ellipse>
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse">
+                                        <Setter Property="Fill" Value="{StaticResource AccentRedBrush}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ServiceRunning}" Value="True">
+                                                <Setter Property="Fill" Value="{StaticResource AccentGreenBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
+                            <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="White"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="&#xE711;"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ServiceRunning}" Value="True">
+                                                <Setter Property="Text" Value="&#xE73E;"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock FontSize="16" FontWeight="SemiBold"
+                                       Text="{Binding AgentStatus, StringFormat=Service: {0}}"/>
+                            <TextBlock FontSize="12" Foreground="#9A9AA5" Margin="0,2,0,0"
+                                       Text="{Binding AgentVersion}"/>
+                        </StackPanel>
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,2">
-                        <Ellipse Width="8" Height="8" Margin="0,0,8,0" Fill="{Binding MadkhalConnected, Converter={StaticResource BoolToStatusBrushConverter}}"/>
-                        <TextBlock Text="{Binding MadkhalStatus, StringFormat=Madkhal: {0}}"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,2">
-                        <Ellipse Width="8" Height="8" Margin="0,0,8,0" Fill="{Binding CentralConnected, Converter={StaticResource BoolToStatusBrushConverter}}"/>
-                        <TextBlock Text="{Binding CentralStatus, StringFormat=Central: {0}}"/>
-                    </StackPanel>
+                    <Border Background="{StaticResource SurfaceDarkBrush}" CornerRadius="5" Padding="10,8" Margin="0,10,0,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontSize="12" FontWeight="SemiBold"
+                                       Text="{Binding Uptime, StringFormat=Uptime: {0}}"/>
+                            <TextBlock FontSize="12" FontWeight="SemiBold" Margin="20,0,0,0"
+                                       Text="{Binding Ram.TotalGb, StringFormat=RAM: {0:0.0} GB}"/>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
-                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding Uptime, StringFormat=Uptime: {0}}" Margin="0,4"/>
-                    <TextBlock Text="{Binding PendingText, StringFormat=Pending: {0}}" Margin="0,4"/>
-                </StackPanel>
-                <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding SentTodayText, StringFormat=Sent Today: {0}}" Margin="0,4"/>
-                    <TextBlock Text="{Binding AgentVersion}" Margin="0,4"/>
-                </StackPanel>
-                <StackPanel Grid.Column="3" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding ConfigVersionText}" Margin="0,4"/>
-                    <TextBlock Text="{Binding LastSyncText}" Margin="0,4"/>
-                </StackPanel>
+
+                <Rectangle Grid.Column="1" Width="1" Fill="{StaticResource BorderColorBrush}" Margin="10,2"/>
+
+                <DockPanel Grid.Column="2" Margin="10,0" VerticalAlignment="Top">
+                    <TextBlock DockPanel.Dock="Top" Text="Monitor Points" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <RepeatButton Grid.Column="0"
+                                      Style="{StaticResource MonitorPointNavButton}"
+                                      Click="MonitorPointsScrollLeft"
+                                      VerticalAlignment="Center">
+                            <Path Width="10" Height="16" Stretch="Uniform" Fill="White"
+                                  Data="M 12,0 L 0,8 L 12,16 Z"/>
+                        </RepeatButton>
+                        <ScrollViewer x:Name="MonitorPointsSlider"
+                                      Grid.Column="1"
+                                      Margin="4,0"
+                                      HorizontalScrollBarVisibility="Hidden"
+                                      VerticalScrollBarVisibility="Disabled"
+                                      CanContentScroll="False"
+                                      PanningMode="HorizontalOnly"
+                                      PreviewMouseWheel="MonitorPointsSlider_PreviewMouseWheel">
+                            <ItemsControl ItemsSource="{Binding DashboardMonitorPoints}" HorizontalAlignment="Left">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Command="{Binding DataContext.SelectMonitorPointCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding}"
+                                                Cursor="Hand"
+                                                Width="104"
+                                                Margin="0,0,8,0"
+                                                Padding="6,4"
+                                                HorizontalContentAlignment="Center">
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <Border x:Name="Chip"
+                                                                        Background="Transparent"
+                                                                        BorderBrush="Transparent"
+                                                                        BorderThickness="1.5"
+                                                                        CornerRadius="8"
+                                                                        Padding="{TemplateBinding Padding}">
+                                                                    <ContentPresenter HorizontalAlignment="Center"/>
+                                                                </Border>
+                                                                <ControlTemplate.Triggers>
+                                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                                        <Setter TargetName="Chip" Property="Background" Value="#2E2E32"/>
+                                                                    </Trigger>
+                                                                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                        <Setter TargetName="Chip" Property="Background" Value="#333338"/>
+                                                                        <Setter TargetName="Chip" Property="BorderBrush" Value="{StaticResource AccentGreenBrush}"/>
+                                                                    </DataTrigger>
+                                                                </ControlTemplate.Triggers>
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </Style>
+                                            </Button.Style>
+                                            <StackPanel>
+                                                <Grid Width="52" Height="52" HorizontalAlignment="Center">
+                                                    <Ellipse Width="52" Height="52" Opacity="0.22"
+                                                             Fill="{Binding Status, Converter={StaticResource HealthToBrushConverter}}"/>
+                                                    <Ellipse Width="46" Height="46" Fill="#1B1B20"
+                                                             Stroke="{Binding Status, Converter={StaticResource HealthToBrushConverter}}"
+                                                             StrokeThickness="2"/>
+                                                    <TextBlock Text="{Binding Glyph}" FontFamily="Segoe MDL2 Assets" FontSize="20"
+                                                               Foreground="#F2F2F2" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Grid>
+                                                <TextBlock Text="{Binding DisplayName}" FontSize="11" Margin="0,4,0,3"
+                                                           HorizontalAlignment="Center" TextAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="White"/>
+                                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                    <Setter Property="Foreground" Value="{StaticResource AccentGreenBrush}"/>
+                                                                    <Setter Property="FontWeight" Value="Bold"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                                <Ellipse Width="8" Height="8" HorizontalAlignment="Center"
+                                                         Fill="{Binding Status, Converter={StaticResource HealthToBrushConverter}}"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                        <RepeatButton Grid.Column="2"
+                                      Style="{StaticResource MonitorPointNavButton}"
+                                      Click="MonitorPointsScrollRight"
+                                      VerticalAlignment="Center">
+                            <Path Width="10" Height="16" Stretch="Uniform" Fill="White"
+                                  Data="M 0,0 L 12,8 L 0,16 Z"/>
+                        </RepeatButton>
+                    </Grid>
+                </DockPanel>
+
+                <Rectangle Grid.Column="3" Width="1" Fill="{StaticResource BorderColorBrush}" Margin="10,2"/>
+
+                <DockPanel Grid.Column="4" Margin="10,0,0,0" VerticalAlignment="Top">
+                    <TextBlock DockPanel.Dock="Top" Text="Messages &amp; Issues Board" FontSize="14"
+                               FontWeight="SemiBold" Foreground="{StaticResource AccentOrangeBrush}" Margin="0,0,0,10"/>
+                    <Border Background="#241C12" CornerRadius="6" Padding="10,8" BorderBrush="#5A3B16" BorderThickness="1">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Top" Text="Current Issues" FontSize="12" FontWeight="SemiBold"
+                                       Foreground="#E0E0E0" Margin="0,0,0,4"/>
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="52">
+                                <Grid>
+                                    <TextBlock Text="لا توجد تنبيهات حالياً." Foreground="#9A9AA5" FontSize="12"
+                                               FlowDirection="RightToLeft" TextAlignment="Right"
+                                               Visibility="{Binding HasCurrentIssues, Converter={StaticResource InverseBoolToVis}}"/>
+                                    <ItemsControl ItemsSource="{Binding CurrentIssues}"
+                                                  Visibility="{Binding HasCurrentIssues, Converter={StaticResource BoolToVis}}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Message}" FontSize="11" Foreground="#F0F0F0"
+                                                           TextWrapping="Wrap" Margin="0,0,0,4"
+                                                           FlowDirection="RightToLeft" TextAlignment="Right"/>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
+                            </ScrollViewer>
+                        </DockPanel>
+                    </Border>
+                </DockPanel>
             </Grid>
         </Border>
 
-        <Grid Grid.Row="3">
+        <Grid Grid.Row="1">
             <views:DashboardView>
                 <views:DashboardView.Style>
                     <Style TargetType="views:DashboardView">
@@ -135,18 +311,6 @@
                     </Style>
                 </views:MonitorPointsView.Style>
             </views:MonitorPointsView>
-            <views:EventsView>
-                <views:EventsView.Style>
-                    <Style TargetType="views:EventsView">
-                        <Setter Property="Visibility" Value="Collapsed"/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding SelectedTab}" Value="Events">
-                                <Setter Property="Visibility" Value="Visible"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </views:EventsView.Style>
-            </views:EventsView>
             <views:SimpleTabView TitleText="Logs" BodyText="Local agent logs are written to C:\ProgramData\ClientAgent\logs">
                 <views:SimpleTabView.Style>
                     <Style TargetType="views:SimpleTabView">
@@ -171,7 +335,7 @@
                     </Style>
                 </views:SimpleTabView.Style>
             </views:SimpleTabView>
-            <views:SimpleTabView TitleText="Diagnostics" BodyText="Local API: http://127.0.0.1:5050  |  Outbox: C:\ProgramData\ClientAgent\outbox.db">
+            <views:SimpleTabView TitleText="Diagnostics" BodyText="Local API: http://127.0.0.1:5050">
                 <views:SimpleTabView.Style>
                     <Style TargetType="views:SimpleTabView">
                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -196,20 +360,11 @@
                 </views:SimpleTabView.Style>
             </views:SimpleTabView>
         </Grid>
+        </Grid>
 
-        <Border Grid.Row="4" Background="{StaticResource SurfaceDarkBrush}" BorderBrush="{StaticResource BorderColorBrush}" BorderThickness="0,1,0,0">
-            <DockPanel Margin="12,0">
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Style="{StaticResource FooterButton}" Content="{Binding IsPaused, Converter={StaticResource PauseLabelConverter}}" Command="{Binding PauseCommand}"/>
-                    <Button Style="{StaticResource FooterButton}" Content="Export" Command="{Binding ExportCommand}"/>
-                    <Button Style="{StaticResource FooterButton}" Content="Settings" Command="{Binding OpenSettingsCommand}"/>
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Foreground="#AAAAAA" Text="{Binding LastUpdate, StringFormat=Last Update: {0}}"/>
-                    <TextBlock Foreground="#AAAAAA" Margin="16,0,0,0" Text="{Binding RefreshIntervalText, StringFormat=Refresh: {0}}"/>
-                    <TextBlock Foreground="#F44336" Margin="16,0,0,0" Text="{Binding ConnectionMessage}"/>
-                </StackPanel>
-            </DockPanel>
-        </Border>
+        <Border Grid.Row="2" Grid.ColumnSpan="2"
+                Background="{StaticResource SurfaceDarkAltBrush}"
+                BorderBrush="{StaticResource BorderColorBrush}"
+                BorderThickness="0,1,0,0"/>
     </Grid>
 </Window>

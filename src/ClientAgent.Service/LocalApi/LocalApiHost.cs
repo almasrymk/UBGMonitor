@@ -1,7 +1,7 @@
 using ClientAgent.Service.Connectivity;
 using ClientAgent.Service.Config;
+using ClientAgent.Service.Monitoring;
 using ClientAgent.Service.Options;
-using ClientAgent.Service.Outbox;
 using ClientAgent.Service.Runtime;
 using ClientAgent.Service.SystemInfo;
 using ClientAgent.Shared.Constants;
@@ -65,13 +65,10 @@ public sealed class LocalApiHost : BackgroundService
 
     private void MapEndpoints(WebApplication app)
     {
-        app.MapGet(ApiRoutes.Status, async (CancellationToken ct) =>
+        app.MapGet(ApiRoutes.Status, () =>
         {
             var identity = _rootProvider.GetRequiredService<IAgentIdentity>();
-            var outbox = _rootProvider.GetRequiredService<IOutboxRepository>();
             var connectivity = _rootProvider.GetRequiredService<IConnectivityTracker>();
-            var pending = await outbox.GetPendingCountAsync(ct);
-            var sentToday = await outbox.GetSentCountSinceAsync(DateTime.UtcNow.Date, ct);
             var cache = _rootProvider.GetRequiredService<ILocalConfigCache>();
             return Results.Ok(new
             {
@@ -79,10 +76,8 @@ public sealed class LocalApiHost : BackgroundService
                 Status = "Running",
                 identity.Version,
                 identity.Uptime,
-                PendingCount = pending,
                 MadkhalConnected = connectivity.MadkhalAvailable,
                 CentralConnected = connectivity.CentralAvailable,
-                SentToday = sentToday,
                 ConfigVersion = cache.GetConfigVersion(),
                 LastSyncUtc = cache.GetLastSyncUtc()
             });
@@ -145,12 +140,33 @@ public sealed class LocalApiHost : BackgroundService
         });
 
         app.MapGet(ApiRoutes.MonitorPoints, async (CancellationToken ct) =>
-            Results.Ok((await _rootProvider.GetRequiredService<ILocalConfigCache>().GetConfigAsync(ct)).MonitorPoints));
+        {
+            var config = await _rootProvider.GetRequiredService<ILocalConfigCache>().GetConfigAsync(ct);
+            var health = _rootProvider.GetRequiredService<IMonitorHealthStore>();
+            var items = config.MonitorPoints.Select(point =>
+            {
+                var isUp = health.GetIsUp(point.MonitorPointId);
+                var status = isUp is null ? "Unknown" : isUp.Value ? "Healthy" : "Critical";
+                return new MonitorPointStatusDto
+                {
+                    MonitorPointId = point.MonitorPointId,
+                    DisplayName = point.DisplayName,
+                    Type = point.Type,
+                    Address = point.Address,
+                    Location = point.Location,
+                    Model = point.Model,
+                    Enabled = point.Enabled,
+                    IntervalSeconds = point.IntervalSeconds,
+                    IsUp = isUp,
+                    Status = point.Enabled ? status : "Unknown",
+                    LastCheckedUtc = health.GetLastCheckedUtc(point.MonitorPointId),
+                    Message = health.GetMessage(point.MonitorPointId)
+                };
+            }).ToList();
+            return Results.Ok(items);
+        });
 
-        app.MapGet(ApiRoutes.EventsRecent, async (int? count, CancellationToken ct) =>
-            Results.Ok(await _rootProvider.GetRequiredService<IOutboxRepository>().GetRecentAsync(count ?? 100, ct)));
-
-        app.MapGet(ApiRoutes.EventsPending, async (CancellationToken ct) =>
-            Results.Ok(new { Pending = await _rootProvider.GetRequiredService<IOutboxRepository>().GetPendingCountAsync(ct) }));
+        app.MapGet(ApiRoutes.Issues, () =>
+            Results.Ok(_rootProvider.GetRequiredService<IMonitorHealthStore>().GetIssues()));
     }
 }

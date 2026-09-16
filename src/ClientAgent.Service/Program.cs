@@ -1,11 +1,8 @@
 using ClientAgent.Service.Config;
 using ClientAgent.Service.Connectivity;
-using ClientAgent.Service.Dispatch;
 using ClientAgent.Service.LocalApi;
-using ClientAgent.Service.Messaging;
 using ClientAgent.Service.Monitoring;
 using ClientAgent.Service.Options;
-using ClientAgent.Service.Outbox;
 using ClientAgent.Service.Runtime;
 using ClientAgent.Service.SystemInfo;
 using Serilog;
@@ -32,13 +29,11 @@ try
                 rollingInterval: RollingInterval.Day));
 
     builder.Services.Configure<AgentOptions>(builder.Configuration.GetSection(AgentOptions.SectionName));
-    builder.Services.Configure<OutboxOptions>(builder.Configuration.GetSection(OutboxOptions.SectionName));
     builder.Services.Configure<RoutingOptions>(builder.Configuration.GetSection(RoutingOptions.SectionName));
     builder.Services.Configure<LocalApiOptions>(builder.Configuration.GetSection(LocalApiOptions.SectionName));
     builder.Services.Configure<MonitoringOptions>(builder.Configuration.GetSection(MonitoringOptions.SectionName));
 
     builder.Services.AddSingleton<IAgentIdentity, AgentIdentity>();
-    builder.Services.AddSingleton<IOutboxRepository, OutboxRepository>();
     builder.Services.AddSingleton<HardwareMonitorReader>();
     builder.Services.AddSingleton<IHardwareService, HardwareService>();
     builder.Services.AddSingleton<ISensorsService, SensorsService>();
@@ -46,27 +41,20 @@ try
     builder.Services.AddSingleton<INetworkService>(sp => sp.GetRequiredService<NetworkService>());
     builder.Services.AddHostedService(sp => sp.GetRequiredService<NetworkService>());
     builder.Services.AddSingleton<ISystemInfoService, SystemInfoService>();
-    builder.Services.AddSingleton<IMonitoringEventBus, MonitoringEventBus>();
-    builder.Services.AddSingleton<IEventPublisher, EventPublisher>();
     builder.Services.AddSingleton<IConnectivityTracker, ConnectivityTracker>();
-    builder.Services.AddSingleton<IRoutingService, RoutingService>();
+    builder.Services.AddSingleton<IMonitorHealthStore, MonitorHealthStore>();
     builder.Services.AddSingleton<ILocalConfigCache, LocalConfigCache>();
-    builder.Services.AddSingleton<EventDispatcher>();
     builder.Services.AddHttpClient("madkhal");
     builder.Services.AddHttpClient("central");
-    builder.Services.AddHttpClient<IEventSender, EventSender>();
 
     builder.Services.AddHostedService<ResourceMonitor>();
     builder.Services.AddHostedService<DeviceMonitor>();
     builder.Services.AddHostedService<DatabaseMonitor>();
     builder.Services.AddHostedService<MadkhalMonitor>();
-    builder.Services.AddHostedService<HeartbeatMonitor>();
-    builder.Services.AddHostedService<DispatcherWorker>();
     builder.Services.AddHostedService<ConfigPuller>();
     builder.Services.AddHostedService<LocalApiHost>();
 
     var host = builder.Build();
-    await host.Services.GetRequiredService<IOutboxRepository>().InitializeDatabaseAsync();
     _ = host.Services.GetRequiredService<ISensorsService>();
     await host.RunAsync();
 }

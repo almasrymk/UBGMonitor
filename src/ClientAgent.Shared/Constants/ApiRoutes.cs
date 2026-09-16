@@ -15,7 +15,6 @@ public static class ApiRoutes
     public const string Sensors = "/api/sensors";
     public const string ProcessesTop = "/api/processes/top";
     public const string MonitorPoints = "/api/monitorpoints";
-    public const string EventsRecent = "/api/events/recent";
-    public const string EventsPending = "/api/events/pending";
+    public const string Issues = "/api/issues";
     public const string AgentConfig = "/api/agent/config";
 }

@@ -10,7 +10,7 @@
 
 | المشروع | الدور |
 |---|---|
-| `ClientAgent.Service` | Worker Service + Outbox + Monitoring + Local API |
+| `ClientAgent.Service` | Worker Service + Monitoring + Local API |
 | `ClientAgent.UI` | لوحة WPF |
 | `ClientAgent.Shared` | Models / DTOs / API routes |
 | `ClientAgent.Tests` | اختبارات xUnit |
@@ -69,9 +69,7 @@ sc.exe delete ClientAgentService
 
 ## المعمارية
 
-- كل موديول مراقبة ينتج `MonitoringEvent` مستقل.
-- الكتابة إلى SQLite Outbox قبل الإرسال (`INSERT OR IGNORE` على `EventId` لضمان Idempotency).
-- التوجيه: Madkhal إن كان متاحاً، ثم Central API، وإلا يبقى الحدث محلياً.
+- موديولات المراقبة تفحص الموارد والأجهزة وقاعدة البيانات وMadkhal وتكتب النتيجة في السجلات.
 - سحب الإعدادات من Central كل 5 دقائق مع كاش محلي JSON.
 - Local API على `http://127.0.0.1:5050` مع CORS لـ localhost فقط.
 
@@ -79,8 +77,7 @@ sc.exe delete ClientAgentService
 
 `src/ClientAgent.Service/appsettings.json`
 
-- `Agent` — معرف الوكيل والإصدار وHeartbeat
-- `Outbox` — مسار SQLite وحجم الدفعة
+- `Agent` — معرف الوكيل والإصدار
 - `Routing` — عناوين Madkhal و Central
 - `LocalApi:Port` — الافتراضي 5050
 - `Monitoring` — فترات الفحص
@@ -100,8 +97,6 @@ sc.exe delete ClientAgentService
 - `GET /api/os`
 - `GET /api/processes/top?count=10`
 - `GET /api/monitorpoints`
-- `GET /api/events/recent?count=100`
-- `GET /api/events/pending`
 
 ## ملاحظات أمنية
 

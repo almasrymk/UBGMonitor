@@ -181,11 +181,11 @@ public sealed class AgentApiClient
     public Task<SensorsInfo?> GetSensorsAsync(CancellationToken ct = default)
         => GetAsync<SensorsInfo>(ApiRoutes.Sensors, "sensors", ct);
 
-    public Task<List<MonitorPoint>?> GetMonitorPointsAsync(CancellationToken ct = default)
-        => GetAsync<List<MonitorPoint>>(ApiRoutes.MonitorPoints, "monitorpoints", ct);
+    public Task<List<MonitorPointStatusDto>?> GetMonitorPointsAsync(CancellationToken ct = default)
+        => GetAsync<List<MonitorPointStatusDto>>(ApiRoutes.MonitorPoints, "monitorpoints", ct);
 
-    public Task<List<MonitoringEvent>?> GetRecentEventsAsync(int count, CancellationToken ct = default)
-        => GetAsync<List<MonitoringEvent>>($"{ApiRoutes.EventsRecent}?count={count}", "events", ct);
+    public Task<List<AgentIssueDto>?> GetIssuesAsync(CancellationToken ct = default)
+        => GetAsync<List<AgentIssueDto>>(ApiRoutes.Issues, "issues", ct);
 
     private async Task<T?> GetAsync<T>(string route, string name, CancellationToken ct)
         where T : class

@@ -1,7 +1,6 @@
 using System.Net.NetworkInformation;
 using ClientAgent.Service.Config;
 using ClientAgent.Service.Options;
-using ClientAgent.Service.Runtime;
 using ClientAgent.Shared.Models;
 using Microsoft.Extensions.Options;
 
@@ -9,23 +8,20 @@ namespace ClientAgent.Service.Monitoring;
 
 public sealed class DeviceMonitor : BackgroundService, IMonitoringModule
 {
-    private readonly IEventPublisher _publisher;
-    private readonly IAgentIdentity _identity;
     private readonly ILocalConfigCache _configCache;
+    private readonly IMonitorHealthStore _health;
     private readonly ILogger<DeviceMonitor> _logger;
     private readonly int _intervalSeconds;
-    private readonly Dictionary<string, EventStatus> _lastStatus = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, bool> _lastUp = new(StringComparer.OrdinalIgnoreCase);
 
     public DeviceMonitor(
-        IEventPublisher publisher,
-        IAgentIdentity identity,
         ILocalConfigCache configCache,
+        IMonitorHealthStore health,
         IOptions<MonitoringOptions> options,
         ILogger<DeviceMonitor> logger)
     {
-        _publisher = publisher;
-        _identity = identity;
         _configCache = configCache;
+        _health = health;
         _logger = logger;
         _intervalSeconds = Math.Max(5, options.Value.DeviceIntervalSeconds);
     }
@@ -57,55 +53,34 @@ public sealed class DeviceMonitor : BackgroundService, IMonitoringModule
         foreach (var device in devices)
         {
             var up = await PingAsync(device.Address, cancellationToken);
-            var status = up ? EventStatus.Up : EventStatus.Down;
-            _lastStatus.TryGetValue(device.MonitorPointId, out var previous);
+            _lastUp.TryGetValue(device.MonitorPointId, out var previousUp);
 
-            if (previous == EventStatus.Down && status == EventStatus.Up)
+            _health.SetPointHealth(device.MonitorPointId, up, up ? "Device is reachable" : "Device is unreachable");
+            if (up)
             {
-                await PublishAsync(device, EventType.Recovery, Severity.Info, EventStatus.Up, "Device recovered", cancellationToken);
+                _health.ClearIssue($"device:{device.MonitorPointId}");
             }
             else
             {
-                await PublishAsync(
-                    device,
-                    EventType.Connectivity,
-                    status == EventStatus.Up ? Severity.Info : Severity.Critical,
-                    status,
-                    status == EventStatus.Up ? "Device is reachable" : "Device is unreachable",
-                    cancellationToken);
+                _health.SetIssue(
+                    $"device:{device.MonitorPointId}",
+                    "Critical",
+                    "Device unreachable",
+                    IssueText.DeviceDown(device.DisplayName),
+                    device.MonitorPointId);
             }
 
-            _lastStatus[device.MonitorPointId] = status;
-        }
-    }
-
-    private async Task PublishAsync(
-        MonitorPoint device,
-        EventType type,
-        Severity severity,
-        EventStatus status,
-        string message,
-        CancellationToken cancellationToken)
-    {
-        await _publisher.PublishAsync(new MonitoringEvent
-        {
-            EventId = Guid.NewGuid(),
-            AgentId = _identity.AgentId,
-            MonitorPointId = device.MonitorPointId,
-            TimestampUtc = DateTime.UtcNow,
-            EventType = type,
-            Severity = severity,
-            Status = status,
-            Message = $"{device.DisplayName}: {message}",
-            Metadata = new Dictionary<string, string>
+            if (previousUp && !up)
             {
-                ["address"] = device.Address,
-                ["model"] = device.Model,
-                ["location"] = device.Location
-            },
-            ConfigVersion = _configCache.GetConfigVersion(),
-            AgentVersion = _identity.Version
-        }, cancellationToken);
+                _logger.LogWarning("Device {Name} ({Address}) is unreachable", device.DisplayName, device.Address);
+            }
+            else if (!previousUp && up && _lastUp.ContainsKey(device.MonitorPointId))
+            {
+                _logger.LogInformation("Device {Name} ({Address}) recovered", device.DisplayName, device.Address);
+            }
+
+            _lastUp[device.MonitorPointId] = up;
+        }
     }
 
     private static async Task<bool> PingAsync(string address, CancellationToken cancellationToken)

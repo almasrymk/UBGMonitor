@@ -1,7 +1,6 @@
 using Microsoft.Data.Sqlite;
 using ClientAgent.Service.Config;
 using ClientAgent.Service.Options;
-using ClientAgent.Service.Runtime;
 using ClientAgent.Shared.Models;
 using Microsoft.Extensions.Options;
 
@@ -9,22 +8,19 @@ namespace ClientAgent.Service.Monitoring;
 
 public sealed class DatabaseMonitor : BackgroundService, IMonitoringModule
 {
-    private readonly IEventPublisher _publisher;
-    private readonly IAgentIdentity _identity;
     private readonly ILocalConfigCache _configCache;
+    private readonly IMonitorHealthStore _health;
     private readonly ILogger<DatabaseMonitor> _logger;
     private readonly int _intervalSeconds;
 
     public DatabaseMonitor(
-        IEventPublisher publisher,
-        IAgentIdentity identity,
         ILocalConfigCache configCache,
+        IMonitorHealthStore health,
         IOptions<MonitoringOptions> options,
         ILogger<DatabaseMonitor> logger)
     {
-        _publisher = publisher;
-        _identity = identity;
         _configCache = configCache;
+        _health = health;
         _logger = logger;
         _intervalSeconds = Math.Max(5, options.Value.DatabaseIntervalSeconds);
     }
@@ -58,19 +54,22 @@ public sealed class DatabaseMonitor : BackgroundService, IMonitoringModule
         }
 
         var up = await CanConnectAsync(connectionString, cancellationToken);
-        await _publisher.PublishAsync(new MonitoringEvent
+        foreach (var point in config.MonitorPoints.Where(p => p.Enabled && p.Type == MonitorPointType.Database))
         {
-            EventId = Guid.NewGuid(),
-            AgentId = _identity.AgentId,
-            MonitorPointId = "local-database",
-            TimestampUtc = DateTime.UtcNow,
-            EventType = EventType.DatabaseStatus,
-            Severity = up ? Severity.Info : Severity.Critical,
-            Status = up ? EventStatus.Up : EventStatus.Down,
-            Message = up ? "Local database is reachable" : "Local database connection failed",
-            ConfigVersion = _configCache.GetConfigVersion(),
-            AgentVersion = _identity.Version
-        }, cancellationToken);
+            _health.SetPointHealth(point.MonitorPointId, up);
+        }
+
+        _health.SetPointHealth("local-database", up);
+        if (up)
+        {
+            _health.ClearIssue("database");
+            _logger.LogDebug("Local database is reachable");
+        }
+        else
+        {
+            _health.SetIssue("database", "Critical", "Database unreachable", IssueText.DatabaseDown(), "local-database");
+            _logger.LogWarning("Local database connection failed");
+        }
     }
 
     private static async Task<bool> CanConnectAsync(string connectionString, CancellationToken cancellationToken)

@@ -1,8 +1,6 @@
 using ClientAgent.Service.Config;
 using ClientAgent.Service.Options;
-using ClientAgent.Service.Runtime;
 using ClientAgent.Service.SystemInfo;
-using ClientAgent.Shared.Models;
 using Microsoft.Extensions.Options;
 
 namespace ClientAgent.Service.Monitoring;
@@ -10,24 +8,21 @@ namespace ClientAgent.Service.Monitoring;
 public sealed class ResourceMonitor : BackgroundService, IMonitoringModule
 {
     private readonly ISystemInfoService _systemInfo;
-    private readonly IEventPublisher _publisher;
-    private readonly IAgentIdentity _identity;
     private readonly ILocalConfigCache _configCache;
+    private readonly IMonitorHealthStore _health;
     private readonly ILogger<ResourceMonitor> _logger;
     private readonly int _intervalSeconds;
 
     public ResourceMonitor(
         ISystemInfoService systemInfo,
-        IEventPublisher publisher,
-        IAgentIdentity identity,
         ILocalConfigCache configCache,
+        IMonitorHealthStore health,
         IOptions<MonitoringOptions> options,
         ILogger<ResourceMonitor> logger)
     {
         _systemInfo = systemInfo;
-        _publisher = publisher;
-        _identity = identity;
         _configCache = configCache;
+        _health = health;
         _logger = logger;
         _intervalSeconds = Math.Max(5, options.Value.ResourceIntervalSeconds);
     }
@@ -58,48 +53,46 @@ public sealed class ResourceMonitor : BackgroundService, IMonitoringModule
 
         if (snapshot.Cpu.UsagePercent >= config.CpuCriticalThreshold)
         {
-            await PublishThresholdAsync("cpu", EventType.ResourceThreshold, snapshot.Cpu.UsagePercent, config.CpuCriticalThreshold, "CPU usage exceeded critical threshold", cancellationToken);
+            _logger.LogWarning("CPU usage {Usage}% exceeded critical threshold {Threshold}%", snapshot.Cpu.UsagePercent, config.CpuCriticalThreshold);
+            _health.SetIssue("cpu", "Critical", "CPU threshold", IssueText.CpuHigh(snapshot.Cpu.UsagePercent), "cpu");
+        }
+        else
+        {
+            _health.ClearIssue("cpu");
         }
 
         if (snapshot.Ram.UsagePercent >= config.RamCriticalThreshold)
         {
-            await PublishThresholdAsync("ram", EventType.ResourceThreshold, snapshot.Ram.UsagePercent, config.RamCriticalThreshold, "RAM usage exceeded critical threshold", cancellationToken);
+            _logger.LogWarning("RAM usage {Usage}% exceeded critical threshold {Threshold}%", snapshot.Ram.UsagePercent, config.RamCriticalThreshold);
+            _health.SetIssue("ram", "Critical", "RAM threshold", IssueText.RamHigh(snapshot.Ram.UsagePercent), "ram");
+        }
+        else
+        {
+            _health.ClearIssue("ram");
         }
 
-        foreach (var partition in snapshot.Partitions.Where(p => p.UsagePercent >= config.DiskCriticalThreshold))
-        {
-            await PublishThresholdAsync(
-                $"disk-{partition.DriveLetter.TrimEnd('\\', ':')}",
-                EventType.ResourceThreshold,
-                partition.UsagePercent,
-                config.DiskCriticalThreshold,
-                $"Disk {partition.DriveLetter} usage exceeded critical threshold",
-                cancellationToken);
-        }
-    }
+        var criticalDrives = snapshot.Partitions
+            .Where(p => p.UsagePercent >= config.DiskCriticalThreshold)
+            .Select(p => p.DriveLetter.TrimEnd('\\', ':'))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-    private Task PublishThresholdAsync(
-        string pointId,
-        EventType type,
-        double measured,
-        double threshold,
-        string message,
-        CancellationToken cancellationToken)
-    {
-        return _publisher.PublishAsync(new MonitoringEvent
+        foreach (var partition in snapshot.Partitions)
         {
-            EventId = Guid.NewGuid(),
-            AgentId = _identity.AgentId,
-            MonitorPointId = pointId,
-            TimestampUtc = DateTime.UtcNow,
-            EventType = type,
-            Severity = Severity.Critical,
-            Status = EventStatus.Critical,
-            MeasuredValue = measured,
-            Threshold = threshold,
-            Message = message,
-            ConfigVersion = _configCache.GetConfigVersion(),
-            AgentVersion = _identity.Version
-        }, cancellationToken);
+            var drive = partition.DriveLetter.TrimEnd('\\', ':');
+            var key = $"disk-{drive}";
+            if (criticalDrives.Contains(drive))
+            {
+                _logger.LogWarning(
+                    "Disk {Drive} usage {Usage}% exceeded critical threshold {Threshold}%",
+                    partition.DriveLetter,
+                    partition.UsagePercent,
+                    config.DiskCriticalThreshold);
+                _health.SetIssue(key, "Critical", "Disk threshold", IssueText.DiskHigh(partition.DriveLetter, partition.UsagePercent), key);
+            }
+            else
+            {
+                _health.ClearIssue(key);
+            }
+        }
     }
 }

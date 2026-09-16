@@ -1,6 +1,6 @@
+using ClientAgent.Service.Config;
 using ClientAgent.Service.Connectivity;
 using ClientAgent.Service.Options;
-using ClientAgent.Service.Runtime;
 using ClientAgent.Shared.Models;
 using Microsoft.Extensions.Options;
 
@@ -9,9 +9,9 @@ namespace ClientAgent.Service.Monitoring;
 public sealed class MadkhalMonitor : BackgroundService, IMonitoringModule
 {
     private readonly HttpClient _httpClient;
-    private readonly IEventPublisher _publisher;
     private readonly IConnectivityTracker _connectivity;
-    private readonly IAgentIdentity _identity;
+    private readonly ILocalConfigCache _configCache;
+    private readonly IMonitorHealthStore _health;
     private readonly RoutingOptions _routing;
     private readonly ILogger<MadkhalMonitor> _logger;
     private readonly int _intervalSeconds;
@@ -19,17 +19,17 @@ public sealed class MadkhalMonitor : BackgroundService, IMonitoringModule
 
     public MadkhalMonitor(
         IHttpClientFactory httpClientFactory,
-        IEventPublisher publisher,
         IConnectivityTracker connectivity,
-        IAgentIdentity identity,
+        ILocalConfigCache configCache,
+        IMonitorHealthStore health,
         IOptions<RoutingOptions> routing,
         IOptions<MonitoringOptions> options,
         ILogger<MadkhalMonitor> logger)
     {
         _httpClient = httpClientFactory.CreateClient("madkhal");
-        _publisher = publisher;
         _connectivity = connectivity;
-        _identity = identity;
+        _configCache = configCache;
+        _health = health;
         _routing = routing.Value;
         _logger = logger;
         _intervalSeconds = Math.Max(5, options.Value.MadkhalIntervalSeconds);
@@ -58,6 +58,22 @@ public sealed class MadkhalMonitor : BackgroundService, IMonitoringModule
     {
         var available = await IsAvailableAsync(cancellationToken);
         _connectivity.SetMadkhal(available);
+        _health.SetPointHealth("madkhal", available);
+
+        var config = await _configCache.GetConfigAsync(cancellationToken);
+        foreach (var point in config.MonitorPoints.Where(p => p.Enabled && p.Type == MonitorPointType.Madkhal))
+        {
+            _health.SetPointHealth(point.MonitorPointId, available);
+        }
+
+        if (available)
+        {
+            _health.ClearIssue("madkhal");
+        }
+        else
+        {
+            _health.SetIssue("madkhal", "Warning", "Madkhal unavailable", IssueText.MadkhalDown(), "madkhal");
+        }
 
         if (_lastAvailable == available)
         {
@@ -65,22 +81,14 @@ public sealed class MadkhalMonitor : BackgroundService, IMonitoringModule
         }
 
         _lastAvailable = available;
-        await _publisher.PublishAsync(new MonitoringEvent
+        if (available)
         {
-            EventId = Guid.NewGuid(),
-            AgentId = _identity.AgentId,
-            MonitorPointId = "madkhal",
-            TimestampUtc = DateTime.UtcNow,
-            EventType = EventType.MadkhalAvailability,
-            Severity = available ? Severity.Info : Severity.Warning,
-            Status = available ? EventStatus.Up : EventStatus.Down,
-            Message = available ? "Madkhal server is available" : "Madkhal server is unavailable",
-            AgentVersion = _identity.Version,
-            Metadata = new Dictionary<string, string>
-            {
-                ["url"] = _routing.MadkhalServerUrl
-            }
-        }, cancellationToken);
+            _logger.LogInformation("Madkhal server is available at {Url}", _routing.MadkhalServerUrl);
+        }
+        else
+        {
+            _logger.LogWarning("Madkhal server is unavailable at {Url}", _routing.MadkhalServerUrl);
+        }
     }
 
     private async Task<bool> IsAvailableAsync(CancellationToken cancellationToken)
