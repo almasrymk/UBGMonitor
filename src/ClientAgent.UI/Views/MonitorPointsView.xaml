@@ -6,13 +6,62 @@
             <TextBlock DockPanel.Dock="Top" Text="Monitor Points" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
             <DataGrid ItemsSource="{Binding MonitorPoints}">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Id" Binding="{Binding MonitorPointId}" Width="140"/>
-                    <DataGridTextColumn Header="Name" Binding="{Binding DisplayName}" Width="*"/>
-                    <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="100"/>
-                    <DataGridTextColumn Header="Address" Binding="{Binding Address}" Width="140"/>
-                    <DataGridTextColumn Header="Location" Binding="{Binding Location}" Width="120"/>
-                    <DataGridTextColumn Header="Model" Binding="{Binding Model}" Width="140"/>
-                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="90"/>
+                    <DataGridTemplateColumn Width="46">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Grid Width="28" Height="28" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Glyph}" FontFamily="Segoe MDL2 Assets"
+                                               FontSize="16" Foreground="#F2F2F2"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Source, ElementName=PointIcon}" Value="{x:Null}">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <Image x:Name="PointIcon" Width="22" Height="22"
+                                           Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Source="{Binding Icon, Converter={StaticResource IconToImageConverter}}">
+                                        <Image.Style>
+                                            <Style TargetType="Image" BasedOn="{StaticResource SiteLogoImage}">
+                                                <Setter Property="Width" Value="22"/>
+                                                <Setter Property="Height" Value="22"/>
+                                                <Setter Property="Margin" Value="0"/>
+                                            </Style>
+                                        </Image.Style>
+                                    </Image>
+                                </Grid>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTextColumn Header="Id" Binding="{Binding MonitorPointId}" Width="72"/>
+                    <DataGridTextColumn Header="Name" Binding="{Binding DisplayName}" Width="2*" MinWidth="220"/>
+                    <DataGridTextColumn Header="Type" Binding="{Binding Type, Converter={StaticResource MonitorPointTypeLabelConverter}}" Width="140"/>
+                    <DataGridTemplateColumn Header="Address" Width="180">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <Image Style="{StaticResource SiteLogoImage}"
+                                           Source="{Binding Icon, Converter={StaticResource IconToImageConverter}}"/>
+                                    <TextBlock Text="{Binding Address}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="90">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                <Setter Property="Foreground" Value="{Binding Status, Converter={StaticResource HealthToBrushConverter}}"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
                     <DataGridCheckBoxColumn Header="Enabled" Binding="{Binding Enabled}" Width="80"/>
                     <DataGridTextColumn Header="Interval" Binding="{Binding IntervalSeconds}" Width="80"/>
                 </DataGrid.Columns>

@@ -146,7 +146,8 @@ public sealed class LocalApiHost : BackgroundService
             var items = config.MonitorPoints.Select(point =>
             {
                 var isUp = health.GetIsUp(point.MonitorPointId);
-                var status = isUp is null ? "Unknown" : isUp.Value ? "Healthy" : "Critical";
+                var status = health.GetStatus(point.MonitorPointId)
+                    ?? (isUp is null ? "Unknown" : isUp.Value ? "Healthy" : "Critical");
                 return new MonitorPointStatusDto
                 {
                     MonitorPointId = point.MonitorPointId,

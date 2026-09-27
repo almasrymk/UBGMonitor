@@ -8,13 +8,21 @@ public sealed class MonitorPointStatusDto
 
     public MonitorPointType Type { get; init; }
 
+    public GarageDeviceKind? DeviceKind { get; init; }
+
+    public string Glyph { get; init; } = "\uE968";
+
     public string Address { get; init; } = string.Empty;
+
+    public string? Icon { get; init; }
 
     public string Location { get; init; } = string.Empty;
 
     public string Model { get; init; } = string.Empty;
 
     public bool Enabled { get; init; } = true;
+
+    public bool ShowInShortcut { get; init; }
 
     public int IntervalSeconds { get; init; }
 

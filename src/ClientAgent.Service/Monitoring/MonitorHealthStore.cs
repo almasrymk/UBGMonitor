@@ -5,9 +5,11 @@ namespace ClientAgent.Service.Monitoring;
 
 public interface IMonitorHealthStore
 {
-    void SetPointHealth(string monitorPointId, bool isUp, string? message = null);
+    void SetPointHealth(string monitorPointId, bool isUp, string? message = null, string? status = null);
 
     bool? GetIsUp(string monitorPointId);
+
+    string? GetStatus(string monitorPointId);
 
     DateTime? GetLastCheckedUtc(string monitorPointId);
 
@@ -25,13 +27,17 @@ public sealed class MonitorHealthStore : IMonitorHealthStore
     private readonly ConcurrentDictionary<string, PointHealth> _points = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, AgentIssueDto> _issues = new(StringComparer.OrdinalIgnoreCase);
 
-    public void SetPointHealth(string monitorPointId, bool isUp, string? message = null)
+    public void SetPointHealth(string monitorPointId, bool isUp, string? message = null, string? status = null)
     {
-        _points[monitorPointId] = new PointHealth(isUp, DateTime.UtcNow, message);
+        var resolved = string.IsNullOrWhiteSpace(status) ? (isUp ? "Healthy" : "Critical") : status;
+        _points[monitorPointId] = new PointHealth(isUp, DateTime.UtcNow, message, resolved);
     }
 
     public bool? GetIsUp(string monitorPointId)
         => _points.TryGetValue(monitorPointId, out var health) ? health.IsUp : null;
+
+    public string? GetStatus(string monitorPointId)
+        => _points.TryGetValue(monitorPointId, out var health) ? health.Status : null;
 
     public DateTime? GetLastCheckedUtc(string monitorPointId)
         => _points.TryGetValue(monitorPointId, out var health) ? health.LastCheckedUtc : null;
@@ -68,5 +74,5 @@ public sealed class MonitorHealthStore : IMonitorHealthStore
     public IReadOnlyList<AgentIssueDto> GetIssues()
         => _issues.Values.OrderByDescending(i => i.TimestampUtc).ToList();
 
-    private sealed record PointHealth(bool IsUp, DateTime LastCheckedUtc, string? Message);
+    private sealed record PointHealth(bool IsUp, DateTime LastCheckedUtc, string? Message, string Status);
 }

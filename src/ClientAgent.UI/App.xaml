@@ -37,6 +37,22 @@
 
         <converters:PercentToBrushConverter x:Key="PercentToBrushConverter"/>
         <converters:EqualsConverter x:Key="EqualsConverter"/>
+        <converters:MonitorPointTypeLabelConverter x:Key="MonitorPointTypeLabelConverter"/>
+        <converters:IconToImageConverter x:Key="IconToImageConverter"/>
+        <Style x:Key="SiteLogoImage" TargetType="Image">
+            <Setter Property="Width" Value="16"/>
+            <Setter Property="Height" Value="16"/>
+            <Setter Property="Margin" Value="0,0,6,0"/>
+            <Setter Property="Stretch" Value="Uniform"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="RenderOptions.BitmapScalingMode" Value="HighQuality"/>
+            <Setter Property="Visibility" Value="Visible"/>
+            <Style.Triggers>
+                <Trigger Property="Source" Value="{x:Null}">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
         <converters:BoolToStatusBrushConverter x:Key="BoolToStatusBrushConverter"/>
         <converters:HealthToBrushConverter x:Key="HealthToBrushConverter"/>
         <converters:ByteSizeConverter x:Key="ByteSizeConverter"/>
@@ -47,24 +63,24 @@
 
         <Style TargetType="Window">
             <Setter Property="FontFamily" Value="Segoe UI"/>
-            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-            <Setter Property="Background" Value="{StaticResource BackgroundDarkBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource BackgroundDarkBrush}"/>
         </Style>
         <Style TargetType="TextBlock">
             <Setter Property="FontFamily" Value="Segoe UI"/>
-            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         </Style>
         <Style x:Key="CardBorder" TargetType="Border">
-            <Setter Property="Background" Value="{StaticResource SurfaceDarkBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceDarkBrush}"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="15"/>
             <Setter Property="Margin" Value="5"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BorderColorBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderColorBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
         </Style>
         <Style x:Key="CaptionButton" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Width" Value="40"/>
             <Setter Property="Height" Value="36"/>

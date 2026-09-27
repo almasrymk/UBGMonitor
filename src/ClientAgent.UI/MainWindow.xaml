@@ -10,7 +10,7 @@
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         ResizeMode="CanResize"
-        Background="{StaticResource BackgroundDarkBrush}"
+        Background="{DynamicResource BackgroundDarkBrush}"
         FontFamily="Segoe UI"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True">
@@ -33,7 +33,7 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Row="0" Grid.ColumnSpan="2" Background="{StaticResource SurfaceDarkBrush}">
+        <Border Grid.Row="0" Grid.ColumnSpan="2" Background="{DynamicResource SurfaceDarkBrush}">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                     <Button Style="{StaticResource CaptionButton}" Content="─" Click="Minimize_Click"
@@ -43,14 +43,14 @@
                     <Button Style="{StaticResource CloseButton}" Content="✕" Click="Close_Click"
                             WindowChrome.IsHitTestVisibleInChrome="True"/>
                 </StackPanel>
-                <TextBlock Text="{Binding WindowTitle}" FontSize="14" FontWeight="SemiBold" Foreground="White"
+                <TextBlock Text="{Binding WindowTitle}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"
                            VerticalAlignment="Center" Margin="12,0,0,0"/>
             </DockPanel>
         </Border>
 
         <Border Grid.Row="1" Grid.Column="0"
-                Background="{StaticResource SurfaceDarkBrush}"
-                BorderBrush="{StaticResource BorderColorBrush}"
+                Background="{DynamicResource SurfaceDarkBrush}"
+                BorderBrush="{DynamicResource BorderColorBrush}"
                 BorderThickness="0,0,1,0">
             <StackPanel Margin="0,8,0,8">
                 <RadioButton Style="{StaticResource NavButton}" Content="Dashboard" Tag="&#xE80F;" GroupName="MainTabs"
@@ -59,15 +59,9 @@
                 <RadioButton Style="{StaticResource NavButton}" Content="Monitor Points" Tag="&#xE707;" GroupName="MainTabs"
                              Command="{Binding SelectTabCommand}" CommandParameter="Monitor Points"
                              IsChecked="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter=Monitor Points, Mode=OneWay}"/>
-                <RadioButton Style="{StaticResource NavButton}" Content="Logs" Tag="&#xE8A5;" GroupName="MainTabs"
-                             Command="{Binding SelectTabCommand}" CommandParameter="Logs"
-                             IsChecked="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter=Logs, Mode=OneWay}"/>
-                <RadioButton Style="{StaticResource NavButton}" Content="Config" Tag="&#xE713;" GroupName="MainTabs"
-                             Command="{Binding SelectTabCommand}" CommandParameter="Config"
-                             IsChecked="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter=Config, Mode=OneWay}"/>
-                <RadioButton Style="{StaticResource NavButton}" Content="Diagnostics" Tag="&#xE90F;" GroupName="MainTabs"
-                             Command="{Binding SelectTabCommand}" CommandParameter="Diagnostics"
-                             IsChecked="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter=Diagnostics, Mode=OneWay}"/>
+                <RadioButton Style="{StaticResource NavButton}" Content="Settings" Tag="&#xE713;" GroupName="MainTabs"
+                             Command="{Binding SelectTabCommand}" CommandParameter="Settings"
+                             IsChecked="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter=Settings, Mode=OneWay}"/>
                 <RadioButton Style="{StaticResource NavButton}" Content="About" Tag="&#xE946;" GroupName="MainTabs"
                              Command="{Binding SelectTabCommand}" CommandParameter="About"
                              IsChecked="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter=About, Mode=OneWay}"/>
@@ -81,25 +75,69 @@
             </Grid.RowDefinitions>
 
         <Border Grid.Row="0"
-                Background="{StaticResource SurfaceDarkAltBrush}"
+                Background="{DynamicResource SurfaceDarkAltBrush}"
                 CornerRadius="5"
-                Margin="8"
-                Padding="16,12"
-                BorderBrush="{StaticResource BorderColorBrush}"
+                Margin="8,6"
+                Padding="12,8"
+                BorderBrush="{DynamicResource BorderColorBrush}"
                 BorderThickness="1">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="0.55*"/>
                     <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="1.65*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="1.1*"/>
+                    <ColumnDefinition>
+                        <ColumnDefinition.Style>
+                            <Style TargetType="ColumnDefinition">
+                                <Setter Property="Width" Value="Auto"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasMonitorPoints}" Value="False">
+                                        <Setter Property="Width" Value="0"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ColumnDefinition.Style>
+                    </ColumnDefinition>
+                    <ColumnDefinition>
+                        <ColumnDefinition.Style>
+                            <Style TargetType="ColumnDefinition">
+                                <Setter Property="Width" Value="1.65*"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasMonitorPoints}" Value="False">
+                                        <Setter Property="Width" Value="0"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ColumnDefinition.Style>
+                    </ColumnDefinition>
+                    <ColumnDefinition>
+                        <ColumnDefinition.Style>
+                            <Style TargetType="ColumnDefinition">
+                                <Setter Property="Width" Value="Auto"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ShowNotifications}" Value="False">
+                                        <Setter Property="Width" Value="0"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ColumnDefinition.Style>
+                    </ColumnDefinition>
+                    <ColumnDefinition>
+                        <ColumnDefinition.Style>
+                            <Style TargetType="ColumnDefinition">
+                                <Setter Property="Width" Value="0.75*"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ShowNotifications}" Value="False">
+                                        <Setter Property="Width" Value="0"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ColumnDefinition.Style>
+                    </ColumnDefinition>
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Top">
-                    <TextBlock Text="Service Status" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                <StackPanel Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Top" MaxWidth="280">
+                    <TextBlock Text="Service Status" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,6"/>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Grid Width="28" Height="28" Margin="0,0,8,0">
+                        <Grid Width="24" Height="24" Margin="0,0,8,0">
                             <Ellipse>
                                 <Ellipse.Style>
                                     <Style TargetType="Ellipse">
@@ -127,13 +165,47 @@
                             </TextBlock>
                         </Grid>
                         <StackPanel VerticalAlignment="Center">
-                            <TextBlock FontSize="13" FontWeight="SemiBold"
+                            <TextBlock FontSize="12" FontWeight="SemiBold"
                                        Text="{Binding AgentStatus, StringFormat=Service: {0}}"/>
                             <TextBlock FontSize="11" Foreground="#9A9AA5" Margin="0,1,0,0"
                                        Text="{Binding AgentVersion}"/>
                         </StackPanel>
                     </StackPanel>
-                    <Border Background="{StaticResource SurfaceDarkBrush}" CornerRadius="5" Padding="8,6" Margin="0,8,0,0">
+                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0" VerticalAlignment="Center">
+                        <Grid Width="24" Height="24" Margin="0,0,8,0">
+                            <Ellipse>
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse">
+                                        <Setter Property="Fill" Value="{StaticResource AccentRedBrush}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding InternetConnected}" Value="True">
+                                                <Setter Property="Fill" Value="{StaticResource AccentGreenBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
+                            <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="White"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" Text="&#xE701;"/>
+                            <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="9" Foreground="White"
+                                       HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-2,-2"
+                                       Text="&#xE711;">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding InternetConnected}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
+                        <TextBlock FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
+                                   Text="{Binding InternetStatus}"/>
+                    </StackPanel>
+                    <Border Background="{DynamicResource SurfaceDarkBrush}" CornerRadius="5" Padding="8,4" Margin="0,6,0,0">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock FontSize="11" FontWeight="SemiBold"
                                        Text="{Binding Uptime, StringFormat=Uptime: {0}}"/>
@@ -143,9 +215,11 @@
                     </Border>
                 </StackPanel>
 
-                <Rectangle Grid.Column="1" Width="1" Fill="{StaticResource BorderColorBrush}" Margin="10,2"/>
+                <Rectangle Grid.Column="1" Width="1" Fill="{DynamicResource BorderColorBrush}" Margin="10,2"
+                           Visibility="{Binding HasMonitorPoints, Converter={StaticResource BoolToVis}}"/>
 
-                <DockPanel Grid.Column="2" Margin="10,0" VerticalAlignment="Top">
+                <DockPanel Grid.Column="2" Margin="10,0" VerticalAlignment="Top"
+                           Visibility="{Binding HasMonitorPoints, Converter={StaticResource BoolToVis}}">
                     <TextBlock DockPanel.Dock="Top" Text="Monitor Points" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,10"/>
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -217,8 +291,32 @@
                                                     <Ellipse Width="46" Height="46" Fill="#1B1B20"
                                                              Stroke="{Binding Status, Converter={StaticResource HealthToBrushConverter}}"
                                                              StrokeThickness="2"/>
-                                                    <TextBlock Text="{Binding Glyph}" FontFamily="Segoe MDL2 Assets" FontSize="20"
-                                                               Foreground="#F2F2F2" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding Glyph}" Foreground="#F2F2F2"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+                                                                <Setter Property="FontSize" Value="20"/>
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Source, ElementName=PointLogo}" Value="{x:Null}">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                    <Image x:Name="PointLogo" Width="28" Height="28" Margin="0"
+                                                           Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"
+                                                           Source="{Binding Icon, Converter={StaticResource IconToImageConverter}}">
+                                                        <Image.Style>
+                                                            <Style TargetType="Image" BasedOn="{StaticResource SiteLogoImage}">
+                                                                <Setter Property="Width" Value="28"/>
+                                                                <Setter Property="Height" Value="28"/>
+                                                                <Setter Property="Margin" Value="0"/>
+                                                            </Style>
+                                                        </Image.Style>
+                                                    </Image>
                                                 </Grid>
                                                 <TextBlock Text="{Binding DisplayName}" FontSize="11" Margin="0,4,0,3"
                                                            HorizontalAlignment="Center" TextAlignment="Center"
@@ -241,16 +339,18 @@
                     </Grid>
                 </DockPanel>
 
-                <Rectangle Grid.Column="3" Width="1" Fill="{StaticResource BorderColorBrush}" Margin="10,2"/>
+                <Rectangle Grid.Column="3" Width="1" Fill="{DynamicResource BorderColorBrush}" Margin="10,2"
+                           Visibility="{Binding ShowNotifications, Converter={StaticResource BoolToVis}}"/>
 
-                <DockPanel Grid.Column="4" Margin="10,0,0,0" VerticalAlignment="Top">
-                    <TextBlock DockPanel.Dock="Top" Text="Messages &amp; Issues Board" FontSize="14"
-                               FontWeight="SemiBold" Foreground="{StaticResource AccentOrangeBrush}" Margin="0,0,0,10"/>
-                    <Border Background="#241C12" CornerRadius="6" Padding="10,8" BorderBrush="#5A3B16" BorderThickness="1">
+                <DockPanel Grid.Column="4" Margin="10,0,0,0" VerticalAlignment="Top"
+                           Visibility="{Binding ShowNotifications, Converter={StaticResource BoolToVis}}">
+                    <TextBlock DockPanel.Dock="Top" Text="Messages &amp; Issues Board" FontSize="13"
+                               FontWeight="SemiBold" Foreground="{StaticResource AccentOrangeBrush}" Margin="0,0,0,6"/>
+                    <Border Background="#241C12" CornerRadius="6" Padding="8,6" BorderBrush="#5A3B16" BorderThickness="1">
                         <DockPanel>
                             <TextBlock DockPanel.Dock="Top" Text="Current Issues" FontSize="12" FontWeight="SemiBold"
                                        Foreground="#E0E0E0" Margin="0,0,0,4"/>
-                            <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="52">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="72">
                                 <Grid>
                                     <TextBlock Text="لا توجد تنبيهات حالياً." Foreground="#9A9AA5" FontSize="12"
                                                FlowDirection="RightToLeft" TextAlignment="Right"
@@ -259,9 +359,26 @@
                                                   Visibility="{Binding HasCurrentIssues, Converter={StaticResource BoolToVis}}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
-                                                <TextBlock Text="{Binding Message}" FontSize="11" Foreground="#F0F0F0"
-                                                           TextWrapping="Wrap" Margin="0,0,0,4"
-                                                           FlowDirection="RightToLeft" TextAlignment="Right"/>
+                                                <StackPanel Margin="0,0,0,8">
+                                                    <TextBlock Text="{Binding Title}" TextWrapping="Wrap"
+                                                               FlowDirection="RightToLeft" TextAlignment="Right">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="FontSize" Value="12"/>
+                                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                                <Setter Property="Foreground" Value="{StaticResource AccentRedBrush}"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Severity}" Value="Warning">
+                                                                        <Setter Property="Foreground" Value="{StaticResource AccentYellowBrush}"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                    <TextBlock Text="{Binding Message}" FontSize="11" Foreground="#F0F0F0"
+                                                               TextWrapping="Wrap" Margin="0,2,0,0"
+                                                               FlowDirection="RightToLeft" TextAlignment="Right"/>
+                                                </StackPanel>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
@@ -298,42 +415,27 @@
                     </Style>
                 </views:MonitorPointsView.Style>
             </views:MonitorPointsView>
-            <views:SimpleTabView TitleText="Logs" BodyText="Local agent logs are written to C:\ProgramData\ClientAgent\logs">
-                <views:SimpleTabView.Style>
-                    <Style TargetType="views:SimpleTabView">
+            <views:SettingsView>
+                <views:SettingsView.Style>
+                    <Style TargetType="views:SettingsView">
                         <Setter Property="Visibility" Value="Collapsed"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="views:SettingsView">
+                                    <Border Background="{TemplateBinding Background}">
+                                        <ContentPresenter/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding SelectedTab}" Value="Logs">
+                            <DataTrigger Binding="{Binding SelectedTab}" Value="Settings">
                                 <Setter Property="Visibility" Value="Visible"/>
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
-                </views:SimpleTabView.Style>
-            </views:SimpleTabView>
-            <views:SimpleTabView TitleText="Config" BodyText="Configuration is pulled from Central API and cached locally. Use appsettings.json for routing and intervals.">
-                <views:SimpleTabView.Style>
-                    <Style TargetType="views:SimpleTabView">
-                        <Setter Property="Visibility" Value="Collapsed"/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding SelectedTab}" Value="Config">
-                                <Setter Property="Visibility" Value="Visible"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </views:SimpleTabView.Style>
-            </views:SimpleTabView>
-            <views:SimpleTabView TitleText="Diagnostics" BodyText="Local API: http://127.0.0.1:5050">
-                <views:SimpleTabView.Style>
-                    <Style TargetType="views:SimpleTabView">
-                        <Setter Property="Visibility" Value="Collapsed"/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding SelectedTab}" Value="Diagnostics">
-                                <Setter Property="Visibility" Value="Visible"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </views:SimpleTabView.Style>
-            </views:SimpleTabView>
+                </views:SettingsView.Style>
+            </views:SettingsView>
             <views:SimpleTabView TitleText="About" BodyText="UBG Monitor — Client Agent Dashboard. English UI with Arabic support planned.">
                 <views:SimpleTabView.Style>
                     <Style TargetType="views:SimpleTabView">
@@ -350,8 +452,8 @@
         </Grid>
 
         <Border Grid.Row="2" Grid.ColumnSpan="2"
-                Background="{StaticResource SurfaceDarkAltBrush}"
-                BorderBrush="{StaticResource BorderColorBrush}"
+                Background="{DynamicResource SurfaceDarkAltBrush}"
+                BorderBrush="{DynamicResource BorderColorBrush}"
                 BorderThickness="0,1,0,0"/>
     </Grid>
 </Window>

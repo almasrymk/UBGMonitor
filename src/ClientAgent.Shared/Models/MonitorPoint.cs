@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace ClientAgent.Shared.Models;
 
 public sealed class MonitorPoint
@@ -8,7 +10,13 @@ public sealed class MonitorPoint
 
     public MonitorPointType Type { get; init; }
 
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public GarageDeviceKind? DeviceKind { get; init; }
+
     public string Address { get; init; } = string.Empty;
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Icon { get; init; }
 
     public string Location { get; init; } = string.Empty;
 
@@ -16,11 +24,16 @@ public sealed class MonitorPoint
 
     public bool Enabled { get; init; } = true;
 
-    public int IntervalSeconds { get; init; } = 30;
+    public bool ShowInShortcut { get; init; }
+
+    public int IntervalSeconds { get; init; } = 3;
 
     public double? WarningThreshold { get; init; }
 
     public double? CriticalThreshold { get; init; }
 
     public Dictionary<string, string> Metadata { get; init; } = new();
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public DatabaseLogin? Database { get; init; }
 }

@@ -46,9 +46,15 @@ try
     builder.Services.AddSingleton<ILocalConfigCache, LocalConfigCache>();
     builder.Services.AddHttpClient("madkhal");
     builder.Services.AddHttpClient("central");
+    builder.Services.AddHttpClient("website", client =>
+    {
+        client.Timeout = TimeSpan.FromSeconds(15);
+    });
 
     builder.Services.AddHostedService<ResourceMonitor>();
     builder.Services.AddHostedService<DeviceMonitor>();
+    builder.Services.AddHostedService<ApplicationMonitor>();
+    builder.Services.AddHostedService<WebsiteMonitor>();
     builder.Services.AddHostedService<DatabaseMonitor>();
     builder.Services.AddHostedService<MadkhalMonitor>();
     builder.Services.AddHostedService<ConfigPuller>();

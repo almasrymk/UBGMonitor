@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Net.NetworkInformation;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -13,12 +14,15 @@ namespace ClientAgent.UI.ViewModels;
 public sealed partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly AgentApiClient _client;
+    private readonly AppSettingsStore _appSettings = new();
     private readonly DispatcherTimer _timer;
 
     [ObservableProperty] private string _windowTitle = "Client Agent Monitor — AGT-001";
     [ObservableProperty] private string _selectedTab = "Dashboard";
     [ObservableProperty] private string _agentStatus = "Connecting...";
     [ObservableProperty] private bool _serviceRunning;
+    [ObservableProperty] private bool _internetConnected;
+    [ObservableProperty] private string _internetStatus = "Internet: Disconnected";
     [ObservableProperty] private bool _madkhalConnected;
     [ObservableProperty] private bool _centralConnected;
     [ObservableProperty] private string _madkhalStatus = "Unknown";
@@ -35,7 +39,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private int _healthyCount;
     [ObservableProperty] private int _unknownCount;
     [ObservableProperty] private bool _hasCurrentIssues;
+    [ObservableProperty] private bool _hasMonitorPoints;
     [ObservableProperty] private string? _selectedMonitorPointId;
+
+    public SettingsViewModel Settings { get; } = new();
 
     public CpuViewModel Cpu { get; } = new();
     public RamViewModel Ram { get; } = new();
@@ -62,11 +69,43 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         TopRamCard = new ProcessListCardViewModel(_client, "Top 5 by RAM", ProcessSortBy.Ram, ResourceBrush("ProcessBarRamBrush", Color.FromRgb(0x21, 0x96, 0xF3)));
         TopNetworkCard = new ProcessListCardViewModel(_client, "Top 5 by Network", ProcessSortBy.Network, Brushes.White);
         HardwareOs = new HardwareOsViewModel(_client);
-        _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+        _timer = new DispatcherTimer();
+        Settings.Saved += async (_, _) =>
+        {
+            ApplySavedRuntimeSettings();
+            await RefreshAsync();
+        };
+        Settings.ApplicationsLoaded += async (_, _) => await RefreshAsync();
+        Settings.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(SettingsViewModel.Theme))
+            {
+                UiTheme.Apply(Settings.Theme);
+            }
+
+            if (e.PropertyName == nameof(SettingsViewModel.NotificationsEnabled))
+            {
+                OnPropertyChanged(nameof(ShowNotifications));
+            }
+        };
+        ApplySavedRuntimeSettings();
         _timer.Tick += async (_, _) => await RefreshAsync();
         _timer.Start();
         _ = RefreshAsync();
     }
+
+    public bool ShowNotifications => Settings.NotificationsEnabled && HasCurrentIssues;
+
+    private void ApplySavedRuntimeSettings()
+    {
+        _client.SetBaseAddress(Settings.ApiBaseUrl);
+        var seconds = Settings.RefreshInterval < 1 ? 1 : Settings.RefreshInterval;
+        _timer.Interval = TimeSpan.FromSeconds(seconds);
+        UiTheme.Apply(Settings.Theme);
+        OnPropertyChanged(nameof(ShowNotifications));
+    }
+
+    partial void OnHasCurrentIssuesChanged(bool value) => OnPropertyChanged(nameof(ShowNotifications));
 
     [RelayCommand]
     private void SelectTab(string tab)
@@ -108,9 +147,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 ApplySnapshot(snapshot);
             }
 
-            var points = await _client.GetMonitorPointsAsync() ?? [];
+            var points = MergeMonitorPoints(_appSettings.LoadMonitorPoints(), await _client.GetMonitorPointsAsync() ?? []);
+            var shortcutPoints = OrderDashboardPoints(points).ToList();
+            HasMonitorPoints = shortcutPoints.Count > 0;
             Replace(MonitorPoints, points);
-            Replace(DashboardMonitorPoints, OrderDashboardPoints(points).Select(DashboardMonitorPointViewModel.From));
+            Replace(DashboardMonitorPoints, shortcutPoints.Select(DashboardMonitorPointViewModel.From));
             ApplyMonitorPointSelection(SelectedMonitorPointId);
             UpdatePointSummary(points);
 
@@ -127,12 +168,73 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
+    partial void OnInternetConnectedChanged(bool value)
+        => InternetStatus = value ? "Internet: Connected" : "Internet: Disconnected";
+
+    private void ApplyInternet(NetworkInfo? network)
+    {
+        var known = InterpretInternet(network);
+        if (known is bool connected)
+        {
+            InternetConnected = connected;
+            return;
+        }
+
+        _ = ProbeInternetAsync();
+    }
+
+    private static bool? InterpretInternet(NetworkInfo? network)
+    {
+        if (network is null)
+        {
+            return null;
+        }
+
+        if (!string.Equals(network.Status, "Up", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (network.PacketLossPercent >= 100)
+        {
+            return false;
+        }
+
+        return network.PingMs is null ? null : true;
+    }
+
+    private async Task ProbeInternetAsync()
+    {
+        var connected = await Task.Run(ProbeInternet);
+        InternetConnected = connected;
+    }
+
+    private static bool ProbeInternet()
+    {
+        try
+        {
+            if (!NetworkInterface.GetIsNetworkAvailable())
+            {
+                return false;
+            }
+
+            using var ping = new Ping();
+            var reply = ping.Send("1.1.1.1", 800);
+            return reply?.Status == IPStatus.Success;
+        }
+        catch (Exception ex) when (ex is PingException or InvalidOperationException)
+        {
+            return false;
+        }
+    }
+
     private void ApplySnapshot(SystemSnapshot snapshot)
     {
         Cpu.Update(snapshot.Cpu);
         Ram.Update(snapshot.Ram);
         Disk.Update(snapshot.Partitions, snapshot.PhysicalDisks);
         Network.Update(snapshot.Network);
+        ApplyInternet(snapshot.Network);
         UpdateHardwareStatus(snapshot.Cpu, snapshot.Ram, snapshot.Os);
         Replace(TopRamProcesses, snapshot.TopProcesses.Take(5));
         Replace(TopCpuProcesses, snapshot.TopProcesses.OrderByDescending(p => p.CpuPercent).ThenByDescending(p => p.RamMB).Take(5));
@@ -150,6 +252,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (ram is not null) Ram.Update(ram);
         if (partitions is not null) Disk.Update(partitions, []);
         if (network is not null) Network.Update(network);
+        ApplyInternet(network);
         UpdateHardwareStatus(cpu, ram, await _client.GetOsAsync());
         if (processes is not null)
         {
@@ -162,6 +265,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         AgentStatus = "Service Not Responding";
         ServiceRunning = false;
+        _ = ProbeInternetAsync();
     }
 
     [RelayCommand]
@@ -203,24 +307,76 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             : $"OS: {osName} {osVersion}".Trim();
     }
 
+    private static string? ResolveIcon(MonitorPoint point)
+    {
+        if (point.Type == MonitorPointType.Website)
+        {
+            return point.Icon;
+        }
+
+        if (point.Type != MonitorPointType.Application)
+        {
+            return null;
+        }
+
+        return string.IsNullOrWhiteSpace(point.Icon)
+            ? InstalledProgramCatalog.Find(point.Address)?.IconBase64
+            : point.Icon;
+    }
+
+    private static List<MonitorPointStatusDto> MergeMonitorPoints(
+        IReadOnlyList<MonitorPoint> configured,
+        IReadOnlyList<MonitorPointStatusDto> live)
+    {
+        if (configured.Count == 0)
+        {
+            return [];
+        }
+
+        var liveById = live.ToDictionary(point => point.MonitorPointId, StringComparer.OrdinalIgnoreCase);
+        return configured.Select(point =>
+        {
+            liveById.TryGetValue(point.MonitorPointId, out var status);
+            var enabled = point.Enabled;
+            return new MonitorPointStatusDto
+            {
+                MonitorPointId = point.MonitorPointId,
+                DisplayName = string.IsNullOrWhiteSpace(point.DisplayName) ? point.MonitorPointId : point.DisplayName,
+                Type = point.Type,
+                DeviceKind = point.Type == MonitorPointType.Device ? point.DeviceKind : null,
+                Glyph = DeviceIcons.Glyph(point.Type, point.Type == MonitorPointType.Device ? point.DeviceKind : null, point.DisplayName),
+                Address = point.Address,
+                Icon = ResolveIcon(point),
+                Location = point.Location,
+                Model = point.Model,
+                Enabled = enabled,
+                ShowInShortcut = point.ShowInShortcut,
+                IntervalSeconds = point.IntervalSeconds,
+                IsUp = status?.IsUp,
+                Status = !enabled ? "Unknown" : status?.Status ?? "Unknown",
+                LastCheckedUtc = status?.LastCheckedUtc,
+                Message = status?.Message
+            };
+        }).ToList();
+    }
+
     private static IEnumerable<MonitorPointStatusDto> OrderDashboardPoints(IEnumerable<MonitorPointStatusDto> points)
         => points
+            .Where(ShowOnDashboard)
             .OrderBy(DashboardRank)
             .ThenBy(p => p.DisplayName, StringComparer.OrdinalIgnoreCase);
 
+    private static bool ShowOnDashboard(MonitorPointStatusDto point)
+        => point.ShowInShortcut || IsProblem(point.Status) || IsWarning(point.Status);
+
     private static int DashboardRank(MonitorPointStatusDto point)
     {
-        if (!point.Enabled || IsStopped(point.Status))
+        if (IsProblem(point.Status))
         {
             return 0;
         }
 
-        if (point.IsUp == false || IsOffline(point.Status))
-        {
-            return 0;
-        }
-
-        if (string.Equals(point.Status, "Unknown", StringComparison.OrdinalIgnoreCase))
+        if (IsWarning(point.Status))
         {
             return 1;
         }
@@ -228,11 +384,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         return 2;
     }
 
-    private static bool IsOffline(string status)
+    private static bool IsProblem(string status)
         => ContainsStatus(status, "Critical", "Offline", "Down");
 
-    private static bool IsStopped(string status)
-        => ContainsStatus(status, "Stop", "Stopped", "Disabled");
+    private static bool IsWarning(string status)
+        => ContainsStatus(status, "Warning");
 
     private static bool ContainsStatus(string status, params string[] tokens)
         => tokens.Any(token => status.Contains(token, StringComparison.OrdinalIgnoreCase));

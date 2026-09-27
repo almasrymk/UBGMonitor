@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using ClientAgent.Shared.Models;
+using ClientAgent.UI.Services;
 
 namespace ClientAgent.UI.ViewModels;
 
@@ -11,6 +12,12 @@ public sealed partial class DashboardMonitorPointViewModel : ObservableObject
 
     public string Glyph { get; init; } = "\uE968";
 
+    public string Address { get; init; } = string.Empty;
+
+    public string? Icon { get; init; }
+
+    public MonitorPointType Type { get; init; }
+
     public string Status { get; init; } = "Unknown";
 
     [ObservableProperty] private bool _isSelected;
@@ -21,37 +28,11 @@ public sealed partial class DashboardMonitorPointViewModel : ObservableObject
         {
             MonitorPointId = point.MonitorPointId,
             DisplayName = string.IsNullOrWhiteSpace(point.DisplayName) ? point.MonitorPointId : point.DisplayName,
-            Glyph = ResolveGlyph(point),
+            Glyph = string.IsNullOrWhiteSpace(point.Glyph) ? DeviceIcons.Glyph(point.Type, point.DeviceKind, point.DisplayName) : point.Glyph,
+            Address = point.Address,
+            Icon = point.Icon,
+            Type = point.Type,
             Status = string.IsNullOrWhiteSpace(point.Status) ? "Unknown" : point.Status
         };
     }
-
-    private static string ResolveGlyph(MonitorPointStatusDto point)
-    {
-        var haystack = $"{point.DisplayName} {point.Model} {point.Type}";
-        if (ContainsAny(haystack, "camera", "كاميرا"))
-        {
-            return "\uE722";
-        }
-
-        if (ContainsAny(haystack, "satel", "dish", "قمر"))
-        {
-            return "\uEC05";
-        }
-
-        if (point.Type == MonitorPointType.Madkhal || ContainsAny(haystack, "wifi", "radio"))
-        {
-            return "\uE704";
-        }
-
-        if (point.Type == MonitorPointType.Database)
-        {
-            return "\uE8F1";
-        }
-
-        return "\uE968";
-    }
-
-    private static bool ContainsAny(string text, params string[] parts)
-        => parts.Any(part => text.Contains(part, StringComparison.OrdinalIgnoreCase));
 }

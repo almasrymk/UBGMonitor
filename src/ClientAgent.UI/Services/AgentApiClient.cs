@@ -18,20 +18,42 @@ public sealed class AgentApiClient
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    private readonly HttpClient _http;
+    private readonly bool _ownsHttpClient;
+    private HttpClient _http;
 
     public AgentApiClient()
     {
-        _http = new HttpClient(CreateIpv4Handler(), disposeHandler: true)
+        _ownsHttpClient = true;
+        _http = CreateClient(new Uri("http://127.0.0.1:5050"));
+    }
+
+    public void SetBaseAddress(string? url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)
+            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
         {
-            // Use 127.0.0.1 instead of localhost to avoid ::1 (IPv6) on Windows.
-            BaseAddress = new Uri("http://127.0.0.1:5050"),
-            Timeout = TimeSpan.FromSeconds(20)
-        };
+            return;
+        }
+
+        if (_http.BaseAddress is not null && SameRequestUri(_http.BaseAddress, uri))
+        {
+            return;
+        }
+
+        if (!_ownsHttpClient)
+        {
+            return;
+        }
+
+        var replacement = CreateClient(uri);
+        var previous = _http;
+        _http = replacement;
+        previous.Dispose();
     }
 
     public AgentApiClient(HttpClient httpClient)
     {
+        _ownsHttpClient = false;
         _http = httpClient;
         _http.BaseAddress ??= new Uri("http://127.0.0.1:5050");
         if (_http.Timeout == Timeout.InfiniteTimeSpan || _http.Timeout < TimeSpan.FromSeconds(5))
@@ -215,13 +237,33 @@ public sealed class AgentApiClient
         }
     }
 
+    private static HttpClient CreateClient(Uri baseAddress)
+        => new(CreateIpv4Handler(), disposeHandler: true)
+        {
+            BaseAddress = baseAddress,
+            Timeout = TimeSpan.FromSeconds(20)
+        };
+
+    private static bool SameRequestUri(Uri left, Uri right)
+        => Uri.Compare(left, right, UriComponents.HttpRequestUrl, UriFormat.SafeUnescaped, StringComparison.OrdinalIgnoreCase) == 0;
+
+    private static IPAddress ResolveConnectAddress(string host)
+    {
+        if (IPAddress.TryParse(host, out var parsed) && parsed.AddressFamily == AddressFamily.InterNetwork)
+        {
+            return parsed;
+        }
+
+        return IPAddress.Loopback;
+    }
+
     private static SocketsHttpHandler CreateIpv4Handler()
     {
         return new SocketsHttpHandler
         {
             ConnectCallback = async (context, cancellationToken) =>
             {
-                var endpoint = new IPEndPoint(IPAddress.Loopback, context.DnsEndPoint.Port);
+                var endpoint = new IPEndPoint(ResolveConnectAddress(context.DnsEndPoint.Host), context.DnsEndPoint.Port);
                 var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                 try
                 {

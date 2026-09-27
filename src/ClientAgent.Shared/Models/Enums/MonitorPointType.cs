@@ -6,5 +6,7 @@ public enum MonitorPointType
     Device = 1,
     Database = 2,
     Madkhal = 3,
-    Agent = 4
+    Agent = 4,
+    Website = 5,
+    Application = 6
 }
