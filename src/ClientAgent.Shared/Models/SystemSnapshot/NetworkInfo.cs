@@ -27,4 +27,25 @@ public sealed class NetworkInfo
     public double? PingMs { get; init; }
 
     public double? PacketLossPercent { get; init; }
+
+    /// <summary>"Wi-Fi", "Ethernet", "Mobile", or the raw adapter type.</summary>
+    public string ConnectionType { get; init; } = "Unknown";
+
+    public string AdapterName { get; init; } = string.Empty;
+
+    public double? LinkSpeedMbps { get; init; }
+
+    public string WifiSsid { get; init; } = string.Empty;
+
+    public int? WifiSignalPercent { get; init; }
+
+    public string WifiBand { get; init; } = string.Empty;
+
+    public string WifiChannel { get; init; } = string.Empty;
+
+    public string WifiRadioType { get; init; } = string.Empty;
+
+    public double? WifiReceiveMbps { get; init; }
+
+    public double? WifiTransmitMbps { get; init; }
 }

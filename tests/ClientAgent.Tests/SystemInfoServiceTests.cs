@@ -60,10 +60,11 @@ public sealed class SystemInfoServiceTests
 
     internal static SystemInfoService CreateSut()
     {
+        var config = new FakeLocalConfigCache();
         var reader = new HardwareMonitorReader();
-        var hardware = new HardwareService(NullLogger<HardwareService>.Instance);
+        var hardware = new HardwareService(config, NullLogger<HardwareService>.Instance);
         var sensors = new SensorsService(reader);
-        var network = new NetworkService(NullLogger<NetworkService>.Instance);
+        var network = new NetworkService(config, NullLogger<NetworkService>.Instance);
         return new SystemInfoService(NullLogger<SystemInfoService>.Instance, hardware, sensors, network);
     }
 }

@@ -6,7 +6,7 @@
             <TextBlock Text="{Binding TitleText, RelativeSource={RelativeSource AncestorType=UserControl}}"
                        FontSize="22" FontWeight="Bold" HorizontalAlignment="Center"/>
             <TextBlock Text="{Binding BodyText, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                       Foreground="#AAAAAA" Margin="0,12,0,0" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="640"/>
+                       Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,12,0,0" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="640"/>
         </StackPanel>
     </Border>
 </UserControl>

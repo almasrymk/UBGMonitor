@@ -4,5 +4,6 @@ public enum ProcessSortBy
 {
     Cpu,
     Ram,
-    Network
+    Network,
+    Disk
 }

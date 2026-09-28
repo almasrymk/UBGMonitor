@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using ClientAgent.UI.Services;
 
 namespace ClientAgent.UI.Controls;
 
@@ -45,6 +46,7 @@ public sealed class CircularProgressControl : System.Windows.Controls.UserContro
         Height = 120;
         Loaded += (_, _) => Rebuild();
         SizeChanged += (_, _) => Rebuild();
+        UiTheme.Changed += (_, _) => Dispatcher.Invoke(Rebuild);
     }
 
     public double Value
@@ -85,7 +87,8 @@ public sealed class CircularProgressControl : System.Windows.Controls.UserContro
         var thickness = Thickness;
         var radius = (size / 2) - (thickness / 2) - 2;
         var center = new Point(size / 2, size / 2);
-        _track.Stroke = TrackBrush;
+        _track.Stroke = UiTheme.Brush("BorderColorBrush", Color.FromRgb(0x3E, 0x3E, 0x42));
+        _label.Foreground = UiTheme.Brush("TextPrimaryBrush", Colors.White);
         _track.StrokeThickness = thickness;
         _progress.Stroke = ProgressBrush;
         _progress.StrokeThickness = thickness;

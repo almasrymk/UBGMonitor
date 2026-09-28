@@ -2,10 +2,17 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Media;
 
+using ClientAgent.UI.Services;
+
 namespace ClientAgent.UI.Controls;
 
 public sealed class GaugeControl : FrameworkElement
 {
+    public GaugeControl()
+    {
+        UiTheme.Changed += (_, _) => InvalidateVisual();
+    }
+
     public static readonly DependencyProperty ValueProperty = DependencyProperty.Register(
         nameof(Value), typeof(double), typeof(GaugeControl),
         new FrameworkPropertyMetadata(0d, FrameworkPropertyMetadataOptions.AffectsRender));
@@ -76,9 +83,11 @@ public sealed class GaugeControl : FrameworkElement
         var ratio = Math.Clamp(Value / max, 0, 1);
         var center = new Point(ActualWidth / 2, ActualHeight * 0.78);
         var radius = Math.Min(ActualWidth / 2, ActualHeight * 0.72) - 10;
-        var trackBrush = new SolidColorBrush(Color.FromRgb(0x4A, 0x4A, 0x52));
-        var tickBrush = new SolidColorBrush(Color.FromRgb(0xC8, 0xC8, 0xC8));
-        var labelBrush = new SolidColorBrush(Color.FromRgb(0xB0, 0xB0, 0xB0));
+        var trackBrush = UiTheme.Brush("ButtonBrush", Color.FromRgb(0x4A, 0x4A, 0x52));
+        var tickBrush = UiTheme.Brush("TextSecondaryBrush", Color.FromRgb(0xC8, 0xC8, 0xC8));
+        var labelBrush = UiTheme.Brush("TextSecondaryBrush", Color.FromRgb(0xB0, 0xB0, 0xB0));
+        var valueBrush = UiTheme.Brush("TextPrimaryBrush", Colors.White);
+        var hubBrush = UiTheme.Brush("ChipFillBrush", Color.FromRgb(0x2A, 0x2A, 0x30));
 
         dc.DrawGeometry(null, new Pen(trackBrush, 10) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round },
             BuildArc(center, radius, 180, 180));
@@ -112,10 +121,10 @@ public sealed class GaugeControl : FrameworkElement
         var needleAngle = 180 + (ratio * 180);
         var needleEnd = Polar(center, radius - 18, needleAngle);
         dc.DrawLine(new Pen(NeedleBrush, 2.2) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Triangle }, center, needleEnd);
-        dc.DrawEllipse(new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x30)), new Pen(tickBrush, 1.2), center, 6, 6);
+        dc.DrawEllipse(hubBrush, new Pen(tickBrush, 1.2), center, 6, 6);
 
         var valueText = string.Concat(Value.ToString("0.0", CultureInfo.InvariantCulture), " ", Unit);
-        var valueFt = Format(valueText, 13, Brushes.White, dpi, FontWeights.SemiBold);
+        var valueFt = Format(valueText, 13, valueBrush, dpi, FontWeights.SemiBold);
         dc.DrawText(valueFt, new Point(center.X - (valueFt.Width / 2), center.Y - valueFt.Height - 14));
 
         if (!string.IsNullOrWhiteSpace(Subtitle))

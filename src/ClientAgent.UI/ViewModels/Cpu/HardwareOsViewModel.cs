@@ -36,25 +36,27 @@ public sealed partial class HardwareOsViewModel : ObservableObject, IDisposable
     {
         _client = client;
         _staticTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
-        _sensorsTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        _sensorsTimer = new DispatcherTimer { Interval = CollapsedSensorsInterval };
         _networkTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         _staticTimer.Tick += async (_, _) => await RefreshStaticAsync();
         _sensorsTimer.Tick += async (_, _) => await RefreshLevelAsync(3);
         _networkTimer.Tick += async (_, _) => await RefreshLevelAsync(5);
         _staticTimer.Start();
+        _sensorsTimer.Start();
         _ = RefreshStaticAsync();
+        _ = RefreshLevelAsync(3);
     }
+
+    /// <summary>Sensors keep refreshing while collapsed so temperature notifications still fire.</summary>
+    private static readonly TimeSpan CollapsedSensorsInterval = TimeSpan.FromSeconds(10);
 
     partial void OnIsLevel3ExpandedChanged(bool value)
     {
+        _sensorsTimer.Interval = value ? TimeSpan.FromSeconds(2) : CollapsedSensorsInterval;
         if (value)
         {
             _ = RefreshLevelAsync(3);
-            _sensorsTimer.Start();
-            return;
         }
-
-        _sensorsTimer.Stop();
     }
 
     partial void OnIsLevel5ExpandedChanged(bool value)
@@ -69,7 +71,19 @@ public sealed partial class HardwareOsViewModel : ObservableObject, IDisposable
         _networkTimer.Stop();
     }
 
-    private async Task RefreshStaticAsync()
+    public void SetHardwareInterval(int seconds)
+    {
+        _staticTimer.Interval = TimeSpan.FromSeconds(seconds < 1 ? 30 : seconds);
+    }
+
+    public void SetNetworkInterval(int seconds)
+    {
+        _networkTimer.Interval = TimeSpan.FromSeconds(seconds < 1 ? 3 : seconds);
+    }
+
+    public Task RefreshStaticAsync() => RefreshStaticCoreAsync();
+
+    private async Task RefreshStaticCoreAsync()
     {
         try
         {
@@ -92,11 +106,6 @@ public sealed partial class HardwareOsViewModel : ObservableObject, IDisposable
 
     private async Task RefreshLevelAsync(int level)
     {
-        if (level == 3 && !IsLevel3Expanded)
-        {
-            return;
-        }
-
         if (level == 5 && !IsLevel5Expanded)
         {
             return;
@@ -167,6 +176,7 @@ public sealed partial class HardwareOsViewModel : ObservableObject, IDisposable
     private static void ApplyRow(InfoRowViewModel row, HardwareItemDto item, int level)
     {
         var isMac = IsMacRow(item.Name);
+        row.UsesSpecMark = level is 1 or 2 or 4;
         row.Set(
             item.Value,
             ToHealth(item.Status),

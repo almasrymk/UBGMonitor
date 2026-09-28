@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Management;
+using ClientAgent.Service.Config;
 using ClientAgent.Shared.Models;
 
 namespace ClientAgent.Service.SystemInfo;
@@ -17,15 +18,15 @@ public interface IHardwareService
 
 public sealed class HardwareService : IHardwareService
 {
-    private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(30);
-
     private readonly ILogger<HardwareService> _logger;
+    private readonly ILocalConfigCache _config;
     private readonly object _lock = new();
     private Inventory? _cached;
     private DateTime _cachedAtUtc;
 
-    public HardwareService(ILogger<HardwareService> logger)
+    public HardwareService(ILocalConfigCache config, ILogger<HardwareService> logger)
     {
+        _config = config;
         _logger = logger;
     }
 
@@ -68,7 +69,8 @@ public sealed class HardwareService : IHardwareService
     {
         lock (_lock)
         {
-            if (_cached is not null && DateTime.UtcNow - _cachedAtUtc < CacheTtl)
+            var ttl = TimeSpan.FromSeconds(_config.GetGeneral().Seconds(_config.GetGeneral().HardwareOsIntervalSeconds, 30));
+            if (_cached is not null && DateTime.UtcNow - _cachedAtUtc < ttl)
             {
                 return _cached;
             }

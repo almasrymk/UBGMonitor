@@ -108,7 +108,7 @@ public sealed class DatabaseMonitor : BackgroundService, IMonitoringModule
         if (login is null || string.IsNullOrWhiteSpace(login.Server) || string.IsNullOrWhiteSpace(login.Database))
         {
             _health.SetPointHealth(point.MonitorPointId, false, "Database connection is not configured", "Critical");
-            _health.SetIssue(key, "Critical", "Database not configured", IssueText.DatabasePointDown(point.DisplayName, "Database", "-", "لم يتم حفظ بيانات الاتصال."), point.MonitorPointId);
+            _health.SetIssue(key, "Critical", "Database not configured", IssueText.DatabasePointDown(point.DisplayName, "Database", "-", "The connection details have not been saved."), point.MonitorPointId);
             return;
         }
 

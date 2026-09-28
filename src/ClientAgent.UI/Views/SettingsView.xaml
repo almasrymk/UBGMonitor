@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <UserControl.Resources>
         <Style x:Key="FieldLabel" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#AAAAAA"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
             <Setter Property="Margin" Value="0,0,0,4"/>
         </Style>
         <Style x:Key="GridCombo" TargetType="ComboBox" BasedOn="{StaticResource FieldCombo}">
@@ -11,22 +11,136 @@
             <Setter Property="MaxWidth" Value="10000"/>
             <Setter Property="Padding" Value="4,2"/>
         </Style>
+        <Style x:Key="SpecInput" TargetType="TextBox" BasedOn="{StaticResource FieldInput}">
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="MaxWidth" Value="10000"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="SpecCombo" TargetType="ComboBox" BasedOn="{StaticResource FieldCombo}">
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="MaxWidth" Value="10000"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="SpecAlertCombo" TargetType="ComboBox" BasedOn="{StaticResource SpecCombo}">
+            <Setter Property="ItemsSource" Value="{Binding SpecAlertOptions}"/>
+            <Setter Property="SelectedValuePath" Value="Alert"/>
+            <Setter Property="ItemTemplate">
+                <Setter.Value>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="10" Height="10" Margin="0,0,8,0" VerticalAlignment="Center" Fill="{Binding Brush}"/>
+                            <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="SpecYesNoCombo" TargetType="ComboBox" BasedOn="{StaticResource SpecCombo}">
+            <Setter Property="ItemsSource" Value="{Binding YesNoOptions}"/>
+            <Setter Property="SelectedValuePath" Value="Value"/>
+            <Setter Property="DisplayMemberPath" Value="Label"/>
+        </Style>
+        <Style x:Key="SpecLabel" TargetType="TextBlock" BasedOn="{StaticResource FieldLabel}">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,12,0"/>
+        </Style>
+        <Style x:Key="GeneralField" TargetType="TextBox" BasedOn="{StaticResource FieldInput}">
+            <Setter Property="MaxWidth" Value="10000"/>
+        </Style>
         <Style x:Key="OnOffToggle" TargetType="ToggleButton">
-            <Setter Property="Width" Value="72"/>
-            <Setter Property="Height" Value="28"/>
+            <Setter Property="Width" Value="78"/>
+            <Setter Property="Height" Value="26"/>
             <Setter Property="HorizontalAlignment" Value="Left"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Margin" Value="0,0,0,14"/>
             <Setter Property="Content" Value="Off"/>
-            <Setter Property="Background" Value="#3C3C3C"/>
-            <Setter Property="Foreground" Value="#E0E0E0"/>
+            <Setter Property="Background" Value="{DynamicResource ButtonBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="White"/>
             <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Track"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{DynamicResource BorderColorBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="13"
+                                SnapsToDevicePixels="True">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="Label"
+                                           Grid.ColumnSpan="2"
+                                           Text="{TemplateBinding Content}"
+                                           Foreground="{TemplateBinding Foreground}"
+                                           FontFamily="Segoe UI"
+                                           FontSize="10"
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           Margin="0,0,10,0"
+                                           IsHitTestVisible="False"/>
+                                <Ellipse x:Name="Knob"
+                                         Grid.Column="0"
+                                         Width="18"
+                                         Height="18"
+                                         Fill="{TemplateBinding BorderBrush}"
+                                         HorizontalAlignment="Left"
+                                         VerticalAlignment="Center"
+                                         Margin="3,0,0,0"
+                                         IsHitTestVisible="False">
+                                    <Ellipse.Effect>
+                                        <DropShadowEffect BlurRadius="4" ShadowDepth="1" Opacity="0.28" Color="#000000"/>
+                                    </Ellipse.Effect>
+                                </Ellipse>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Label" Property="HorizontalAlignment" Value="Left"/>
+                                <Setter TargetName="Label" Property="Margin" Value="10,0,0,0"/>
+                                <Setter TargetName="Knob" Property="Grid.Column" Value="1"/>
+                                <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right"/>
+                                <Setter TargetName="Knob" Property="Margin" Value="0,0,3,0"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Track" Property="Opacity" Value="0.55"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
             <Style.Triggers>
                 <Trigger Property="IsChecked" Value="True">
                     <Setter Property="Content" Value="On"/>
                     <Setter Property="Background" Value="{StaticResource AccentGreenBrush}"/>
                     <Setter Property="Foreground" Value="White"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="ThemeToggle" TargetType="ToggleButton" BasedOn="{StaticResource OnOffToggle}">
+            <Setter Property="Content" Value="Dark"/>
+            <Setter Property="Background" Value="#1E1E1E"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#F3F3F3"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Style.Triggers>
+                <Trigger Property="IsChecked" Value="True">
+                    <Setter Property="Content" Value="Light"/>
+                    <Setter Property="Background" Value="#F3F3F3"/>
+                    <Setter Property="Foreground" Value="#1A1A1A"/>
+                    <Setter Property="BorderBrush" Value="#1E1E1E"/>
+                </Trigger>
+                <Trigger Property="IsChecked" Value="False">
+                    <Setter Property="Content" Value="Dark"/>
+                    <Setter Property="Background" Value="#1E1E1E"/>
+                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="BorderBrush" Value="#F3F3F3"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -39,7 +153,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
                         <Border x:Name="Bd"
-                                Background="#1B1B20"
+                                Background="{DynamicResource InputBrush}"
                                 BorderBrush="Transparent"
                                 BorderThickness="1.5"
                                 CornerRadius="6"
@@ -48,10 +162,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#2E2E32"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource HoverBrush}"/>
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#333338"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SelectedBrush}"/>
                                 <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentGreenBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -60,7 +174,7 @@
             </Setter>
         </Style>
         <Style x:Key="SettingsSideTab" TargetType="RadioButton">
-            <Setter Property="Foreground" Value="#AAAAAA"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
             <Setter Property="FontFamily" Value="Segoe UI"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="Background" Value="Transparent"/>
@@ -84,11 +198,11 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter Property="Foreground" Value="{StaticResource AccentGreenBrush}"/>
-                                <Setter TargetName="Bd" Property="Background" Value="#333338"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SelectedBrush}"/>
                                 <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentGreenBrush}"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Foreground" Value="White"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -98,7 +212,7 @@
         <Style x:Key="SettingsList" TargetType="ListBox">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
             <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
             <Setter Property="ItemContainerStyle" Value="{StaticResource SettingsListItem}"/>
         </Style>
@@ -119,7 +233,7 @@
                 <RadioButton Style="{StaticResource SettingsSideTab}" Content="Monitor Points" GroupName="SettingsSections"
                              Command="{Binding SelectSectionCommand}" CommandParameter="Monitor Points"
                              IsChecked="{Binding SelectedSection, Converter={StaticResource EqualsConverter}, ConverterParameter=Monitor Points, Mode=OneWay}"/>
-                <RadioButton Style="{StaticResource SettingsSideTab}" Content="Conditions" GroupName="SettingsSections"
+                <RadioButton Style="{StaticResource SettingsSideTab}" Content="Device Specifications" GroupName="SettingsSections"
                              Command="{Binding SelectSectionCommand}" CommandParameter="Conditions"
                              IsChecked="{Binding SelectedSection, Converter={StaticResource EqualsConverter}, ConverterParameter=Conditions, Mode=OneWay}"/>
             </StackPanel>
@@ -133,7 +247,7 @@
             <StackPanel Orientation="Horizontal">
                 <Button Content="Save" Command="{Binding SaveCommand}" Style="{StaticResource FooterButton}" Margin="0,0,8,0" Padding="18,6"/>
                 <Button Content="Reset" Command="{Binding ResetCommand}" Style="{StaticResource FooterButton}" Margin="0" Padding="18,6"/>
-                <TextBlock Text="{Binding StatusMessage}" Foreground="#AAAAAA" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
             </StackPanel>
         </Border>
 
@@ -149,21 +263,64 @@
                         </Style.Triggers>
                     </Style>
                 </ScrollViewer.Style>
-                <StackPanel Margin="12,8,12,12" MaxWidth="520" HorizontalAlignment="Left">
-                    <TextBlock Text="General" FontSize="20" FontWeight="SemiBold" Foreground="#E0E0E0" Margin="0,0,0,6"/>
-                    <TextBlock Text="Agent display and connection preferences." Foreground="#AAAAAA" Margin="0,0,0,18" TextWrapping="Wrap"/>
+                <StackPanel Margin="12,8,12,12">
+                    <TextBlock Text="General" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,6"/>
+                    <TextBlock Text="Agent display and connection preferences." Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,18" TextWrapping="Wrap"/>
 
-                    <TextBlock Text="Refresh Interval (seconds)" Style="{StaticResource FieldLabel}"/>
-                    <TextBox Text="{Binding RefreshInterval, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="28"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
 
-                    <TextBlock Text="API Base URL" Style="{StaticResource FieldLabel}"/>
-                    <TextBox Text="{Binding ApiBaseUrl, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}"/>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Device name" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Text="{Binding MachineName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource GeneralField}"/>
 
-                    <TextBlock Text="Theme" Style="{StaticResource FieldLabel}"/>
-                    <ComboBox ItemsSource="{Binding ThemeOptions}" SelectedItem="{Binding Theme}" Style="{StaticResource FieldCombo}"/>
+                            <TextBlock Text="Service (seconds)" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Text="{Binding RefreshInterval, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource GeneralField}"/>
 
-                    <TextBlock Text="Notifications" Style="{StaticResource FieldLabel}"/>
-                    <ToggleButton IsChecked="{Binding NotificationsEnabled}" Style="{StaticResource OnOffToggle}"/>
+                            <TextBlock Text="Internet &amp; Network (seconds)" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Text="{Binding InternetIntervalSeconds, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource GeneralField}"/>
+
+                            <TextBlock Text="Internet speed test (seconds, 0 = off)" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Text="{Binding SpeedTestIntervalSeconds, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource GeneralField}"/>
+
+                            <TextBlock Text="CPU (seconds)" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Text="{Binding CpuIntervalSeconds, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource GeneralField}"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="RAM (seconds)" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Text="{Binding RamIntervalSeconds, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource GeneralField}"/>
+
+                            <TextBlock Text="Disk (seconds)" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Text="{Binding DiskIntervalSeconds, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource GeneralField}"/>
+
+                            <TextBlock Text="Hardware &amp; OS (seconds)" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Text="{Binding HardwareOsIntervalSeconds, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource GeneralField}"/>
+
+                            <TextBlock Text="API Base URL" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Text="{Binding ApiBaseUrl, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource GeneralField}"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid Margin="0,4,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="28"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Theme" Style="{StaticResource FieldLabel}"/>
+                            <ToggleButton IsChecked="{Binding IsLightTheme}" Style="{StaticResource ThemeToggle}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Notifications" Style="{StaticResource FieldLabel}"/>
+                            <ToggleButton IsChecked="{Binding NotificationsEnabled}" Style="{StaticResource OnOffToggle}"/>
+                        </StackPanel>
+                    </Grid>
                 </StackPanel>
             </ScrollViewer>
 
@@ -184,8 +341,8 @@
                 </Grid.RowDefinitions>
 
                 <StackPanel Grid.Row="0" Margin="0,0,12,12">
-                    <TextBlock Text="Monitor Points" FontSize="20" FontWeight="SemiBold" Foreground="#E0E0E0" Margin="0,0,0,6"/>
-                    <TextBlock TextWrapping="Wrap" Foreground="#AAAAAA" Margin="0,0,0,10"
+                    <TextBlock Text="Monitor Points" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,6"/>
+                    <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,10"
                                Text="Points are stored in the service appsettings.json. Edit a cell, then Save."/>
                     <StackPanel Orientation="Horizontal">
                         <Button Content="Add" Command="{Binding AddMonitorPointCommand}"
@@ -288,13 +445,20 @@
                         <DataGridTemplateColumn Header="Database" Width="170">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Button Content="{Binding DatabaseSummary}"
-                                            Click="ConfigureDatabase_Click"
+                                    <Button Click="ConfigureDatabase_Click"
                                             Style="{StaticResource FooterButton}"
                                             Margin="0"
                                             Padding="8,4"
                                             HorizontalAlignment="Left"
-                                            Visibility="{Binding IsDatabase, Converter={StaticResource BoolToVis}}"/>
+                                            Visibility="{Binding IsDatabase, Converter={StaticResource BoolToVis}}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Image Width="18" Height="18" Margin="0,0,6,0"
+                                                   Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"
+                                                   VerticalAlignment="Center"
+                                                   Source="{Binding DatabaseLogo, Converter={StaticResource IconToImageConverter}}"/>
+                                            <TextBlock Text="{Binding DatabaseSummary}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
@@ -311,13 +475,33 @@
                             <DataGridTemplateColumn.CellEditingTemplate>
                                 <DataTemplate>
                                     <TextBox Text="{Binding Address, UpdateSourceTrigger=PropertyChanged}"
-                                             BorderThickness="0" Background="Transparent" Foreground="White"
+                                             BorderThickness="0" Background="Transparent" Foreground="{DynamicResource TextPrimaryBrush}"
                                              VerticalContentAlignment="Center"/>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellEditingTemplate>
                         </DataGridTemplateColumn>
                         <DataGridCheckBoxColumn Header="Enabled" Binding="{Binding Enabled, UpdateSourceTrigger=PropertyChanged}" Width="80"/>
                         <DataGridCheckBoxColumn Header="Shortcut" Binding="{Binding ShowInShortcut, UpdateSourceTrigger=PropertyChanged}" Width="90"/>
+                        <DataGridTemplateColumn Header="Alert" Width="150">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <ComboBox ItemsSource="{Binding DataContext.AlertOptions, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                              SelectedValue="{Binding Alert, UpdateSourceTrigger=PropertyChanged}"
+                                              SelectedValuePath="Alert"
+                                              Style="{StaticResource GridCombo}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Ellipse Width="10" Height="10" Margin="0,0,8,0" VerticalAlignment="Center"
+                                                             Fill="{Binding Brush}"/>
+                                                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
                         <DataGridTextColumn Header="Interval" Binding="{Binding IntervalSeconds, UpdateSourceTrigger=PropertyChanged}" Width="80"/>
                     </DataGrid.Columns>
                 </DataGrid>
@@ -344,67 +528,157 @@
                 </Grid.RowDefinitions>
 
                 <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,12,12">
-                    <TextBlock Text="Conditions" FontSize="20" FontWeight="SemiBold" Foreground="#E0E0E0" Margin="0,0,0,6"/>
-                    <TextBlock TextWrapping="Wrap" Foreground="#AAAAAA"
-                               Text="Rules that raise a warning or a critical alert for a monitor point."/>
+                    <TextBlock Text="Device Specifications" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,6"/>
+                    <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}"
+                               Text="The left column is the minimum. Warning (yellow) and Problem (red) are percents. Alert sets the notification level. Leave 0 to skip a check."/>
                 </StackPanel>
 
-                <DockPanel Grid.Row="1" Grid.Column="0" Margin="0,0,12,0">
-                    <Button DockPanel.Dock="Top" Content="Add" Command="{Binding AddConditionCommand}"
-                            Style="{StaticResource FooterButton}" HorizontalAlignment="Left" Margin="0,0,0,10" Padding="18,6"/>
-                    <ListBox ItemsSource="{Binding Conditions}"
-                             SelectedItem="{Binding SelectedCondition}"
-                             Style="{StaticResource SettingsList}">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel>
-                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Text="{Binding Summary}" Foreground="#AAAAAA" FontSize="11" Margin="0,2,0,0"/>
-                                </StackPanel>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </DockPanel>
+                <ScrollViewer Grid.Row="1" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="0,0,12,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="2*"/>
+                                <ColumnDefinition Width="24"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="24"/>
+                                <ColumnDefinition Width="130"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
 
-                <ScrollViewer Grid.Row="1" Grid.Column="1" VerticalScrollBarVisibility="Auto">
-                    <Grid>
-                        <TextBlock Text="No conditions yet. Use Add to create a rule."
-                                   Foreground="#9A9AA5" Margin="8,8,0,0" TextWrapping="Wrap"
-                                   Visibility="{Binding HasSelectedCondition, Converter={StaticResource InverseBoolToVis}}"/>
-                        <StackPanel MaxWidth="520" HorizontalAlignment="Left"
-                                    Visibility="{Binding HasSelectedCondition, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="Name" Style="{StaticResource FieldLabel}"/>
-                            <TextBox Text="{Binding SelectedCondition.Name, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}"/>
-
-                            <TextBlock Text="Applies to" Style="{StaticResource FieldLabel}"/>
-                            <ComboBox ItemsSource="{Binding TargetOptions}"
-                                      SelectedValue="{Binding SelectedCondition.TargetId}"
-                                      SelectedValuePath="Id"
-                                      DisplayMemberPath="Label"
-                                      Style="{StaticResource FieldCombo}"/>
-
-                            <TextBlock Text="Rule" Style="{StaticResource FieldLabel}"/>
-                            <ComboBox ItemsSource="{Binding RuleOptions}"
-                                      SelectedItem="{Binding SelectedCondition.Rule}"
-                                      Style="{StaticResource FieldCombo}"/>
-
-                            <StackPanel Visibility="{Binding SelectedCondition.IsResponseTime, Converter={StaticResource BoolToVis}}">
-                                <TextBlock Text="Threshold (seconds)" Style="{StaticResource FieldLabel}"/>
-                                <TextBox Text="{Binding SelectedCondition.Threshold, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}"/>
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Minimum" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Left" Margin="0,0,0,14"/>
+                            <StackPanel Grid.Row="2" Grid.Column="6" Margin="0,0,0,16">
+                                <TextBlock Text="Alert" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                                <TextBlock Text=" " Style="{StaticResource FieldLabel}"/>
+                                <ComboBox SelectedValue="{Binding CpuAlert}" Style="{StaticResource SpecAlertCombo}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="3" Grid.Column="6" Margin="0,0,0,16" VerticalAlignment="Bottom">
+                                <ComboBox SelectedValue="{Binding RamAlert}" Style="{StaticResource SpecAlertCombo}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="4" Grid.Column="6" Margin="0,0,0,16" VerticalAlignment="Bottom">
+                                <ComboBox SelectedValue="{Binding DiskAlert}" Style="{StaticResource SpecAlertCombo}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="5" Grid.Column="6" Margin="0,0,0,16" VerticalAlignment="Bottom">
+                                <ComboBox SelectedValue="{Binding InternetNotify}" Style="{StaticResource SpecYesNoCombo}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="6" Grid.Column="6" Margin="0,0,0,16" VerticalAlignment="Bottom">
+                                <ComboBox SelectedValue="{Binding DownloadNotify}" Style="{StaticResource SpecYesNoCombo}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="7" Grid.Column="6" Margin="0,0,0,16" VerticalAlignment="Bottom">
+                                <ComboBox SelectedValue="{Binding UploadNotify}" Style="{StaticResource SpecYesNoCombo}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="8" Grid.Column="6" Margin="0,0,0,16" VerticalAlignment="Bottom">
+                                <ComboBox SelectedValue="{Binding OsNotify}" Style="{StaticResource SpecYesNoCombo}"/>
                             </StackPanel>
 
-                            <TextBlock Text="Severity" Style="{StaticResource FieldLabel}"/>
-                            <ComboBox ItemsSource="{Binding SeverityOptions}"
-                                      SelectedItem="{Binding SelectedCondition.Severity}"
-                                      Style="{StaticResource FieldCombo}"/>
+                            <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,0,16">
+                                <TextBlock Text="CPU" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                                <TextBlock Text="Cores" Style="{StaticResource FieldLabel}"/>
+                                <TextBox Text="{Binding CpuMinCores, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource SpecInput}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="2" Grid.Column="2" Margin="0,0,0,16">
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <Ellipse Width="10" Height="10" Fill="{StaticResource AccentYellowBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Warning" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock Text="Percent" Style="{StaticResource FieldLabel}"/>
+                                <TextBox Text="{Binding CpuWarningPercent, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource SpecInput}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="2" Grid.Column="4" Margin="0,0,0,16">
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <Ellipse Width="10" Height="10" Fill="{StaticResource AccentRedBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Problem" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock Text="Percent" Style="{StaticResource FieldLabel}"/>
+                                <TextBox Text="{Binding CpuProblemPercent, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource SpecInput}"/>
+                            </StackPanel>
 
-                            <TextBlock Text="Enabled" Style="{StaticResource FieldLabel}"/>
-                            <ToggleButton IsChecked="{Binding SelectedCondition.Enabled}" Style="{StaticResource OnOffToggle}"/>
+                            <StackPanel Grid.Row="3" Grid.Column="0" Margin="0,0,0,16">
+                                <TextBlock Text="RAM" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                                <TextBlock Text="GB" Style="{StaticResource FieldLabel}"/>
+                                <TextBox Text="{Binding RamMinGb, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource SpecInput}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="3" Grid.Column="2" Margin="0,0,0,16">
+                                <TextBlock FontWeight="SemiBold" Margin="0,0,0,8" Text=" "/>
+                                <TextBlock Text="Percent" Style="{StaticResource FieldLabel}"/>
+                                <TextBox Text="{Binding RamWarningPercent, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource SpecInput}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="3" Grid.Column="4" Margin="0,0,0,16">
+                                <TextBlock FontWeight="SemiBold" Margin="0,0,0,8" Text=" "/>
+                                <TextBlock Text="Percent" Style="{StaticResource FieldLabel}"/>
+                                <TextBox Text="{Binding RamProblemPercent, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource SpecInput}"/>
+                            </StackPanel>
 
-                            <Button Content="Remove" Command="{Binding RemoveConditionCommand}"
-                                    Style="{StaticResource FooterButton}" HorizontalAlignment="Left" Margin="0,4,0,12" Padding="18,6"/>
-                        </StackPanel>
-                    </Grid>
+                            <StackPanel Grid.Row="5" Grid.Column="0" Margin="0,0,0,16">
+                                <TextBlock Text="Internet" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                                <TextBlock Text="Minimum speed in Kbps" Style="{StaticResource FieldLabel}"/>
+                                <TextBox Text="{Binding InternetMinKbps, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource SpecInput}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="6" Grid.Column="0" Margin="0,0,0,16">
+                                <TextBlock Text="Download" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                                <TextBlock Text="Minimum download speed in Kbps" Style="{StaticResource FieldLabel}"/>
+                                <TextBox Text="{Binding DownloadMinKbps, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource SpecInput}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="7" Grid.Column="0" Margin="0,0,0,16">
+                                <TextBlock Text="Upload" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                                <TextBlock Text="Minimum upload speed in Kbps" Style="{StaticResource FieldLabel}"/>
+                                <TextBox Text="{Binding UploadMinKbps, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource SpecInput}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="4" Grid.Column="0" Margin="0,0,0,16">
+                                <TextBlock Text="Disk" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                                <TextBlock Text="GB" Style="{StaticResource FieldLabel}"/>
+                                <TextBox Text="{Binding DiskMinimum, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource SpecInput}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="4" Grid.Column="2" Margin="0,0,0,16">
+                                <TextBlock FontWeight="SemiBold" Margin="0,0,0,8" Text=" "/>
+                                <TextBlock Text="Remaining" Style="{StaticResource FieldLabel}"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="6"/>
+                                        <ColumnDefinition Width="80"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox Grid.Column="0" Text="{Binding DiskRemainingWarning, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource SpecInput}"/>
+                                    <ComboBox Grid.Column="2" ItemsSource="{Binding DiskUnitOptions}" SelectedItem="{Binding DiskRemainingWarningUnit}" Style="{StaticResource SpecCombo}"/>
+                                </Grid>
+                            </StackPanel>
+                            <StackPanel Grid.Row="4" Grid.Column="4" Margin="0,0,0,16">
+                                <TextBlock FontWeight="SemiBold" Margin="0,0,0,8" Text=" "/>
+                                <TextBlock Text="Remaining" Style="{StaticResource FieldLabel}"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="6"/>
+                                        <ColumnDefinition Width="80"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox Grid.Column="0" Text="{Binding DiskRemainingProblem, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource SpecInput}"/>
+                                    <ComboBox Grid.Column="2" ItemsSource="{Binding DiskUnitOptions}" SelectedItem="{Binding DiskRemainingProblemUnit}" Style="{StaticResource SpecCombo}"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="8" Grid.Column="0" Margin="0,0,0,16">
+                                <TextBlock Text="Operating system" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                                <ComboBox ItemsSource="{Binding OperatingSystemOptions}"
+                                          SelectedItem="{Binding RequiredOperatingSystem}"
+                                          Style="{StaticResource SpecCombo}"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
                 </ScrollViewer>
             </Grid>
         </Grid>

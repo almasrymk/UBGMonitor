@@ -128,16 +128,16 @@ public sealed class WebsiteMonitor : BackgroundService, IMonitoringModule
         {
             return ProbeResult.Fail(
                 "Address is missing",
-                "عنوان ناقص",
-                "العنوان فارغ. أضف عنوان الموقع أو واجهة الـ API في حقل Address.");
+                "Address is missing",
+                "The address is empty. Enter the website or API address in the Address field.");
         }
 
         if (!TryNormalize(address, out var uri))
         {
             return ProbeResult.Fail(
                 "Address is not a valid URL",
-                "عنوان غير صالح",
-                "العنوان غير صالح. اكتب رابطاً مثل https://example.com أو example.com.");
+                "Invalid address",
+                "The address is not valid. Enter a link such as https://example.com or example.com.");
         }
 
         if (address.Contains("://", StringComparison.Ordinal))
@@ -158,7 +158,7 @@ public sealed class WebsiteMonitor : BackgroundService, IMonitoringModule
 
         if (http.Up)
         {
-            return new ProbeResult(false, http.Message, "HTTPS غير متاح", https.AlertReason) { Status = "Warning" };
+            return new ProbeResult(false, http.Message, "HTTPS not available", $"Works over HTTP only; HTTPS failed. {https.AlertReason}") { Status = "Warning" };
         }
 
         return uri.Scheme == Uri.UriSchemeHttps ? https : http;
@@ -182,8 +182,8 @@ public sealed class WebsiteMonitor : BackgroundService, IMonitoringModule
         {
             return ProbeResult.Fail(
                 "Website did not respond",
-                "الموقع لا يستجيب",
-                $"الموقع لا يستجيب. انتهت مهلة الانتظار ({RequestTimeout.TotalSeconds:0} ثوانٍ) ولم يصل أي رد.");
+                "Website not responding",
+                $"The website did not respond within {RequestTimeout.TotalSeconds:0} seconds.");
         }
         catch (HttpRequestException ex)
         {
@@ -198,24 +198,24 @@ public sealed class WebsiteMonitor : BackgroundService, IMonitoringModule
         var label = string.IsNullOrWhiteSpace(reason) ? code.ToString() : $"{code} {reason}";
         var meaning = code switch
         {
-            400 => "الطلب غير مفهوم. راجع عنوان الـ API والمسار.",
-            401 => "الموقع يطلب تسجيل دخول أو مفتاح وصول، والطلب رُفض.",
-            403 => "الوصول إلى هذا العنوان مرفوض.",
-            404 => "الموقع أو الصفحة غير موجودة على هذا العنوان.",
-            408 => "الخادم أغلق الطلب لأن الانتظار طال.",
-            429 => "الموقع رفض الطلب لكثرة المحاولات.",
-            500 => "الخادم واجه خطأ داخلياً أثناء معالجة الطلب.",
-            502 => "البوابة لم تصل إلى الخادم الذي خلفها.",
-            503 => "الخدمة غير متاحة حالياً.",
-            504 => "البوابة انتظرت الخادم ولم يصلها رد.",
-            >= 500 => "الخادم رجع خطأ ولم يكتمل الطلب.",
-            _ => "الطلب لم ينجح والموقع رجع خطأ."
+            400 => "The request was not understood. Check the API address and path.",
+            401 => "The website requires a login or access key, and the request was rejected.",
+            403 => "Access to this address is forbidden.",
+            404 => "The website or page does not exist at this address.",
+            408 => "The server closed the request because it waited too long.",
+            429 => "The website rejected the request because of too many attempts.",
+            500 => "The server had an internal error while handling the request.",
+            502 => "The gateway could not reach the server behind it.",
+            503 => "The service is currently unavailable.",
+            504 => "The gateway waited for the server but got no reply.",
+            >= 500 => "The server returned an error and the request did not complete.",
+            _ => "The request failed and the website returned an error."
         };
 
         return ProbeResult.Fail(
             $"Website returned HTTP {label}",
-            code == 404 ? "الموقع غير موجود" : "الموقع رجع خطأ",
-            $"الموقع رجع خطأ HTTP {label}. {meaning}");
+            code == 404 ? "Website not found" : "Website returned an error",
+            $"The website returned HTTP {label}. {meaning}");
     }
 
     private static ProbeResult ClassifyTransport(HttpRequestException ex)
@@ -226,24 +226,24 @@ public sealed class WebsiteMonitor : BackgroundService, IMonitoringModule
         {
             return ProbeResult.Fail(
                 "Website host was not found",
-                "الموقع غير موجود",
-                "لم يتم العثور على الموقع. اسم النطاق غير موجود، تأكد من كتابة العنوان ومن أن النطاق مسجل.");
+                "Website not found",
+                "The domain name was not found. Check the address spelling and that the domain is registered.");
         }
 
         if (socket?.SocketErrorCode == SocketError.ConnectionRefused)
         {
             return ProbeResult.Fail(
                 "Connection refused",
-                "تعذر الاتصال",
-                "تعذر فتح الاتصال. الجهاز رفض الاتصال، وقد تكون الخدمة متوقفة أو المنفذ مغلقاً.");
+                "Connection failed",
+                "The server refused the connection. The service may be stopped or the port may be closed.");
         }
 
         if (socket?.SocketErrorCode is SocketError.NetworkUnreachable or SocketError.HostUnreachable)
         {
             return ProbeResult.Fail(
                 "Network unreachable",
-                "تعذر الوصول",
-                "تعذر الوصول إلى الموقع. الشبكة لا تصل إلى هذا العنوان.");
+                "Unreachable",
+                "The network cannot reach this address.");
         }
 
         if (ex.HttpRequestError == HttpRequestError.SecureConnectionError)
@@ -251,27 +251,27 @@ public sealed class WebsiteMonitor : BackgroundService, IMonitoringModule
             var cause = FirstLine(ex.InnerException?.Message ?? ex.Message);
             return ProbeResult.Fail(
                 "Secure connection failed",
-                "فشل الاتصال الآمن",
+                "Secure connection failed",
                 string.IsNullOrWhiteSpace(cause)
-                    ? "فشل الاتصال الآمن (HTTPS). شهادة الموقع غير موثوقة أو بروتوكول TLS غير مدعوم."
-                    : $"فشل الاتصال الآمن (HTTPS). {cause}");
+                    ? "The secure (HTTPS) connection failed. The website certificate is not trusted or the TLS version is not supported."
+                    : $"The secure (HTTPS) connection failed. {cause}");
         }
 
         if (ex.HttpRequestError == HttpRequestError.ConnectionError)
         {
             return ProbeResult.Fail(
                 "Website is unreachable",
-                "تعذر الاتصال",
-                "تعذر الوصول إلى الموقع. الاتصال انقطع أو العنوان لا يستقبل الطلبات.");
+                "Connection failed",
+                "The connection dropped or the address is not accepting requests.");
         }
 
         var detail = FirstLine(ex.InnerException?.Message ?? ex.Message);
         return ProbeResult.Fail(
             string.IsNullOrWhiteSpace(detail) ? "Website is unreachable" : detail,
-            "تعذر الاتصال",
+            "Connection failed",
             string.IsNullOrWhiteSpace(detail)
-                ? "تعذر الاتصال بالموقع."
-                : $"تعذر الاتصال بالموقع. {detail}");
+                ? "Could not connect to the website."
+                : $"Could not connect to the website. {detail}");
     }
 
     private static SocketException? FindSocket(Exception ex)

@@ -313,28 +313,23 @@ internal static class ProcessNetworkSampler
         public byte EnableCollection;
     }
 
+    // Must match TCP_ESTATS_DATA_ROD_v0 exactly (96 bytes); any other size makes the API fail.
     [StructLayout(LayoutKind.Sequential)]
     private struct TcpEstatsDataRod
     {
         public ulong DataBytesOut;
-        public ulong DataBytesIn;
         public ulong DataSegsOut;
+        public ulong DataBytesIn;
         public ulong DataSegsIn;
-        public ulong SoftCongWs;
-        public ulong SoftCongMs;
-        public ulong SoftCongCount;
-        public ulong SeqRcvWnd;
-        public ulong MaxSsCwnd;
-        public ulong CurRtoCount;
-        public ulong LastRtoTime;
-        public ulong MinRtt;
-        public ulong MaxRtt;
-        public ulong SumRtt;
-        public ulong CountRtt;
-        public ulong CurTimeoutCount;
-        public ulong AbruptTimeouts;
-        public ulong PktsRetrans;
-        public ulong BytesRetrans;
-        public ulong FastRetrans;
+        public ulong SegsOut;
+        public ulong SegsIn;
+        public uint SoftErrors;
+        public uint SoftErrorReason;
+        public uint SndUna;
+        public uint SndNxt;
+        public uint SndMax;
+        public ulong ThruBytesAcked;
+        public uint RcvNxt;
+        public ulong ThruBytesReceived;
     }
 }

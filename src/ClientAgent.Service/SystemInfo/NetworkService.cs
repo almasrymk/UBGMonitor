@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using ClientAgent.Service.Config;
 using ClientAgent.Shared.Models;
 
 namespace ClientAgent.Service.SystemInfo;
@@ -17,7 +18,6 @@ public interface INetworkService
 public sealed class NetworkService : BackgroundService, INetworkService
 {
     private static readonly IPAddress PingTarget = IPAddress.Parse("8.8.8.8");
-    private static readonly TimeSpan PingCacheTtl = TimeSpan.FromSeconds(8);
     private static readonly TimeSpan PublicIpCacheTtl = TimeSpan.FromMinutes(5);
     private static readonly HttpClient PublicIpClient = new() { Timeout = TimeSpan.FromSeconds(3) };
     private static readonly string[] PublicIpUrls =
@@ -28,6 +28,7 @@ public sealed class NetworkService : BackgroundService, INetworkService
     ];
 
     private readonly ILogger<NetworkService> _logger;
+    private readonly ILocalConfigCache _config;
     private readonly object _lock = new();
     private readonly SemaphoreSlim _pingGate = new(1, 1);
     private readonly Dictionary<string, (PerformanceCounter Rx, PerformanceCounter Tx)> _perfCounters = new(StringComparer.OrdinalIgnoreCase);
@@ -43,19 +44,21 @@ public sealed class NetworkService : BackgroundService, INetworkService
     private DateTime _publicIpAtUtc;
     private readonly SemaphoreSlim _publicIpGate = new(1, 1);
 
-    public NetworkService(ILogger<NetworkService> logger)
+    public NetworkService(ILocalConfigCache config, ILogger<NetworkService> logger)
     {
+        _config = config;
         _logger = logger;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         SampleThroughput();
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
         try
         {
-            while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false))
+            while (!stoppingToken.IsCancellationRequested)
             {
+                var seconds = _config.GetGeneral().Seconds(_config.GetGeneral().NetworkIntervalSeconds, 3);
+                await Task.Delay(TimeSpan.FromSeconds(seconds), stoppingToken).ConfigureAwait(false);
                 SampleThroughput();
             }
         }
@@ -131,11 +134,16 @@ public sealed class NetworkService : BackgroundService, INetworkService
                 dhcp = false;
             }
 
+            var connectionType = ClassifyConnection(nic);
+            var wifi = connectionType == WifiType ? WifiInfoReader.Find(nic.Name, nic.Description) : null;
+
             return new Sample
             {
-                Hostname = Environment.MachineName,
+                Hostname = _config.GetGeneral().DisplayName,
                 Domain = Environment.UserDomainName,
-                ConnectionType = nic.NetworkInterfaceType.ToString(),
+                ConnectionType = connectionType,
+                LinkSpeedMbps = nic.Speed > 0 ? Math.Round(nic.Speed / 1_000_000d, 1) : null,
+                Wifi = wifi,
                 Status = nic.OperationalStatus.ToString(),
                 InterfaceName = nic.Name,
                 AdapterModel = nic.Description,
@@ -314,15 +322,56 @@ public sealed class NetworkService : BackgroundService, INetworkService
                         && n.NetworkInterfaceType != NetworkInterfaceType.Loopback)
             .ToList();
 
-        return nics.FirstOrDefault(n => n.GetIPProperties().GatewayAddresses.Any(g =>
-                   g.Address.AddressFamily == AddressFamily.InterNetwork
-                   && !IPAddress.IsLoopback(g.Address)))
+        // Windows routes through the wired adapter when both cable and Wi-Fi have a gateway.
+        return nics
+                   .Where(n => n.GetIPProperties().GatewayAddresses.Any(g =>
+                       g.Address.AddressFamily == AddressFamily.InterNetwork
+                       && !IPAddress.IsLoopback(g.Address)))
+                   .OrderBy(n => ClassifyConnection(n) switch
+                   {
+                       EthernetType => 0,
+                       WifiType => 1,
+                       _ => 2
+                   })
+                   .FirstOrDefault()
                ?? nics.OrderByDescending(n => n.GetIPStatistics().BytesReceived).FirstOrDefault();
+    }
+
+    private const string WifiType = "Wi-Fi";
+    private const string EthernetType = "Ethernet";
+
+    private static string ClassifyConnection(NetworkInterface nic)
+    {
+        var description = nic.Description;
+        if (nic.NetworkInterfaceType == NetworkInterfaceType.Wireless80211
+            || description.Contains("Wi-Fi", StringComparison.OrdinalIgnoreCase)
+            || description.Contains("Wireless", StringComparison.OrdinalIgnoreCase)
+            || description.Contains("802.11", StringComparison.OrdinalIgnoreCase))
+        {
+            return WifiType;
+        }
+
+        return nic.NetworkInterfaceType switch
+        {
+            NetworkInterfaceType.Ethernet
+                or NetworkInterfaceType.Ethernet3Megabit
+                or NetworkInterfaceType.FastEthernetT
+                or NetworkInterfaceType.FastEthernetFx
+                or NetworkInterfaceType.GigabitEthernet => EthernetType,
+            NetworkInterfaceType.Wwanpp or NetworkInterfaceType.Wwanpp2 or NetworkInterfaceType.Ppp => "Mobile",
+            _ => nic.NetworkInterfaceType.ToString()
+        };
+    }
+
+    private TimeSpan PingTtl()
+    {
+        var seconds = _config.GetGeneral().Seconds(_config.GetGeneral().InternetIntervalSeconds, 5);
+        return TimeSpan.FromSeconds(seconds);
     }
 
     private async Task RefreshPingIfStaleAsync(bool wait)
     {
-        if (DateTime.UtcNow - _pingAtUtc < PingCacheTtl && _cachedPingMs is not null)
+        if (DateTime.UtcNow - _pingAtUtc < PingTtl() && _cachedPingMs is not null)
         {
             return;
         }
@@ -341,7 +390,7 @@ public sealed class NetworkService : BackgroundService, INetworkService
 
         try
         {
-            if (DateTime.UtcNow - _pingAtUtc < PingCacheTtl && _cachedPingMs is not null)
+            if (DateTime.UtcNow - _pingAtUtc < PingTtl() && _cachedPingMs is not null)
             {
                 return;
             }
@@ -470,7 +519,17 @@ public sealed class NetworkService : BackgroundService, INetworkService
         TotalTxGB = sample.TotalTxGb,
         PingMs = sample.PingMs,
         PacketLossPercent = sample.PacketLossPercent,
-        PublicIp = sample.PublicIp
+        PublicIp = sample.PublicIp,
+        ConnectionType = sample.ConnectionType,
+        AdapterName = sample.AdapterModel,
+        LinkSpeedMbps = sample.LinkSpeedMbps,
+        WifiSsid = sample.Wifi?.Ssid ?? string.Empty,
+        WifiSignalPercent = sample.Wifi?.SignalPercent,
+        WifiBand = sample.Wifi?.Band ?? string.Empty,
+        WifiChannel = sample.Wifi?.Channel ?? string.Empty,
+        WifiRadioType = sample.Wifi?.RadioType ?? string.Empty,
+        WifiReceiveMbps = sample.Wifi?.ReceiveMbps,
+        WifiTransmitMbps = sample.Wifi?.TransmitMbps
     };
 
     private static HardwareLevelDto MapLevel(Sample sample)
@@ -479,7 +538,7 @@ public sealed class NetworkService : BackgroundService, INetworkService
         {
             Item("Hostname", sample.Hostname),
             Item("Domain", sample.Domain),
-            Item("Connection Type", sample.ConnectionType),
+            Item("Connection Type", sample.ConnectionType == EthernetType ? "Ethernet (Cable)" : sample.ConnectionType),
             Item("Status", sample.Status, sample.Status.Equals("Up", StringComparison.OrdinalIgnoreCase) ? "Green" : "Red"),
             Item("Interface Name", sample.InterfaceName),
             Item("Adapter Model", sample.AdapterModel),
@@ -500,6 +559,20 @@ public sealed class NetworkService : BackgroundService, INetworkService
             Item("Packet Loss", sample.PacketLossPercent.HasValue ? $"{sample.PacketLossPercent:0}%" : "-", PacketLossStatus(sample.PacketLossPercent))
         };
 
+        if (sample.Wifi is { } wifi)
+        {
+            items.InsertRange(3,
+            [
+                Item("Wi-Fi Network (SSID)", wifi.Ssid),
+                Item("Wi-Fi Signal", wifi.SignalPercent is int signal ? $"{signal}%" : "-", SignalStatus(wifi.SignalPercent)),
+                Item("Wi-Fi Band", wifi.Band),
+                Item("Wi-Fi Channel", wifi.Channel),
+                Item("Wi-Fi Radio Type", wifi.RadioType),
+                Item("Wi-Fi Receive Rate", wifi.ReceiveMbps is double rx ? $"{rx:0} Mbps" : "-"),
+                Item("Wi-Fi Transmit Rate", wifi.TransmitMbps is double tx ? $"{tx:0} Mbps" : "-")
+            ]);
+        }
+
         return new HardwareLevelDto
         {
             Level = 5,
@@ -519,6 +592,14 @@ public sealed class NetworkService : BackgroundService, INetworkService
             Status = status ?? (text == "-" ? "Red" : "Green")
         };
     }
+
+    private static string SignalStatus(int? percent) => percent switch
+    {
+        null => "Red",
+        >= 60 => "Green",
+        >= 40 => "Yellow",
+        _ => "Red"
+    };
 
     private static string PacketLossStatus(double? percent)
     {
@@ -561,6 +642,8 @@ public sealed class NetworkService : BackgroundService, INetworkService
         public string Hostname { get; init; } = Environment.MachineName;
         public string Domain { get; init; } = Environment.UserDomainName;
         public string ConnectionType { get; init; } = "-";
+        public double? LinkSpeedMbps { get; init; }
+        public WifiDetails? Wifi { get; init; }
         public string Status { get; init; } = "Disconnected";
         public string InterfaceName { get; init; } = "-";
         public string AdapterModel { get; init; } = "-";

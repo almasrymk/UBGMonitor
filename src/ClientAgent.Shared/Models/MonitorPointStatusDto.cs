@@ -26,6 +26,8 @@ public sealed class MonitorPointStatusDto
 
     public int IntervalSeconds { get; init; }
 
+    public MonitorPointAlert Alert { get; init; } = MonitorPointAlert.Problem;
+
     public bool? IsUp { get; init; }
 
     public string Status { get; init; } = "Unknown";

@@ -16,6 +16,7 @@ public sealed partial class MonitorPointSettingViewModel : ObservableObject
     [ObservableProperty] private string _model = string.Empty;
     [ObservableProperty] private bool _enabled = true;
     [ObservableProperty] private bool _showInShortcut;
+    [ObservableProperty] private MonitorPointAlert _alert = MonitorPointAlert.Problem;
     [ObservableProperty] private int _intervalSeconds = 3;
 
     public string TypeLabel => MonitorPointTypeLabels.Format(Type);
@@ -33,7 +34,13 @@ public sealed partial class MonitorPointSettingViewModel : ObservableObject
             ? "Configure"
             : $"{DatabaseEngineLabel(DatabaseLogin.Engine)} · {DatabaseLogin.Server}";
 
-    partial void OnDatabaseLoginChanged(DatabaseLogin? value) => OnPropertyChanged(nameof(DatabaseSummary));
+    public string? DatabaseLogo => IsDatabase ? DatabaseLogos.Base64(DatabaseLogin?.Engine) : null;
+
+    partial void OnDatabaseLoginChanged(DatabaseLogin? value)
+    {
+        OnPropertyChanged(nameof(DatabaseSummary));
+        OnPropertyChanged(nameof(DatabaseLogo));
+    }
 
     public string? ApplicationPath
     {
@@ -61,6 +68,7 @@ public sealed partial class MonitorPointSettingViewModel : ObservableObject
         OnPropertyChanged(nameof(IsDevice));
         OnPropertyChanged(nameof(IsApplication));
         OnPropertyChanged(nameof(IsDatabase));
+        OnPropertyChanged(nameof(DatabaseLogo));
         OnPropertyChanged(nameof(ApplicationPath));
         OnPropertyChanged(nameof(DeviceGlyph));
         if (value is not (MonitorPointType.Website or MonitorPointType.Application))
@@ -150,6 +158,7 @@ public sealed partial class MonitorPointSettingViewModel : ObservableObject
             Model = point.Model,
             Enabled = point.Enabled,
             ShowInShortcut = point.ShowInShortcut,
+            Alert = point.Alert,
             DatabaseLogin = point.Database?.Copy(),
             IntervalSeconds = point.IntervalSeconds < 1 ? 3 : point.IntervalSeconds
         };
@@ -167,6 +176,7 @@ public sealed partial class MonitorPointSettingViewModel : ObservableObject
             Model = Model.Trim(),
             Enabled = Enabled,
             ShowInShortcut = ShowInShortcut,
+            Alert = Alert,
             Database = Type == MonitorPointType.Database ? DatabaseLogin?.Copy() : null,
             IntervalSeconds = IntervalSeconds < 1 ? 3 : IntervalSeconds
         };

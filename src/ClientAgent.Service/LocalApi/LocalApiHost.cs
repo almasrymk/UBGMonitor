@@ -73,6 +73,7 @@ public sealed class LocalApiHost : BackgroundService
             return Results.Ok(new
             {
                 identity.AgentId,
+                MachineName = cache.GetGeneral().DisplayName,
                 Status = "Running",
                 identity.Version,
                 identity.Uptime,
@@ -129,9 +130,9 @@ public sealed class LocalApiHost : BackgroundService
         app.MapGet(ApiRoutes.ProcessesTop, async (int? count, string? sortBy, CancellationToken ct) =>
         {
             var sort = string.IsNullOrWhiteSpace(sortBy) ? "cpu" : sortBy.Trim().ToLowerInvariant();
-            if (sort is not "cpu" and not "ram" and not "network")
+            if (sort is not "cpu" and not "ram" and not "network" and not "disk")
             {
-                return Results.BadRequest(new { error = "sortBy must be cpu, ram, or network" });
+                return Results.BadRequest(new { error = "sortBy must be cpu, ram, network, or disk" });
             }
 
             var items = await _rootProvider.GetRequiredService<ISystemInfoService>()

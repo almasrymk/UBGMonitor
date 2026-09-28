@@ -26,6 +26,8 @@ public sealed class MonitorPoint
 
     public bool ShowInShortcut { get; init; }
 
+    public MonitorPointAlert Alert { get; init; } = MonitorPointAlert.Problem;
+
     public int IntervalSeconds { get; init; } = 3;
 
     public double? WarningThreshold { get; init; }

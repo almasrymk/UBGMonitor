@@ -15,6 +15,8 @@ public interface ILocalConfigCache
     string GetConfigVersion();
 
     DateTime? GetLastSyncUtc();
+
+    GeneralRuntimeSettings GetGeneral();
 }
 
 public sealed class LocalConfigCache : ILocalConfigCache
@@ -39,6 +41,7 @@ public sealed class LocalConfigCache : ILocalConfigCache
     private AgentRuntimeConfig _current;
     private DateTime _appSettingsStamp = DateTime.MinValue;
     private List<MonitorPoint>? _appSettingsPoints;
+    private GeneralRuntimeSettings _general = new();
 
     public LocalConfigCache(IAgentIdentity identity, IConfiguration configuration, ILogger<LocalConfigCache> logger)
     {
@@ -102,6 +105,12 @@ public sealed class LocalConfigCache : ILocalConfigCache
     }
 
     public string GetConfigVersion() => _current.ConfigVersion;
+
+    public GeneralRuntimeSettings GetGeneral()
+    {
+        TryReadMonitorPoints(out _);
+        return _general;
+    }
 
     public DateTime? GetLastSyncUtc()
     {
@@ -179,6 +188,12 @@ public sealed class LocalConfigCache : ILocalConfigCache
             }
 
             points = monitorPoints.Deserialize<List<MonitorPoint>>(AppSettingsJson) ?? [];
+            if (TryGetProperty(document.RootElement, "Setting", out var settingNode)
+                && TryGetProperty(settingNode, "General", out var generalNode))
+            {
+                _general = generalNode.Deserialize<GeneralRuntimeSettings>(AppSettingsJson) ?? new GeneralRuntimeSettings();
+            }
+
             _appSettingsStamp = stamp;
             _appSettingsPoints = points;
             return true;

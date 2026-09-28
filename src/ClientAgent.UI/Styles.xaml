@@ -4,7 +4,7 @@
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Padding" Value="0,8"/>
-        <Setter Property="Foreground" Value="#E0E0E0"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Expander">
@@ -29,7 +29,7 @@
                                            Grid.Column="0"
                                            Text="▶"
                                            FontSize="10"
-                                           Foreground="#9A9AA5"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
                                            VerticalAlignment="Center"
                                            Margin="0,0,8,0"/>
                                 <ContentPresenter Grid.Column="1"
@@ -53,22 +53,22 @@
         </Setter>
     </Style>
     <Style x:Key="FieldInput" TargetType="TextBox">
-        <Setter Property="Background" Value="#1B1B20"/>
-        <Setter Property="Foreground" Value="#E0E0E0"/>
+        <Setter Property="Background" Value="{DynamicResource InputBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource BorderColorBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CaretBrush" Value="#E0E0E0"/>
+        <Setter Property="CaretBrush" Value="{DynamicResource TextPrimaryBrush}"/>
         <Setter Property="Padding" Value="8,6"/>
         <Setter Property="Margin" Value="0,0,0,14"/>
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="MaxWidth" Value="480"/>
     </Style>
     <Style x:Key="FieldPassword" TargetType="PasswordBox">
-        <Setter Property="Background" Value="#1B1B20"/>
-        <Setter Property="Foreground" Value="#E0E0E0"/>
+        <Setter Property="Background" Value="{DynamicResource InputBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource BorderColorBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CaretBrush" Value="#E0E0E0"/>
+        <Setter Property="CaretBrush" Value="{DynamicResource TextPrimaryBrush}"/>
         <Setter Property="Padding" Value="8,6"/>
         <Setter Property="Margin" Value="0,0,0,14"/>
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
@@ -86,13 +86,13 @@
         </Setter>
     </Style>
     <Style x:Key="FieldCheck" TargetType="CheckBox">
-        <Setter Property="Foreground" Value="#E0E0E0"/>
-        <Setter Property="Background" Value="#1B1B20"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource InputBrush}"/>
         <Setter Property="Margin" Value="0,0,0,12"/>
     </Style>
     <Style x:Key="FieldCombo" TargetType="ComboBox">
-        <Setter Property="Background" Value="#1B1B20"/>
-        <Setter Property="Foreground" Value="#E0E0E0"/>
+        <Setter Property="Background" Value="{DynamicResource InputBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource BorderColorBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Padding" Value="8,6"/>
@@ -103,7 +103,7 @@
         <Setter Property="ItemContainerStyle">
             <Setter.Value>
                 <Style TargetType="ComboBoxItem">
-                    <Setter Property="Foreground" Value="#E0E0E0"/>
+                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                     <Setter Property="Background" Value="Transparent"/>
                     <Setter Property="Padding" Value="8,6"/>
                     <Setter Property="HorizontalContentAlignment" Value="Left"/>
@@ -117,11 +117,11 @@
                                 </Border>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsHighlighted" Value="True">
-                                        <Setter TargetName="ItemBorder" Property="Background" Value="#333338"/>
+                                        <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource HoverBrush}"/>
                                     </Trigger>
                                     <Trigger Property="IsSelected" Value="True">
-                                        <Setter TargetName="ItemBorder" Property="Background" Value="#2F4A38"/>
-                                        <Setter Property="Foreground" Value="White"/>
+                                        <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource SelectedAccentBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                                     </Trigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
@@ -140,17 +140,17 @@
                             <ToggleButton.Template>
                                 <ControlTemplate TargetType="ToggleButton">
                                     <Border x:Name="Box"
-                                            Background="#1B1B20"
+                                            Background="{DynamicResource InputBrush}"
                                             BorderBrush="{DynamicResource BorderColorBrush}"
                                             BorderThickness="1">
                                         <Path Width="8" Height="5" Margin="0,0,10,0"
                                               HorizontalAlignment="Right" VerticalAlignment="Center"
-                                              Fill="#E0E0E0" Stretch="Fill"
+                                              Fill="{DynamicResource TextPrimaryBrush}" Stretch="Fill"
                                               Data="M 0 0 L 8 0 L 4 5 Z"/>
                                     </Border>
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="Box" Property="Background" Value="#2E2E32"/>
+                                            <Setter TargetName="Box" Property="Background" Value="{DynamicResource HoverBrush}"/>
                                         </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
@@ -163,7 +163,7 @@
                                           Content="{TemplateBinding SelectionBoxItem}"
                                           ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
                                           ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
-                                          TextElement.Foreground="#E0E0E0"/>
+                                          TextElement.Foreground="{DynamicResource TextPrimaryBrush}"/>
                         <Popup Placement="Bottom"
                                AllowsTransparency="True"
                                Focusable="False"
@@ -171,7 +171,7 @@
                                IsOpen="{TemplateBinding IsDropDownOpen}">
                             <Border MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
                                     MaxHeight="{TemplateBinding MaxDropDownHeight}"
-                                    Background="#1B1B20"
+                                    Background="{DynamicResource InputBrush}"
                                     BorderBrush="{DynamicResource BorderColorBrush}"
                                     BorderThickness="1">
                                 <ScrollViewer Background="Transparent" HorizontalScrollBarVisibility="Disabled">

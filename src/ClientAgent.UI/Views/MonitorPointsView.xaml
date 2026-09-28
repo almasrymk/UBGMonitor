@@ -11,7 +11,7 @@
                             <DataTemplate>
                                 <Grid Width="28" Height="28" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <TextBlock Text="{Binding Glyph}" FontFamily="Segoe MDL2 Assets"
-                                               FontSize="16" Foreground="#F2F2F2"
+                                               FontSize="16" Foreground="{DynamicResource TextPrimaryBrush}"
                                                HorizontalAlignment="Center" VerticalAlignment="Center">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">

@@ -8,7 +8,7 @@ public sealed class HardwareCardServiceTests
     [Fact]
     public async Task GetStaticLevelsAsync_ReturnsLevels124_WithExpectedCounts()
     {
-        var sut = new HardwareService(NullLogger<HardwareService>.Instance);
+        var sut = new HardwareService(new FakeLocalConfigCache(), NullLogger<HardwareService>.Instance);
 
         var response = await sut.GetStaticLevelsAsync();
 
@@ -29,7 +29,7 @@ public sealed class HardwareCardServiceTests
     [Fact]
     public async Task GetLevelAsync_1_2_4_ReturnsRequestedLevel()
     {
-        var sut = new HardwareService(NullLogger<HardwareService>.Instance);
+        var sut = new HardwareService(new FakeLocalConfigCache(), NullLogger<HardwareService>.Instance);
 
         var level1 = await sut.GetLevelAsync(1);
         var level2 = await sut.GetLevelAsync(2);
@@ -61,7 +61,7 @@ public sealed class HardwareCardServiceTests
     [Fact]
     public async Task NetworkService_GetLevelAsync_Returns20Items()
     {
-        var sut = new NetworkService(NullLogger<NetworkService>.Instance);
+        var sut = new NetworkService(new FakeLocalConfigCache(), NullLogger<NetworkService>.Instance);
 
         var level = await sut.GetLevelAsync();
 

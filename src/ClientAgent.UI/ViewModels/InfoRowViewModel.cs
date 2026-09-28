@@ -15,7 +15,9 @@ public sealed partial class InfoRowViewModel : ObservableObject
 
     public string Label { get; }
 
-    [ObservableProperty] private string _value = "-";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowHealthDot))]
+    private string _value = "-";
 
     [ObservableProperty] private SensorHealth _health = SensorHealth.Ok;
 
@@ -26,6 +28,17 @@ public sealed partial class InfoRowViewModel : ObservableObject
     [ObservableProperty] private bool _isMacHighlighted;
 
     [ObservableProperty] private bool _canCopy;
+
+    /// <summary>True/false when the row has a Device Specifications minimum; null when no spec applies.</summary>
+    [ObservableProperty] private bool? _specMet;
+
+    /// <summary>Shows the spec ✓/✕ mark instead of the health dot.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowHealthDot))]
+    private bool _usesSpecMark;
+
+    /// <summary>Health dot only for rows that actually have a reading.</summary>
+    public bool ShowHealthDot => !UsesSpecMark && !string.Equals(Value, "-", StringComparison.Ordinal);
 
     public void Set(
         string value,

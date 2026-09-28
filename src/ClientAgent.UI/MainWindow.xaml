@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="clr-namespace:ClientAgent.UI.Views"
         Title="{Binding WindowTitle}"
+        Icon="Assets/agent-monitor.png"
         Width="1280"
         Height="780"
         MinWidth="1000"
@@ -43,8 +44,13 @@
                     <Button Style="{StaticResource CloseButton}" Content="✕" Click="Close_Click"
                             WindowChrome.IsHitTestVisibleInChrome="True"/>
                 </StackPanel>
-                <TextBlock Text="{Binding WindowTitle}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"
-                           VerticalAlignment="Center" Margin="12,0,0,0"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Image Width="18" Height="18" Margin="10,0,8,0"
+                           Source="Assets/agent-monitor.png"
+                           RenderOptions.BitmapScalingMode="HighQuality"/>
+                    <TextBlock Text="{Binding WindowTitle}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
             </DockPanel>
         </Border>
 
@@ -167,7 +173,9 @@
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock FontSize="12" FontWeight="SemiBold"
                                        Text="{Binding AgentStatus, StringFormat=Service: {0}}"/>
-                            <TextBlock FontSize="11" Foreground="#9A9AA5" Margin="0,1,0,0"
+                            <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,1,0,0"
+                                       Text="{Binding Settings.MachineName, StringFormat=Device: {0}}"/>
+                            <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,1,0,0"
                                        Text="{Binding AgentVersion}"/>
                         </StackPanel>
                     </StackPanel>
@@ -272,10 +280,10 @@
                                                                 </Border>
                                                                 <ControlTemplate.Triggers>
                                                                     <Trigger Property="IsMouseOver" Value="True">
-                                                                        <Setter TargetName="Chip" Property="Background" Value="#2E2E32"/>
+                                                                        <Setter TargetName="Chip" Property="Background" Value="{DynamicResource HoverBrush}"/>
                                                                     </Trigger>
                                                                     <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                                        <Setter TargetName="Chip" Property="Background" Value="#333338"/>
+                                                                        <Setter TargetName="Chip" Property="Background" Value="{DynamicResource SelectedBrush}"/>
                                                                         <Setter TargetName="Chip" Property="BorderBrush" Value="{StaticResource AccentGreenBrush}"/>
                                                                     </DataTrigger>
                                                                 </ControlTemplate.Triggers>
@@ -288,10 +296,10 @@
                                                 <Grid Width="52" Height="52" HorizontalAlignment="Center">
                                                     <Ellipse Width="52" Height="52" Opacity="0.22"
                                                              Fill="{Binding Status, Converter={StaticResource HealthToBrushConverter}}"/>
-                                                    <Ellipse Width="46" Height="46" Fill="#1B1B20"
+                                                    <Ellipse Width="46" Height="46" Fill="{DynamicResource ChipFillBrush}"
                                                              Stroke="{Binding Status, Converter={StaticResource HealthToBrushConverter}}"
                                                              StrokeThickness="2"/>
-                                                    <TextBlock Text="{Binding Glyph}" Foreground="#F2F2F2"
+                                                    <TextBlock Text="{Binding Glyph}" Foreground="{DynamicResource TextPrimaryBrush}"
                                                                HorizontalAlignment="Center" VerticalAlignment="Center">
                                                         <TextBlock.Style>
                                                             <Style TargetType="TextBlock">
@@ -320,7 +328,7 @@
                                                 </Grid>
                                                 <TextBlock Text="{Binding DisplayName}" FontSize="11" Margin="0,4,0,3"
                                                            HorizontalAlignment="Center" TextAlignment="Center"
-                                                           TextTrimming="CharacterEllipsis" Foreground="White" FontWeight="SemiBold"/>
+                                                           TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold"/>
                                                 <Ellipse Width="8" Height="8" HorizontalAlignment="Center"
                                                          Fill="{Binding Status, Converter={StaticResource HealthToBrushConverter}}"/>
                                             </StackPanel>
@@ -346,22 +354,20 @@
                            Visibility="{Binding ShowNotifications, Converter={StaticResource BoolToVis}}">
                     <TextBlock DockPanel.Dock="Top" Text="Messages &amp; Issues Board" FontSize="13"
                                FontWeight="SemiBold" Foreground="{StaticResource AccentOrangeBrush}" Margin="0,0,0,6"/>
-                    <Border Background="#241C12" CornerRadius="6" Padding="8,6" BorderBrush="#5A3B16" BorderThickness="1">
+                    <Border Background="{DynamicResource IssueBoardBrush}" CornerRadius="6" Padding="8,6" BorderBrush="{DynamicResource IssueBoardBorderBrush}" BorderThickness="1">
                         <DockPanel>
                             <TextBlock DockPanel.Dock="Top" Text="Current Issues" FontSize="12" FontWeight="SemiBold"
-                                       Foreground="#E0E0E0" Margin="0,0,0,4"/>
+                                       Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,4"/>
                             <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="72">
                                 <Grid>
-                                    <TextBlock Text="لا توجد تنبيهات حالياً." Foreground="#9A9AA5" FontSize="12"
-                                               FlowDirection="RightToLeft" TextAlignment="Right"
+                                    <TextBlock Text="No notifications right now." Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12"
                                                Visibility="{Binding HasCurrentIssues, Converter={StaticResource InverseBoolToVis}}"/>
                                     <ItemsControl ItemsSource="{Binding CurrentIssues}"
                                                   Visibility="{Binding HasCurrentIssues, Converter={StaticResource BoolToVis}}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
                                                 <StackPanel Margin="0,0,0,8">
-                                                    <TextBlock Text="{Binding Title}" TextWrapping="Wrap"
-                                                               FlowDirection="RightToLeft" TextAlignment="Right">
+                                                    <TextBlock Text="{Binding Title}" TextWrapping="Wrap">
                                                         <TextBlock.Style>
                                                             <Style TargetType="TextBlock">
                                                                 <Setter Property="FontSize" Value="12"/>
@@ -371,13 +377,15 @@
                                                                     <DataTrigger Binding="{Binding Severity}" Value="Warning">
                                                                         <Setter Property="Foreground" Value="{StaticResource AccentYellowBrush}"/>
                                                                     </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding Severity}" Value="Unknown">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource AccentGrayBrush}"/>
+                                                                    </DataTrigger>
                                                                 </Style.Triggers>
                                                             </Style>
                                                         </TextBlock.Style>
                                                     </TextBlock>
-                                                    <TextBlock Text="{Binding Message}" FontSize="11" Foreground="#F0F0F0"
-                                                               TextWrapping="Wrap" Margin="0,2,0,0"
-                                                               FlowDirection="RightToLeft" TextAlignment="Right"/>
+                                                    <TextBlock Text="{Binding Message}" FontSize="11" Foreground="{DynamicResource IssueTextBrush}"
+                                                               TextWrapping="Wrap" Margin="0,2,0,0"/>
                                                 </StackPanel>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
@@ -436,7 +444,7 @@
                     </Style>
                 </views:SettingsView.Style>
             </views:SettingsView>
-            <views:SimpleTabView TitleText="About" BodyText="UBG Monitor — Client Agent Dashboard. English UI with Arabic support planned.">
+            <views:SimpleTabView TitleText="About" BodyText="Agent Monitor. English UI with Arabic support planned.">
                 <views:SimpleTabView.Style>
                     <Style TargetType="views:SimpleTabView">
                         <Setter Property="Visibility" Value="Collapsed"/>

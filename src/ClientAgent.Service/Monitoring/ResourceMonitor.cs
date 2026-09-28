@@ -1,7 +1,5 @@
 using ClientAgent.Service.Config;
-using ClientAgent.Service.Options;
 using ClientAgent.Service.SystemInfo;
-using Microsoft.Extensions.Options;
 
 namespace ClientAgent.Service.Monitoring;
 
@@ -11,20 +9,20 @@ public sealed class ResourceMonitor : BackgroundService, IMonitoringModule
     private readonly ILocalConfigCache _configCache;
     private readonly IMonitorHealthStore _health;
     private readonly ILogger<ResourceMonitor> _logger;
-    private readonly int _intervalSeconds;
+    private DateTime _nextCpuUtc = DateTime.MinValue;
+    private DateTime _nextRamUtc = DateTime.MinValue;
+    private DateTime _nextDiskUtc = DateTime.MinValue;
 
     public ResourceMonitor(
         ISystemInfoService systemInfo,
         ILocalConfigCache configCache,
         IMonitorHealthStore health,
-        IOptions<MonitoringOptions> options,
         ILogger<ResourceMonitor> logger)
     {
         _systemInfo = systemInfo;
         _configCache = configCache;
         _health = health;
         _logger = logger;
-        _intervalSeconds = Math.Max(5, options.Value.ResourceIntervalSeconds);
     }
 
     public string Name => nameof(ResourceMonitor);
@@ -42,41 +40,73 @@ public sealed class ResourceMonitor : BackgroundService, IMonitoringModule
                 _logger.LogError(ex, "Resource monitor cycle failed");
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(_intervalSeconds), stoppingToken);
+            await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);
         }
     }
 
     public async Task RunCycleAsync(CancellationToken cancellationToken)
     {
         var config = await _configCache.GetConfigAsync(cancellationToken);
-        var snapshot = await _systemInfo.GetSnapshotAsync(cancellationToken);
-
-        if (snapshot.Cpu.UsagePercent >= config.CpuCriticalThreshold)
+        var general = _configCache.GetGeneral();
+        var now = DateTime.UtcNow;
+        var checkCpu = now >= _nextCpuUtc;
+        var checkRam = now >= _nextRamUtc;
+        var checkDisk = now >= _nextDiskUtc;
+        if (!checkCpu && !checkRam && !checkDisk)
         {
-            _logger.LogWarning("CPU usage {Usage}% exceeded critical threshold {Threshold}%", snapshot.Cpu.UsagePercent, config.CpuCriticalThreshold);
-            _health.SetIssue("cpu", "Critical", "CPU threshold", IssueText.CpuHigh(snapshot.Cpu.UsagePercent), "cpu");
+            return;
         }
-        else
+
+        if (checkCpu)
+        {
+            _nextCpuUtc = now.AddSeconds(general.Seconds(general.CpuIntervalSeconds, 3));
+        }
+
+        if (checkRam)
+        {
+            _nextRamUtc = now.AddSeconds(general.Seconds(general.RamIntervalSeconds, 3));
+        }
+
+        if (checkDisk)
+        {
+            _nextDiskUtc = now.AddSeconds(general.Seconds(general.DiskIntervalSeconds, 15));
+        }
+
+        var cpu = checkCpu ? await _systemInfo.GetCpuAsync(cancellationToken) : null;
+        var ram = checkRam ? await _systemInfo.GetRamAsync(cancellationToken) : null;
+        var partitions = checkDisk ? await _systemInfo.GetPartitionsAsync(cancellationToken) : null;
+
+        if (cpu is not null && cpu.UsagePercent >= config.CpuCriticalThreshold)
+        {
+            _logger.LogWarning("CPU usage {Usage}% exceeded critical threshold {Threshold}%", cpu.UsagePercent, config.CpuCriticalThreshold);
+            _health.SetIssue("cpu", "Critical", "CPU threshold", IssueText.CpuHigh(cpu.UsagePercent), "cpu");
+        }
+        else if (checkCpu)
         {
             _health.ClearIssue("cpu");
         }
 
-        if (snapshot.Ram.UsagePercent >= config.RamCriticalThreshold)
+        if (ram is not null && ram.UsagePercent >= config.RamCriticalThreshold)
         {
-            _logger.LogWarning("RAM usage {Usage}% exceeded critical threshold {Threshold}%", snapshot.Ram.UsagePercent, config.RamCriticalThreshold);
-            _health.SetIssue("ram", "Critical", "RAM threshold", IssueText.RamHigh(snapshot.Ram.UsagePercent), "ram");
+            _logger.LogWarning("RAM usage {Usage}% exceeded critical threshold {Threshold}%", ram.UsagePercent, config.RamCriticalThreshold);
+            _health.SetIssue("ram", "Critical", "RAM threshold", IssueText.RamHigh(ram.UsagePercent), "ram");
         }
-        else
+        else if (checkRam)
         {
             _health.ClearIssue("ram");
         }
 
-        var criticalDrives = snapshot.Partitions
+        if (partitions is null)
+        {
+            return;
+        }
+
+        var criticalDrives = partitions
             .Where(p => p.UsagePercent >= config.DiskCriticalThreshold)
             .Select(p => p.DriveLetter.TrimEnd('\\', ':'))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var partition in snapshot.Partitions)
+        foreach (var partition in partitions)
         {
             var drive = partition.DriveLetter.TrimEnd('\\', ':');
             var key = $"disk-{drive}";

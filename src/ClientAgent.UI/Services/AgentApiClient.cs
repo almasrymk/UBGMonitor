@@ -77,6 +77,9 @@ public sealed class AgentApiClient
     public Task<List<DiskPartition>?> GetPartitionsAsync(CancellationToken ct = default)
         => GetAsync<List<DiskPartition>>(ApiRoutes.DiskPartitions, "partitions", ct);
 
+    public Task<List<PhysicalDisk>?> GetPhysicalDisksAsync(CancellationToken ct = default)
+        => GetAsync<List<PhysicalDisk>>(ApiRoutes.DiskPhysical, "physical-disks", ct);
+
     public Task<NetworkInfo?> GetNetworkAsync(CancellationToken ct = default)
         => GetAsync<NetworkInfo>(ApiRoutes.Network, "network", ct);
 
@@ -91,6 +94,7 @@ public sealed class AgentApiClient
         {
             ProcessSortBy.Ram => "ram",
             ProcessSortBy.Network => "network",
+            ProcessSortBy.Disk => "disk",
             _ => "cpu"
         };
         var route = $"{ApiRoutes.ProcessesTop}?count={count}&sortBy={sort}";

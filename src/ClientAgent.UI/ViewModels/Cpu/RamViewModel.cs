@@ -13,6 +13,9 @@ public sealed partial class RamViewModel : ObservableObject
     [ObservableProperty] private double _cachedGb;
     public ObservableCollection<double> History { get; } = [];
 
+    /// <summary>Used memory in GB, for the Task Manager style "Memory usage" graph.</summary>
+    public ObservableCollection<double> UsedHistory { get; } = [];
+
     public void Update(RamInfo ram)
     {
         UsagePercent = ram.UsagePercent;
@@ -21,5 +24,6 @@ public sealed partial class RamViewModel : ObservableObject
         FreeGb = ram.FreeGB;
         CachedGb = ram.CachedGB;
         CpuViewModel.Push(History, ram.UsagePercent);
+        CpuViewModel.Push(UsedHistory, ram.UsedGB);
     }
 }

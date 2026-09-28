@@ -46,10 +46,10 @@
                                     </Border>
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="Bd" Property="Background" Value="#333338"/>
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SelectedBrush}"/>
                                         </Trigger>
                                         <Trigger Property="IsSelected" Value="True">
-                                            <Setter TargetName="Bd" Property="Background" Value="#2F4A38"/>
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SelectedAccentBrush}"/>
                                         </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
@@ -83,7 +83,7 @@
                             <TextBlock Grid.Column="2"
                                        Text="{Binding Pid}"
                                        FontSize="11"
-                                       Foreground="#AAAAAA"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
                                        VerticalAlignment="Center"/>
                             <TextBlock Grid.Column="3"
                                        Text="{Binding DisplayValue}"
@@ -110,7 +110,7 @@
             </ListBox>
         </DockPanel>
         <TextBlock Text="{Binding ErrorMessage}"
-                   Foreground="#AAAAAA"
+                   Foreground="{DynamicResource TextSecondaryBrush}"
                    FontSize="12"
                    TextWrapping="Wrap"
                    HorizontalAlignment="Center"
@@ -119,7 +119,7 @@
                    Margin="8"
                    Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}"/>
         <TextBlock Text="Loading..."
-                   Foreground="#AAAAAA"
+                   Foreground="{DynamicResource TextSecondaryBrush}"
                    FontSize="12"
                    HorizontalAlignment="Center"
                    VerticalAlignment="Center"

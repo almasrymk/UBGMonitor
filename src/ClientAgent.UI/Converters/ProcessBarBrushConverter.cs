@@ -18,7 +18,8 @@ public sealed class ProcessBarBrushConverter : IMultiValueConverter
         return sortBy switch
         {
             ProcessSortBy.Ram => Brush("ProcessBarRamBrush", Color.FromRgb(0x21, 0x96, 0xF3)),
-            ProcessSortBy.Network => Brush("ProcessBarNetworkBrush", Color.FromRgb(0x9C, 0x27, 0xB0)),
+            ProcessSortBy.Network => Brush("TextPrimaryBrush", Colors.White),
+            ProcessSortBy.Disk => Brush("AccentRedBrush", Color.FromRgb(0xF4, 0x43, 0x36)),
             _ when percent >= 50 => Brush("ProcessBarCpuHighBrush", Color.FromRgb(0xF4, 0x43, 0x36)),
             _ when percent >= 20 => Brush("ProcessBarCpuMidBrush", Color.FromRgb(0xFF, 0xC1, 0x07)),
             _ => Brush("ProcessBarCpuLowBrush", Color.FromRgb(0x4C, 0xAF, 0x50))

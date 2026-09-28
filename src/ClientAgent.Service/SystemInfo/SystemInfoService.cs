@@ -295,6 +295,7 @@ public sealed class SystemInfoService : ISystemInfoService
             {
                 "cpu" => CollectByCpu(take),
                 "network" => CollectByNetwork(take),
+                "disk" => CollectByDisk(take),
                 _ => CollectByRam(take)
             };
         }
@@ -390,6 +391,36 @@ public sealed class SystemInfoService : ISystemInfoService
 
             _lastNetworkBytes = current;
             _lastNetworkTimestamp = now;
+        }
+
+        return SnapshotProcesses()
+            .Select(row => (row.Name, row.Pid, row.RamMb, Rate: rates.GetValueOrDefault(row.Pid)))
+            .OrderByDescending(row => row.Rate)
+            .ThenByDescending(row => row.RamMb)
+            .Take(take)
+            .Select(row => new ProcessTopDto
+            {
+                Name = row.Name,
+                Pid = row.Pid,
+                Value = row.Rate,
+                Unit = "KB/s"
+            })
+            .ToList();
+    }
+
+    private List<ProcessTopDto> CollectByDisk(int take)
+    {
+        const int sampleMs = 500;
+        var first = ProcessDiskSampler.ReadBytesByPid();
+        Thread.Sleep(sampleMs);
+        var second = ProcessDiskSampler.ReadBytesByPid();
+        var rates = new Dictionary<int, double>(second.Count);
+        foreach (var (pid, bytes) in second)
+        {
+            if (first.TryGetValue(pid, out var previous) && bytes > previous)
+            {
+                rates[pid] = Math.Round((bytes - previous) / (sampleMs / 1000d) / 1024d, 1);
+            }
         }
 
         return SnapshotProcesses()

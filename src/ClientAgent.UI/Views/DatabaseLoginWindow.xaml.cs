@@ -120,5 +120,8 @@ public partial class DatabaseLoginWindow : Window
             _ => 1433
         };
 
-    private sealed record EngineChoice(DatabaseEngine Engine, string Label, int DefaultPort);
+    private sealed record EngineChoice(DatabaseEngine Engine, string Label, int DefaultPort)
+    {
+        public string? Logo => Services.DatabaseLogos.Base64(Engine);
+    }
 }
