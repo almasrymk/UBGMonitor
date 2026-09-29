@@ -38,6 +38,9 @@
         <SolidColorBrush x:Key="DividerBrush" Color="#3A3A4D"/>
         <SolidColorBrush x:Key="ChipFillBrush" Color="#1B1B20"/>
         <SolidColorBrush x:Key="NavHoverBrush" Color="#44444A"/>
+        <SolidColorBrush x:Key="ScrollThumbBrush" Color="#3A3A40"/>
+        <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="#46464C"/>
+        <SolidColorBrush x:Key="ScrollThumbDragBrush" Color="#525258"/>
         <SolidColorBrush x:Key="IssueBoardBrush" Color="#241C12"/>
         <SolidColorBrush x:Key="IssueBoardBorderBrush" Color="#5A3B16"/>
         <SolidColorBrush x:Key="IssueTextBrush" Color="#F0F0F0"/>
@@ -241,6 +244,33 @@
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
                                 <Setter Property="Cursor" Value="Arrow"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="AccentFooterButton" TargetType="Button" BasedOn="{StaticResource FooterButton}">
+            <Setter Property="Background" Value="{StaticResource AccentGreenBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="4"
+                                Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              RecognizesAccessKey="True"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.7"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>

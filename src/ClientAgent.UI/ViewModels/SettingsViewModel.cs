@@ -167,11 +167,33 @@ public sealed partial class SettingsViewModel : ObservableObject
     /// <summary>Green check shown for a few seconds after a successful save.</summary>
     [ObservableProperty] private bool _isSavedBadgeVisible;
 
+    private TaskCompletionSource? _savedBadgeHidden;
+
     private void ShowSavedBadge()
     {
         _savedTimer.Stop();
         IsSavedBadgeVisible = true;
         _savedTimer.Start();
+    }
+
+    private Task WaitForSavedBadgeAsync()
+    {
+        if (!IsSavedBadgeVisible)
+        {
+            return Task.CompletedTask;
+        }
+
+        _savedBadgeHidden ??= new TaskCompletionSource();
+        return _savedBadgeHidden.Task;
+    }
+
+    partial void OnIsSavedBadgeVisibleChanged(bool value)
+    {
+        if (!value && _savedBadgeHidden is { } hidden)
+        {
+            _savedBadgeHidden = null;
+            hidden.TrySetResult();
+        }
     }
 
     private void OnConditionPropertyChanged(object? sender, PropertyChangedEventArgs e) => RefreshHasChanges();
@@ -256,6 +278,10 @@ public sealed partial class SettingsViewModel : ObservableObject
         if (choice == true)
         {
             await SaveCommand.ExecuteAsync(null);
+            if (!HasChanges)
+            {
+                await WaitForSavedBadgeAsync();
+            }
         }
         else if (choice == false)
         {

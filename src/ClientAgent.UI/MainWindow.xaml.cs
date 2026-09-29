@@ -6,6 +6,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using ClientAgent.UI.Services;
 using ClientAgent.UI.ViewModels;
+using ClientAgent.UI.Views;
 
 namespace ClientAgent.UI;
 
@@ -34,13 +35,16 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         var viewModel = new MainViewModel();
-        viewModel.Settings.ConfirmSaveChanges = section => MessageBox.Show(
+        viewModel.Settings.ConfirmSaveChanges = section => ThemedDialog.Show(
                 this,
-                $"You have unsaved changes in \"{section}\".\n\nDo you want to save them before leaving this tab?",
                 "Unsaved changes",
-                MessageBoxButton.YesNoCancel,
-                MessageBoxImage.Question,
-                MessageBoxResult.Cancel) switch
+                $"You have unsaved changes in \"{section}\".\n\nDo you want to save them before leaving this tab?",
+                DialogKind.Question,
+                [
+                    new DialogButton("Save", MessageBoxResult.Yes, IsPrimary: true),
+                    new DialogButton("Don't save", MessageBoxResult.No),
+                    new DialogButton("Cancel", MessageBoxResult.Cancel)
+                ]) switch
             {
                 MessageBoxResult.Yes => true,
                 MessageBoxResult.No => false,
@@ -126,8 +130,8 @@ public partial class MainWindow : Window
         Dashboard.SaveCurrentAsMyDefault();
         _pins = _pins with { DefaultNavPinned = _nav.Pinned, DefaultStatusPinned = _status.Pinned };
         SavePins();
-        MessageBox.Show(this, "The current layout is saved as your default. \"Reset layout\" will return to it.",
-            "Reset layout", MessageBoxButton.OK, MessageBoxImage.Information);
+        ThemedDialog.Show(this, "Reset layout", "The current layout is saved as your default. \"Reset layout\" will return to it.",
+            DialogKind.Info, [new DialogButton("OK", MessageBoxResult.OK, IsPrimary: true)], MessageBoxResult.OK);
     }
 
     private static PanelPins LoadPins()

@@ -18,12 +18,15 @@ public partial class SettingsView : UserControl
             return;
         }
 
-        var answer = MessageBox.Show(
-            Window.GetWindow(this)!,
-            $"All unsaved changes in \"{settings.SelectedSectionTitle}\" will be lost, and this tab will go back to its last saved values.\n\nDo you want to continue?",
+        var answer = ThemedDialog.Show(
+            Window.GetWindow(this),
             "Reset changes",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning,
+            $"All unsaved changes in \"{settings.SelectedSectionTitle}\" will be lost, and this tab will go back to its last saved values.\n\nDo you want to continue?",
+            DialogKind.Warning,
+            [
+                new DialogButton("Reset", MessageBoxResult.Yes, IsDanger: true),
+                new DialogButton("Cancel", MessageBoxResult.No)
+            ],
             MessageBoxResult.No);
         if (answer == MessageBoxResult.Yes)
         {
