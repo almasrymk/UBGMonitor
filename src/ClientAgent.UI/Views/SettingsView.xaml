@@ -48,8 +48,8 @@
             <Setter Property="MaxWidth" Value="10000"/>
         </Style>
         <Style x:Key="OnOffToggle" TargetType="ToggleButton">
-            <Setter Property="Width" Value="78"/>
-            <Setter Property="Height" Value="26"/>
+            <Setter Property="Width" Value="48"/>
+            <Setter Property="Height" Value="24"/>
             <Setter Property="HorizontalAlignment" Value="Left"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Margin" Value="0,0,0,14"/>
@@ -67,7 +67,7 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{DynamicResource BorderColorBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="13"
+                                CornerRadius="12"
                                 SnapsToDevicePixels="True">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -79,16 +79,16 @@
                                            Text="{TemplateBinding Content}"
                                            Foreground="{TemplateBinding Foreground}"
                                            FontFamily="Segoe UI"
-                                           FontSize="10"
+                                           FontSize="9.5"
                                            FontWeight="SemiBold"
                                            VerticalAlignment="Center"
                                            HorizontalAlignment="Right"
-                                           Margin="0,0,10,0"
+                                           Margin="0,0,7,0"
                                            IsHitTestVisible="False"/>
                                 <Ellipse x:Name="Knob"
                                          Grid.Column="0"
-                                         Width="18"
-                                         Height="18"
+                                         Width="17"
+                                         Height="17"
                                          Fill="{TemplateBinding BorderBrush}"
                                          HorizontalAlignment="Left"
                                          VerticalAlignment="Center"
@@ -103,7 +103,7 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="Label" Property="HorizontalAlignment" Value="Left"/>
-                                <Setter TargetName="Label" Property="Margin" Value="10,0,0,0"/>
+                                <Setter TargetName="Label" Property="Margin" Value="7,0,0,0"/>
                                 <Setter TargetName="Knob" Property="Grid.Column" Value="1"/>
                                 <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right"/>
                                 <Setter TargetName="Knob" Property="Margin" Value="0,0,3,0"/>
@@ -124,6 +124,7 @@
             </Style.Triggers>
         </Style>
         <Style x:Key="ThemeToggle" TargetType="ToggleButton" BasedOn="{StaticResource OnOffToggle}">
+            <Setter Property="Width" Value="56"/>
             <Setter Property="Content" Value="Dark"/>
             <Setter Property="Background" Value="#1E1E1E"/>
             <Setter Property="Foreground" Value="White"/>
@@ -246,7 +247,7 @@
                 Padding="12,10">
             <StackPanel Orientation="Horizontal">
                 <Button Content="Save" Command="{Binding SaveCommand}" Style="{StaticResource FooterButton}" Margin="0,0,8,0" Padding="18,6"/>
-                <Button Content="Reset" Command="{Binding ResetCommand}" Style="{StaticResource FooterButton}" Margin="0" Padding="18,6"/>
+                <Button Content="Reset" Click="Reset_Click" Style="{StaticResource FooterButton}" Margin="0" Padding="18,6"/>
                 <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
             </StackPanel>
         </Border>

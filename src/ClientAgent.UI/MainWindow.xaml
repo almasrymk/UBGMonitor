@@ -23,6 +23,85 @@
                       UseAeroCaptionButtons="False"/>
     </WindowChrome.WindowChrome>
 
+    <Window.Resources>
+        <Style x:Key="PinButton" TargetType="ToggleButton">
+            <Setter Property="Width" Value="28"/>
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="{StaticResource AccentOrangeBrush}"/>
+            <Setter Property="ToolTip" Value="Auto hide is ON (hides when the mouse leaves). Click to keep it open"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Bg" Background="{DynamicResource ButtonBrush}" CornerRadius="5"
+                                BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1">
+                            <Path x:Name="PinIcon" Width="14" Height="14" Stretch="Uniform"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center"
+                                  Fill="{TemplateBinding Foreground}" RenderTransformOrigin="0.5,0.5"
+                                  Data="M 5,0 L 11,0 L 11,1.5 L 10,1.5 L 10,6 L 13,9 L 13,10.5 L 8.75,10.5 L 8.75,16 L 7.25,16 L 7.25,10.5 L 3,10.5 L 3,9 L 6,6 L 6,1.5 L 5,1.5 Z">
+                                <Path.RenderTransform>
+                                    <RotateTransform x:Name="PinTilt" Angle="45"/>
+                                </Path.RenderTransform>
+                            </Path>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="PinIcon" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <RotateTransform Angle="0"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource NavHoverBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsChecked" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                    <Setter Property="ToolTip" Value="Pinned open. Click to turn on auto hide"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="AutoHideStrip" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource SurfaceDarkBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderColorBrush}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource NavHoverBrush}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="TitleBarButton" TargetType="Button">
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Padding" Value="10,0"/>
+            <Setter Property="Margin" Value="0,0,6,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bg" Background="Transparent" CornerRadius="5" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource HoverBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="36"/>
@@ -30,13 +109,28 @@
             <RowDefinition Height="28"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="92"/>
+            <ColumnDefinition x:Name="NavColumn" Width="92"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
         <Border Grid.Row="0" Grid.ColumnSpan="2" Background="{DynamicResource SurfaceDarkBrush}">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button x:Name="ResetLayoutButton" Style="{StaticResource TitleBarButton}" Click="ResetLayout_Click"
+                            ToolTip="Reset the dashboard and panels to your default layout (right-click for more)">
+                        <Button.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Reset to my default" Click="ResetLayout_Click"/>
+                                <MenuItem Header="Save current layout as my default" Click="SaveDefaultLayout_Click"/>
+                                <Separator/>
+                                <MenuItem Header="Reset to original layout" Click="ResetOriginalLayout_Click"/>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72C;" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Reset layout" FontSize="12" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
                     <Button Style="{StaticResource CaptionButton}" Content="─" Click="Minimize_Click"
                             WindowChrome.IsHitTestVisibleInChrome="True"/>
                     <Button x:Name="MaximizeButton" Style="{StaticResource CaptionButton}" Content="☐" Click="Maximize_Click"
@@ -45,7 +139,11 @@
                             WindowChrome.IsHitTestVisibleInChrome="True"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Image Width="18" Height="18" Margin="10,0,8,0"
+                    <Button Style="{StaticResource TitleBarButton}" Margin="4,0,0,0" Padding="9,0" Click="ToggleMenu_Click"
+                            ToolTip="Show / auto hide the menu">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE700;" FontSize="14"/>
+                    </Button>
+                    <Image Width="18" Height="18" Margin="6,0,8,0"
                            Source="Assets/agent-monitor.png"
                            RenderOptions.BitmapScalingMode="HighQuality"/>
                     <TextBlock Text="{Binding WindowTitle}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"
@@ -54,10 +152,20 @@
             </DockPanel>
         </Border>
 
-        <Border Grid.Row="1" Grid.Column="0"
+        <Border x:Name="NavStrip" Grid.Row="1" Grid.Column="0" Style="{StaticResource AutoHideStrip}"
+                BorderThickness="0,0,1,0" ToolTip="Menu">
+            <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="11" Text="&#xE76C;" VerticalAlignment="Center"
+                       HorizontalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}"/>
+        </Border>
+
+        <Border x:Name="NavPanel" Grid.Row="1" Grid.Column="0" Width="92" HorizontalAlignment="Left" Panel.ZIndex="20"
                 Background="{DynamicResource SurfaceDarkBrush}"
                 BorderBrush="{DynamicResource BorderColorBrush}"
                 BorderThickness="0,0,1,0">
+            <Border.RenderTransform>
+                <TranslateTransform x:Name="NavShift"/>
+            </Border.RenderTransform>
+            <DockPanel>
             <StackPanel Margin="0,8,0,8">
                 <RadioButton Style="{StaticResource NavButton}" Content="Dashboard" Tag="&#xE80F;" GroupName="MainTabs"
                              Command="{Binding SelectTabCommand}" CommandParameter="Dashboard"
@@ -72,21 +180,34 @@
                              Command="{Binding SelectTabCommand}" CommandParameter="About"
                              IsChecked="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter=About, Mode=OneWay}"/>
             </StackPanel>
+            </DockPanel>
         </Border>
 
-        <Grid Grid.Row="1" Grid.Column="1">
+        <Grid x:Name="ContentHost" Grid.Row="1" Grid.Column="1" ClipToBounds="True">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
+                <RowDefinition x:Name="StatusRow" Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-        <Border Grid.Row="0"
+        <Border x:Name="StatusStrip" Grid.Row="0" Style="{StaticResource AutoHideStrip}"
+                BorderThickness="0,0,0,1" ToolTip="Service Status">
+            <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="11" Text="&#xE70D;" VerticalAlignment="Center"
+                       HorizontalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}"/>
+        </Border>
+
+        <Border x:Name="StatusPanel" Grid.Row="0" VerticalAlignment="Top" Panel.ZIndex="20"
                 Background="{DynamicResource SurfaceDarkAltBrush}"
                 CornerRadius="5"
                 Margin="8,6"
                 Padding="12,8"
                 BorderBrush="{DynamicResource BorderColorBrush}"
                 BorderThickness="1">
+            <Border.RenderTransform>
+                <TranslateTransform x:Name="StatusShift"/>
+            </Border.RenderTransform>
+            <Grid>
+            <ToggleButton x:Name="StatusPin" Style="{StaticResource PinButton}" IsChecked="True" Panel.ZIndex="1"
+                          HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-4,-8,0"/>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -102,18 +223,7 @@
                             </Style>
                         </ColumnDefinition.Style>
                     </ColumnDefinition>
-                    <ColumnDefinition>
-                        <ColumnDefinition.Style>
-                            <Style TargetType="ColumnDefinition">
-                                <Setter Property="Width" Value="1.65*"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding HasMonitorPoints}" Value="False">
-                                        <Setter Property="Width" Value="0"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </ColumnDefinition.Style>
-                    </ColumnDefinition>
+                    <ColumnDefinition Width="1.65*"/>
                     <ColumnDefinition>
                         <ColumnDefinition.Style>
                             <Style TargetType="ColumnDefinition">
@@ -396,10 +506,11 @@
                     </Border>
                 </DockPanel>
             </Grid>
+            </Grid>
         </Border>
 
         <Grid Grid.Row="1">
-            <views:DashboardView>
+            <views:DashboardView x:Name="Dashboard">
                 <views:DashboardView.Style>
                     <Style TargetType="views:DashboardView">
                         <Setter Property="Visibility" Value="Collapsed"/>

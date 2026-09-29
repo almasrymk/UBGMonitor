@@ -5,10 +5,12 @@
     <Color x:Key="ProcessBarCpuLow">#4CAF50</Color>
     <Color x:Key="ProcessBarRam">#2196F3</Color>
     <Color x:Key="ProcessBarNetwork">#9C27B0</Color>
+    <Color x:Key="ProcessBarDisk">#AB47BC</Color>
 
     <SolidColorBrush x:Key="ProcessBarCpuHighBrush" Color="{StaticResource ProcessBarCpuHigh}"/>
     <SolidColorBrush x:Key="ProcessBarCpuMidBrush" Color="{StaticResource ProcessBarCpuMid}"/>
     <SolidColorBrush x:Key="ProcessBarCpuLowBrush" Color="{StaticResource ProcessBarCpuLow}"/>
     <SolidColorBrush x:Key="ProcessBarRamBrush" Color="{StaticResource ProcessBarRam}"/>
     <SolidColorBrush x:Key="ProcessBarNetworkBrush" Color="{StaticResource ProcessBarNetwork}"/>
+    <SolidColorBrush x:Key="ProcessBarDiskBrush" Color="{StaticResource ProcessBarDisk}"/>
 </ResourceDictionary>

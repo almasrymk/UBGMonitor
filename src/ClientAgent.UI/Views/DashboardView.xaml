@@ -8,6 +8,32 @@
         <SolidColorBrush x:Key="MacAddressBrush" Color="#64B5F6"/>
         <SolidColorBrush x:Key="ValueYellowBrush" Color="#FFD54F"/>
         <SolidColorBrush x:Key="ValuePurpleBrush" Color="#BA68C8"/>
+        <Style x:Key="PanelResizeGrip" TargetType="Thumb">
+            <Setter Property="Width" Value="16"/>
+            <Setter Property="Height" Value="16"/>
+            <Setter Property="Cursor" Value="SizeNWSE"/>
+            <Setter Property="Opacity" Value="0.45"/>
+            <Setter Property="ToolTip" Value="Drag to resize, double-click to fit content"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Grid Background="Transparent">
+                            <Path Data="M 14,4 L 4,14 M 14,8 L 8,14 M 14,12 L 12,14"
+                                  Stroke="{DynamicResource TextSecondaryBrush}" StrokeThickness="1.5"
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Opacity" Value="1"/>
+                </Trigger>
+                <Trigger Property="IsDragging" Value="True">
+                    <Setter Property="Opacity" Value="1"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
         <Style x:Key="CopyHintToolTip" TargetType="ToolTip">
             <Setter Property="Background" Value="White"/>
             <Setter Property="Foreground" Value="Black"/>
@@ -93,7 +119,7 @@
         <ToolTip x:Key="DiskGraphToolTip" x:Shared="False" Style="{StaticResource CopyHintToolTip}">
             <StackPanel>
                 <StackPanel Orientation="Horizontal">
-                    <Line Style="{StaticResource LegendLine}" Stroke="{StaticResource AccentRedBrush}"/>
+                    <Line Style="{StaticResource LegendLine}" Stroke="{StaticResource ProcessBarDiskBrush}"/>
                     <TextBlock Style="{StaticResource LegendText}"
                                Text="{Binding Disk.ActiveTimePercent, StringFormat=Active time: {0:0}%}"/>
                 </StackPanel>
@@ -225,22 +251,8 @@
             </ContextMenu>
         </ScrollViewer.ContextMenu>
         <Border Padding="10">
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
-            
-            <!-- CPU / RAM / Disk / Network unified cards -->
-            <Grid Grid.Row="0" >
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-
-                <Border x:Name="SlotTop0" Grid.Column="0" Margin="0,0,10,0">
+        <controls:DashboardBoard x:Name="Board" Background="Transparent" AllowDrop="True">
+                <Border x:Name="SlotTop0" controls:DashboardBoard.Left="0" controls:DashboardBoard.Top="0">
                 <Border Style="{StaticResource CardBorder}" Tag="Cpu" Margin="0" Padding="12" VerticalAlignment="Top">
                     <DockPanel LastChildFill="False">
                         <Grid DockPanel.Dock="Top" Height="200">
@@ -285,7 +297,7 @@
                 </Border>
                 </Border>
 
-                <Border x:Name="SlotTop1" Grid.Column="1" Margin="0,0,10,0">
+                <Border x:Name="SlotTop1" controls:DashboardBoard.Left="0.25" controls:DashboardBoard.Top="0">
                 <Border Style="{StaticResource CardBorder}" Tag="Ram" Margin="0" Padding="12" VerticalAlignment="Top">
                     <DockPanel LastChildFill="False">
                         <Grid DockPanel.Dock="Top" Height="200">
@@ -328,13 +340,13 @@
                 </Border>
                 </Border>
 
-                <Border x:Name="SlotTop2" Grid.Column="2" Margin="0,0,10,0">
+                <Border x:Name="SlotTop2" controls:DashboardBoard.Left="0.5" controls:DashboardBoard.Top="0">
                 <Border Style="{StaticResource CardBorder}" Tag="Disk" Margin="0" Padding="12" VerticalAlignment="Top">
                     <DockPanel LastChildFill="False">
                         <Grid DockPanel.Dock="Top" Height="200">
                             <DockPanel>
                                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
-                                    <TextBlock Text="Disk Usage" FontSize="16" FontWeight="Bold" Foreground="{StaticResource AccentRedBrush}"/>
+                                    <TextBlock Text="Disk Usage" FontSize="16" FontWeight="Bold" Foreground="{StaticResource ProcessBarDiskBrush}"/>
                                     <TextBlock Style="{StaticResource SpecOkMark}" Visibility="{Binding DiskSpecOk, Converter={StaticResource BoolToVis}}"/>
                                     <TextBlock Style="{StaticResource SpecBadMark}" Visibility="{Binding DiskSpecBad, Converter={StaticResource BoolToVis}}"/>
                                 </StackPanel>
@@ -342,7 +354,7 @@
                                                                ToolTip="{StaticResource DiskGraphToolTip}" ShowGrid="False"
                                                                ValueLabel="{Binding Disk.ActiveTimePercent, StringFormat=Active {0:0}%}"
                                                                Values="{Binding Disk.ActiveHistory}"
-                                                               Stroke="{StaticResource AccentRedBrush}"/>
+                                                               Stroke="{StaticResource ProcessBarDiskBrush}"/>
                                 <Grid Margin="0,8,0,0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>
@@ -367,13 +379,13 @@
                                                VerticalAlignment="Top"
                                                Title="Top 5 by Disk"
                                                SortBy="{x:Static enums:ProcessSortBy.Disk}"
-                                               AccentColor="{StaticResource AccentRedBrush}"
+                                               AccentColor="{StaticResource ProcessBarDiskBrush}"
                                                DataContext="{Binding TopDiskCard}"/>
                     </DockPanel>
                 </Border>
                 </Border>
 
-                <Border x:Name="SlotTop3" Grid.Column="3" Margin="0">
+                <Border x:Name="SlotTop3" controls:DashboardBoard.Left="0.75" controls:DashboardBoard.Top="0">
                 <Border Style="{StaticResource CardBorder}" Tag="Network" Margin="0" Padding="12" VerticalAlignment="Top">
                     <DockPanel LastChildFill="False">
                         <Grid DockPanel.Dock="Top" Height="200">
@@ -470,25 +482,12 @@
                     </DockPanel>
                 </Border>
                 </Border>
-            </Grid>
-            
-            <!-- Row 5 -->
-            <Grid Grid.Row="1" Margin="0,10,0,0" VerticalAlignment="Top">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
 
-                <Grid Grid.Column="0" Margin="0,0,10,0">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    <Border x:Name="SlotBottom0" Grid.Row="0" Margin="0,0,0,10">
+                    <Border x:Name="SlotBottom0" controls:DashboardBoard.Left="0" controls:DashboardBoard.WidthRatio="0.5" controls:DashboardBoard.Top="1">
                     <Border Style="{StaticResource CardBorder}" Tag="DiskStatus" Margin="0">
                         <DockPanel>
                             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
-                                <TextBlock Text="Disk Status" FontSize="16" FontWeight="Bold" Foreground="{StaticResource AccentRedBrush}"/>
+                                <TextBlock Text="Disk Status" FontSize="16" FontWeight="Bold" Foreground="{StaticResource ProcessBarDiskBrush}"/>
                                 <TextBlock Style="{StaticResource SpecOkMark}" Visibility="{Binding DiskSpecOk, Converter={StaticResource BoolToVis}}"/>
                                 <TextBlock Style="{StaticResource SpecBadMark}" Visibility="{Binding DiskSpecBad, Converter={StaticResource BoolToVis}}"/>
                             </StackPanel>
@@ -530,7 +529,7 @@
                         </DockPanel>
                     </Border>
                     </Border>
-                    <Border x:Name="SlotBottom1" Grid.Row="1" Margin="0">
+                    <Border x:Name="SlotBottom1" controls:DashboardBoard.Left="0" controls:DashboardBoard.WidthRatio="0.5" controls:DashboardBoard.Top="2">
                     <Border Style="{StaticResource CardBorder}" Tag="MonitorSummary" Margin="0">
                         <StackPanel>
                             <TextBlock Text="Monitor Points Summary" FontSize="14" FontWeight="Bold" Margin="0,0,0,12"/>
@@ -561,9 +560,8 @@
                         </StackPanel>
                     </Border>
                     </Border>
-                </Grid>
 
-                <Border x:Name="SlotBottom2" Grid.Column="1" Margin="0">
+                <Border x:Name="SlotBottom2" controls:DashboardBoard.Left="0.5" controls:DashboardBoard.WidthRatio="0.5" controls:DashboardBoard.Top="1">
                 <Border Style="{StaticResource CardBorder}" Tag="HardwareOs" HorizontalAlignment="Stretch" Padding="10,15" Margin="0">
                     <StackPanel Grid.IsSharedSizeScope="True">
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
@@ -653,7 +651,7 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0" Text="Live Sensors" FontSize="14" FontWeight="SemiBold"
-                                               Foreground="{StaticResource AccentRedBrush}"/>
+                                               Foreground="{DynamicResource TextPrimaryBrush}"/>
                                     <TextBlock Grid.Column="1" Text="{Binding HardwareOs.Level3Count, StringFormat=[{0}]}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
                                 </Grid>
                             </Expander.Header>
@@ -662,10 +660,7 @@
                     </StackPanel>
                 </Border>
                 </Border>
-            </Grid>
-            
-           
-        </Grid>
+        </controls:DashboardBoard>
         </Border>
     </ScrollViewer>
 </UserControl>

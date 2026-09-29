@@ -13,7 +13,13 @@ Log.Logger = new LoggerConfiguration()
 
 try
 {
-    var builder = Host.CreateApplicationBuilder(args);
+    // A Windows service starts in System32, so appsettings.json must be resolved from the exe folder.
+    var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
+    {
+        Args = args,
+        ContentRootPath = AppContext.BaseDirectory
+    });
+    Log.Information("Settings file: {Path}", Path.Combine(AppContext.BaseDirectory, "appsettings.json"));
 
     builder.Services.AddWindowsService(options =>
     {

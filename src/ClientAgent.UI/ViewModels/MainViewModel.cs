@@ -103,7 +103,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         TopCpuCard = new ProcessListCardViewModel(_client, "Top 5 by CPU", ProcessSortBy.Cpu, ResourceBrush("AccentGreenBrush", Color.FromRgb(0x4C, 0xAF, 0x50)));
         TopRamCard = new ProcessListCardViewModel(_client, "Top 5 by RAM", ProcessSortBy.Ram, ResourceBrush("ProcessBarRamBrush", Color.FromRgb(0x21, 0x96, 0xF3)));
         TopNetworkCard = new ProcessListCardViewModel(_client, "Top 5 by Network", ProcessSortBy.Network, Brushes.White);
-        TopDiskCard = new ProcessListCardViewModel(_client, "Top 5 by Disk", ProcessSortBy.Disk, ResourceBrush("AccentRedBrush", Color.FromRgb(0xF4, 0x43, 0x36)));
+        TopDiskCard = new ProcessListCardViewModel(_client, "Top 5 by Disk", ProcessSortBy.Disk, ResourceBrush("ProcessBarDiskBrush", Color.FromRgb(0xAB, 0x47, 0xBC)));
         HardwareOs = new HardwareOsViewModel(_client);
         _timer = new DispatcherTimer();
         Settings.Saved += async (_, _) =>

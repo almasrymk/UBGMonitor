@@ -1,17 +1,122 @@
-﻿using System.Windows;
+﻿using System.IO;
+using System.Text.Json;
+using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
+using ClientAgent.UI.Services;
 using ClientAgent.UI.ViewModels;
 
 namespace ClientAgent.UI;
 
 public partial class MainWindow : Window
 {
+    private const double PinnedNavWidth = 92;
+    private const double StripSize = 16;
+
+    private static readonly string PanelsPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "AgentMonitor",
+        "panels.json");
+
+    private sealed record PanelPins(
+        bool NavPinned = true,
+        bool StatusPinned = true,
+        bool? DefaultNavPinned = null,
+        bool? DefaultStatusPinned = null);
+
+    private PanelPins _pins = new();
+
+    private readonly AutoHidePanel _nav;
+    private readonly AutoHidePanel _status;
+
     public MainWindow()
     {
         InitializeComponent();
         DataContext = new MainViewModel();
         StateChanged += (_, _) => MaximizeButton.Content = WindowState == WindowState.Maximized ? "❐" : "☐";
         Loaded += (_, _) => FitToWorkArea();
+
+        _nav = new AutoHidePanel(NavPanel, NavStrip, NavShift, horizontal: true, pinned =>
+        {
+            NavColumn.Width = new GridLength(pinned ? PinnedNavWidth : StripSize);
+            Grid.SetColumnSpan(NavPanel, pinned ? 1 : 2);
+        });
+        _status = new AutoHidePanel(StatusPanel, StatusStrip, StatusShift, horizontal: false, pinned =>
+        {
+            StatusRow.Height = pinned ? GridLength.Auto : new GridLength(StripSize);
+            Grid.SetRowSpan(StatusPanel, pinned ? 1 : 2);
+        });
+
+        _pins = LoadPins();
+        ApplyPins(_pins.NavPinned, _pins.StatusPinned);
+
+        StatusPin.Click += (_, _) => { _status.SetPinned(StatusPin.IsChecked == true); SavePins(); };
+        NavPanel.PreviewMouseLeftButtonUp += (_, _) => Dispatcher.BeginInvoke(_nav.Close);
+    }
+
+    private void ApplyPins(bool navPinned, bool statusPinned)
+    {
+        StatusPin.IsChecked = statusPinned;
+        _nav.SetPinned(navPinned);
+        _status.SetPinned(statusPinned);
+    }
+
+    private void ToggleMenu_Click(object sender, RoutedEventArgs e)
+    {
+        _nav.SetPinned(!_nav.Pinned);
+        SavePins();
+    }
+
+    private void ResetLayout_Click(object sender, RoutedEventArgs e)
+    {
+        Dashboard.ResetLayout(useMyDefault: true);
+        ApplyPins(_pins.DefaultNavPinned ?? true, _pins.DefaultStatusPinned ?? true);
+        SavePins();
+    }
+
+    private void ResetOriginalLayout_Click(object sender, RoutedEventArgs e)
+    {
+        Dashboard.ResetLayout(useMyDefault: false);
+        ApplyPins(true, true);
+        SavePins();
+    }
+
+    private void SaveDefaultLayout_Click(object sender, RoutedEventArgs e)
+    {
+        Dashboard.SaveCurrentAsMyDefault();
+        _pins = _pins with { DefaultNavPinned = _nav.Pinned, DefaultStatusPinned = _status.Pinned };
+        SavePins();
+        MessageBox.Show(this, "The current layout is saved as your default. \"Reset layout\" will return to it.",
+            "Reset layout", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private static PanelPins LoadPins()
+    {
+        try
+        {
+            return File.Exists(PanelsPath)
+                ? JsonSerializer.Deserialize<PanelPins>(File.ReadAllText(PanelsPath)) ?? new PanelPins()
+                : new PanelPins();
+        }
+        catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
+        {
+            return new PanelPins();
+        }
+    }
+
+    private void SavePins()
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(PanelsPath)!);
+            _pins = _pins with { NavPinned = _nav.Pinned, StatusPinned = _status.Pinned };
+            File.WriteAllText(PanelsPath, JsonSerializer.Serialize(_pins));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Pin state is a convenience; keep the current session state.
+        }
     }
 
     private void FitToWorkArea()

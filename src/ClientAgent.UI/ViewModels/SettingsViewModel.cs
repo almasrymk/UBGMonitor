@@ -195,12 +195,16 @@ public sealed partial class SettingsViewModel : ObservableObject
             _monitorPointSnapshot = points.Select(ClonePoint).ToList();
             StatusMessage = points.Any(point => point.Type == MonitorPointType.Website && string.IsNullOrWhiteSpace(point.Icon) && !string.IsNullOrWhiteSpace(point.Address))
                 ? "Saved. No icon was found for one or more websites."
-                : "Saved to service appsettings.json";
+                : $"Saved to {_store.FilePath}";
             Saved?.Invoke(this, EventArgs.Empty);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (UnauthorizedAccessException)
         {
-            StatusMessage = "Could not save service appsettings.json";
+            StatusMessage = $"Access denied to {_store.FilePath}. Run Agent Monitor as administrator or allow writing to the service folder.";
+        }
+        catch (IOException ex)
+        {
+            StatusMessage = $"Could not save service appsettings.json: {ex.Message}";
         }
     }
 
