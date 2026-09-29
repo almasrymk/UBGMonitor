@@ -33,7 +33,20 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        DataContext = new MainViewModel();
+        var viewModel = new MainViewModel();
+        viewModel.Settings.ConfirmSaveChanges = section => MessageBox.Show(
+                this,
+                $"You have unsaved changes in \"{section}\".\n\nDo you want to save them before leaving this tab?",
+                "Unsaved changes",
+                MessageBoxButton.YesNoCancel,
+                MessageBoxImage.Question,
+                MessageBoxResult.Cancel) switch
+            {
+                MessageBoxResult.Yes => true,
+                MessageBoxResult.No => false,
+                _ => null
+            };
+        DataContext = viewModel;
         StateChanged += (_, _) => MaximizeButton.Content = WindowState == WindowState.Maximized ? "❐" : "☐";
         Loaded += (_, _) => FitToWorkArea();
 
@@ -53,6 +66,32 @@ public partial class MainWindow : Window
 
         StatusPin.Click += (_, _) => { _status.SetPinned(StatusPin.IsChecked == true); SavePins(); };
         NavPanel.PreviewMouseLeftButtonUp += (_, _) => Dispatcher.BeginInvoke(_nav.Close);
+
+        PreviewMouseDown += (_, e) =>
+        {
+            if (e.ChangedButton == MouseButton.XButton1 && GoBack())
+            {
+                e.Handled = true;
+            }
+        };
+        PreviewKeyDown += (_, e) =>
+        {
+            if (e.SystemKey == Key.Left && Keyboard.Modifiers == ModifierKeys.Alt && GoBack())
+            {
+                e.Handled = true;
+            }
+        };
+    }
+
+    private bool GoBack()
+    {
+        if (DataContext is not MainViewModel vm || !vm.GoBackCommand.CanExecute(null))
+        {
+            return false;
+        }
+
+        vm.GoBackCommand.Execute(null);
+        return true;
     }
 
     private void ApplyPins(bool navPinned, bool statusPinned)

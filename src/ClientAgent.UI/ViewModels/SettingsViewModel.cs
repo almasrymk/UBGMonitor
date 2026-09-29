@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ClientAgent.Shared.Models;
@@ -91,7 +93,176 @@ public sealed partial class SettingsViewModel : ObservableObject
         ReplaceMonitorPoints(_store.LoadMonitorPoints());
         _snapshot = Capture();
         _monitorPointSnapshot = CaptureMonitorPoints();
+        MarkAllClean();
+        _statusTimer.Tick += (_, _) =>
+        {
+            _statusTimer.Stop();
+            StatusMessage = string.Empty;
+        };
+        _savedTimer.Tick += (_, _) =>
+        {
+            _savedTimer.Stop();
+            IsSavedBadgeVisible = false;
+        };
+
+        PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is not (nameof(HasChanges) or nameof(StatusMessage) or nameof(SelectedSection)
+                or nameof(SelectedMonitorPoint) or nameof(SelectedCondition) or nameof(HasSelectedCondition)
+                or nameof(IsLightTheme) or nameof(IsSavedBadgeVisible) or nameof(SelectedSectionTitle)))
+            {
+                RefreshHasChanges();
+            }
+        };
+        MonitorPoints.CollectionChanged += (_, _) => RefreshHasChanges();
+        Conditions.CollectionChanged += (_, e) =>
+        {
+            foreach (var item in e.NewItems?.OfType<ConditionSettingViewModel>() ?? [])
+            {
+                item.PropertyChanged += OnConditionPropertyChanged;
+            }
+
+            foreach (var item in e.OldItems?.OfType<ConditionSettingViewModel>() ?? [])
+            {
+                item.PropertyChanged -= OnConditionPropertyChanged;
+            }
+
+            RefreshHasChanges();
+        };
+        foreach (var condition in Conditions)
+        {
+            condition.PropertyChanged += OnConditionPropertyChanged;
+        }
+
         _ = LoadInstalledApplicationsAsync();
+    }
+
+    private static readonly string[] Sections = [SectionGeneral, SectionMonitorPoints, SectionConditions];
+    private static readonly TimeSpan StatusMessageDuration = TimeSpan.FromSeconds(4);
+
+    private readonly Dictionary<string, string> _savedFingerprints = new();
+    private readonly System.Windows.Threading.DispatcherTimer _statusTimer = new() { Interval = StatusMessageDuration };
+    private bool _suspendChangeTracking;
+
+    /// <summary>True when the selected section differs from what was last loaded or saved.</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ResetCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    private bool _hasChanges;
+
+    /// <summary>
+    /// Asks what to do with unsaved changes in the current section: true = save, false = discard, null = stay.
+    /// The argument is the section title shown to the user.
+    /// </summary>
+    public Func<string, bool?>? ConfirmSaveChanges { get; set; }
+
+    public string SelectedSectionTitle => SectionTitle(SelectedSection);
+
+    public static string SectionTitle(string section) =>
+        "Settings › " + (section == SectionConditions ? "Device Specifications" : section);
+
+    private static readonly TimeSpan SavedBadgeDuration = TimeSpan.FromSeconds(3);
+    private readonly System.Windows.Threading.DispatcherTimer _savedTimer = new() { Interval = SavedBadgeDuration };
+
+    /// <summary>Green check shown for a few seconds after a successful save.</summary>
+    [ObservableProperty] private bool _isSavedBadgeVisible;
+
+    private void ShowSavedBadge()
+    {
+        _savedTimer.Stop();
+        IsSavedBadgeVisible = true;
+        _savedTimer.Start();
+    }
+
+    private void OnConditionPropertyChanged(object? sender, PropertyChangedEventArgs e) => RefreshHasChanges();
+
+    /// <summary>What the user can edit in a section, as JSON (monitor point icons are left out; they refresh in the background).</summary>
+    private string SectionFingerprint(string section)
+    {
+        switch (section)
+        {
+            case SectionMonitorPoints:
+                var points = JsonSerializer.SerializeToNode(CaptureMonitorPoints()) as JsonArray ?? [];
+                foreach (var point in points.OfType<JsonObject>())
+                {
+                    point.Remove(nameof(MonitorPoint.Icon));
+                }
+
+                return points.ToJsonString();
+            case SectionConditions:
+                return JsonSerializer.Serialize(CaptureDeviceSpec()) + JsonSerializer.Serialize(Capture().Conditions);
+            default:
+                return JsonSerializer.Serialize(CaptureGeneral());
+        }
+    }
+
+    private void MarkClean(string section)
+    {
+        _savedFingerprints[section] = SectionFingerprint(section);
+        RefreshHasChanges();
+    }
+
+    private void MarkAllClean()
+    {
+        foreach (var section in Sections)
+        {
+            _savedFingerprints[section] = SectionFingerprint(section);
+        }
+
+        RefreshHasChanges();
+    }
+
+    private void RefreshHasChanges()
+    {
+        if (!_suspendChangeTracking)
+        {
+            HasChanges = !_savedFingerprints.TryGetValue(SelectedSection, out var saved)
+                || SectionFingerprint(SelectedSection) != saved;
+        }
+    }
+
+    partial void OnSelectedSectionChanged(string value)
+    {
+        OnPropertyChanged(nameof(SelectedSectionTitle));
+        RefreshHasChanges();
+    }
+
+    partial void OnStatusMessageChanged(string value)
+    {
+        _statusTimer.Stop();
+        if (!string.IsNullOrEmpty(value))
+        {
+            _statusTimer.Start();
+        }
+    }
+
+    /// <summary>
+    /// Lets the user leave the current section: asks to save or discard its unsaved changes first.
+    /// Returns false when the user chose to stay (or saving failed).
+    /// </summary>
+    public async Task<bool> TryLeaveSectionAsync()
+    {
+        if (SaveCommand.IsRunning || IsSavedBadgeVisible)
+        {
+            return false;
+        }
+
+        if (!HasChanges || ConfirmSaveChanges is null)
+        {
+            return true;
+        }
+
+        var choice = ConfirmSaveChanges(SelectedSectionTitle);
+        if (choice == true)
+        {
+            await SaveCommand.ExecuteAsync(null);
+        }
+        else if (choice == false)
+        {
+            ResetCommand.Execute(null);
+        }
+
+        return choice is not null && !HasChanges;
     }
 
     public ObservableCollection<InstalledAppInfo> InstalledApplications { get; } = [];
@@ -179,23 +350,57 @@ public sealed partial class SettingsViewModel : ObservableObject
     public bool HasSelectedCondition => SelectedCondition is not null;
 
     [RelayCommand]
-    private void SelectSection(string section) => SelectedSection = section;
+    private async Task SelectSection(string section)
+    {
+        if (section == SelectedSection)
+        {
+            return;
+        }
 
-    [RelayCommand]
+        if (await TryLeaveSectionAsync())
+        {
+            SelectedSection = section;
+        }
+        else
+        {
+            // Staying: re-sync the side tabs, whose radio button already moved to the clicked section.
+            OnPropertyChanged(nameof(SelectedSection));
+        }
+    }
+
+    /// <summary>Saves only the selected section; the other sections keep their last saved values.</summary>
+    [RelayCommand(CanExecute = nameof(HasChanges))]
     private async Task Save()
     {
+        var section = SelectedSection;
         try
         {
-            StatusMessage = "Saving...";
-            await CaptureIconsAsync();
+            StatusMessage = string.Empty;
+            if (section == SectionMonitorPoints)
+            {
+                await CaptureIconsAsync();
+            }
+
             var current = Capture();
-            var points = CaptureMonitorPoints();
-            _store.Save(current, points);
-            _snapshot = Clone(current);
+            var saved = Clone(_snapshot);
+            var settings = new UiAppSettings
+            {
+                General = section == SectionGeneral ? current.General : saved.General,
+                DeviceSpec = section == SectionConditions ? current.DeviceSpec : saved.DeviceSpec,
+                Conditions = section == SectionConditions ? current.Conditions : saved.Conditions
+            };
+            var points = section == SectionMonitorPoints
+                ? CaptureMonitorPoints()
+                : _monitorPointSnapshot.Select(ClonePoint).ToList();
+
+            _store.Save(settings, points);
+            _snapshot = Clone(settings);
             _monitorPointSnapshot = points.Select(ClonePoint).ToList();
-            StatusMessage = points.Any(point => point.Type == MonitorPointType.Website && string.IsNullOrWhiteSpace(point.Icon) && !string.IsNullOrWhiteSpace(point.Address))
-                ? "Saved. No icon was found for one or more websites."
-                : $"Saved to {_store.FilePath}";
+            MarkClean(section);
+            StatusMessage = section == SectionMonitorPoints && points.Any(point => point.Type == MonitorPointType.Website && string.IsNullOrWhiteSpace(point.Icon) && !string.IsNullOrWhiteSpace(point.Address))
+                ? "No icon was found for one or more websites."
+                : string.Empty;
+            ShowSavedBadge();
             Saved?.Invoke(this, EventArgs.Empty);
         }
         catch (UnauthorizedAccessException)
@@ -208,12 +413,35 @@ public sealed partial class SettingsViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
+    /// <summary>Puts the selected section back to its last saved values.</summary>
+    [RelayCommand(CanExecute = nameof(HasChanges))]
     private void Reset()
     {
-        Apply(_snapshot);
-        ReplaceMonitorPoints(_monitorPointSnapshot);
+        var section = SelectedSection;
+        _suspendChangeTracking = true;
+        try
+        {
+            switch (section)
+            {
+                case SectionMonitorPoints:
+                    ReplaceMonitorPoints(_monitorPointSnapshot);
+                    break;
+                case SectionConditions:
+                    ApplyDeviceSpec(_snapshot.DeviceSpec);
+                    ReplaceConditions(_snapshot.Conditions);
+                    break;
+                default:
+                    ApplyGeneral(_snapshot.General);
+                    break;
+            }
+        }
+        finally
+        {
+            _suspendChangeTracking = false;
+        }
+
         StatusMessage = string.Empty;
+        MarkClean(section);
     }
 
     [RelayCommand]
@@ -241,11 +469,11 @@ public sealed partial class SettingsViewModel : ObservableObject
         RefreshConditionTargets();
     }
 
-    [RelayCommand(CanExecute = nameof(CanRemoveMonitorPoint))]
-    private void RemoveMonitorPoint()
+    [RelayCommand]
+    private void RemoveMonitorPoint(MonitorPointSettingViewModel? point)
     {
-        var current = SelectedMonitorPoint;
-        if (current is null)
+        var current = point ?? SelectedMonitorPoint;
+        if (current is null || !MonitorPoints.Contains(current))
         {
             return;
         }
@@ -289,14 +517,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             : Conditions[Math.Min(index, Conditions.Count - 1)];
     }
 
-    private bool CanRemoveMonitorPoint() => SelectedMonitorPoint is not null;
-
     private bool CanRemoveCondition() => SelectedCondition is not null;
-
-    partial void OnSelectedMonitorPointChanged(MonitorPointSettingViewModel? value)
-    {
-        RemoveMonitorPointCommand.NotifyCanExecuteChanged();
-    }
 
     partial void OnSelectedConditionChanged(ConditionSettingViewModel? value)
     {
@@ -310,13 +531,22 @@ public sealed partial class SettingsViewModel : ObservableObject
         {
             RefreshConditionTargets();
         }
+
+        RefreshHasChanges();
     }
 
     partial void OnInternetIntervalSecondsChanged(int value) => NetworkIntervalSeconds = value;
 
     private void Apply(UiAppSettings settings)
     {
-        var general = settings.General ?? new GeneralSettings();
+        ApplyGeneral(settings.General);
+        ApplyDeviceSpec(settings.DeviceSpec);
+        ReplaceConditions(settings.Conditions);
+    }
+
+    private void ApplyGeneral(GeneralSettings? settings)
+    {
+        var general = settings ?? new GeneralSettings();
         MachineName = string.IsNullOrWhiteSpace(general.MachineName) ? Environment.MachineName : general.MachineName.Trim();
         RefreshInterval = general.RefreshInterval < 1 ? DefaultRefreshInterval : general.RefreshInterval;
         InternetIntervalSeconds = AtLeastOne(general.InternetIntervalSeconds, DefaultInternetInterval);
@@ -329,8 +559,6 @@ public sealed partial class SettingsViewModel : ObservableObject
         ApiBaseUrl = string.IsNullOrWhiteSpace(general.ApiBaseUrl) ? DefaultApiBaseUrl : general.ApiBaseUrl.Trim();
         Theme = general.Theme is "Dark" or "Light" ? general.Theme : DefaultTheme;
         NotificationsEnabled = general.NotificationsEnabled;
-        ApplyDeviceSpec(settings.DeviceSpec);
-        ReplaceConditions(settings.Conditions);
     }
 
     private UiAppSettings Capture()

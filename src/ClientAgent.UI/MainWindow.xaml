@@ -95,6 +95,9 @@
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Bg" Property="Background" Value="{DynamicResource HoverBrush}"/>
                             </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.35"/>
+                            </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -142,6 +145,12 @@
                     <Button Style="{StaticResource TitleBarButton}" Margin="4,0,0,0" Padding="9,0" Click="ToggleMenu_Click"
                             ToolTip="Show / auto hide the menu">
                         <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE700;" FontSize="14"/>
+                    </Button>
+                    <Button Style="{StaticResource TitleBarButton}" Margin="2,0,0,0" Padding="9,0"
+                            Command="{Binding GoBackCommand}" ToolTip="{Binding BackToolTip}"
+                            ToolTipService.ShowOnDisabled="True">
+                        <Path Width="14" Height="12" Stretch="Uniform" Fill="{DynamicResource TextPrimaryBrush}"
+                              Data="M 6,0 L 7.4,1.4 L 3.8,5 L 14,5 L 14,7 L 3.8,7 L 7.4,10.6 L 6,12 L 0,6 Z"/>
                     </Button>
                     <Image Width="18" Height="18" Margin="6,0,8,0"
                            Source="Assets/agent-monitor.png"

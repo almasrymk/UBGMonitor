@@ -333,10 +333,74 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     partial void OnHasCurrentIssuesChanged(bool value) => OnPropertyChanged(nameof(ShowNotifications));
 
+    private const string SettingsTab = "Settings";
+
     [RelayCommand]
-    private void SelectTab(string tab)
+    private async Task SelectTab(string tab)
     {
-        SelectedTab = tab;
+        if (await CanLeaveCurrentTabAsync(tab))
+        {
+            SelectedTab = tab;
+        }
+    }
+
+    private async Task<bool> CanLeaveCurrentTabAsync(string target)
+    {
+        if (SelectedTab != SettingsTab || target == SettingsTab)
+        {
+            return true;
+        }
+
+        if (!await Settings.TryLeaveSectionAsync())
+        {
+            // Staying on Settings: re-sync the menu, whose radio button already moved to the clicked tab.
+            OnPropertyChanged(nameof(SelectedTab));
+            return false;
+        }
+
+        return true;
+    }
+
+    private readonly Stack<string> _tabHistory = new();
+    private bool _navigatingBack;
+
+    public bool CanGoBack => _tabHistory.Count > 0;
+
+    public string BackToolTip => CanGoBack ? $"Back to {_tabHistory.Peek()}" : "Back";
+
+    partial void OnSelectedTabChanged(string? oldValue, string newValue)
+    {
+        if (!_navigatingBack && !string.IsNullOrEmpty(oldValue) && oldValue != newValue)
+        {
+            _tabHistory.Push(oldValue);
+        }
+
+        OnPropertyChanged(nameof(CanGoBack));
+        OnPropertyChanged(nameof(BackToolTip));
+        GoBackCommand.NotifyCanExecuteChanged();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanGoBack))]
+    private async Task GoBack()
+    {
+        if (_tabHistory.Count == 0 || !await CanLeaveCurrentTabAsync(_tabHistory.Peek()))
+        {
+            return;
+        }
+
+        _navigatingBack = true;
+        try
+        {
+            SelectedTab = _tabHistory.Pop();
+        }
+        finally
+        {
+            _navigatingBack = false;
+        }
+
+        OnPropertyChanged(nameof(CanGoBack));
+        OnPropertyChanged(nameof(BackToolTip));
+        GoBackCommand.NotifyCanExecuteChanged();
     }
 
     [RelayCommand]
@@ -468,7 +532,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
-    private void ViewAllMonitorPoints() => SelectedTab = "Monitor Points";
+    private Task ViewAllMonitorPoints() => SelectTab("Monitor Points");
 
     private void UpdateHardwareStatus(CpuInfo? cpu, RamInfo? ram, OsInfo? os)
     {

@@ -20,8 +20,8 @@ public partial class SettingsView : UserControl
 
         var answer = MessageBox.Show(
             Window.GetWindow(this)!,
-            "All changes you have not saved will be lost, and the settings will go back to the last saved values.\n\nDo you want to continue?",
-            "Reset settings",
+            $"All unsaved changes in \"{settings.SelectedSectionTitle}\" will be lost, and this tab will go back to its last saved values.\n\nDo you want to continue?",
+            "Reset changes",
             MessageBoxButton.YesNo,
             MessageBoxImage.Warning,
             MessageBoxResult.No);

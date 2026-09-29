@@ -246,8 +246,17 @@
                 BorderThickness="0,1,0,0"
                 Padding="12,10">
             <StackPanel Orientation="Horizontal">
-                <Button Content="Save" Command="{Binding SaveCommand}" Style="{StaticResource FooterButton}" Margin="0,0,8,0" Padding="18,6"/>
-                <Button Content="Reset" Click="Reset_Click" Style="{StaticResource FooterButton}" Margin="0" Padding="18,6"/>
+                <Button Content="Save" Command="{Binding SaveCommand}" Style="{StaticResource FooterButton}" Margin="0,0,8,0" Padding="18,6"
+                        ToolTip="Save the changes in this tab" ToolTipService.ShowOnDisabled="True"/>
+                <Button Content="Reset" Click="Reset_Click" Style="{StaticResource FooterButton}" Margin="0" Padding="18,6"
+                        IsEnabled="{Binding HasChanges}" ToolTip="Undo the unsaved changes in this tab"
+                        ToolTipService.ShowOnDisabled="True"/>
+                <Grid Width="22" Height="22" Margin="12,0,0,0" VerticalAlignment="Center" ToolTip="Saved"
+                      Visibility="{Binding IsSavedBadgeVisible, Converter={StaticResource BoolToVis}}">
+                    <Ellipse Fill="{StaticResource AccentGreenBrush}"/>
+                    <Path Data="M 5,11.5 L 9.5,16 L 17,7" Stroke="White" StrokeThickness="2.4"
+                          StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+                </Grid>
                 <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
             </StackPanel>
         </Border>
@@ -265,7 +274,10 @@
                     </Style>
                 </ScrollViewer.Style>
                 <StackPanel Margin="12,8,12,12">
-                    <TextBlock Text="General" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,6"/>
+                    <TextBlock FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,6">
+                        <Run Text="Settings ›" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <Run Text="General"/>
+                    </TextBlock>
                     <TextBlock Text="Agent display and connection preferences." Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,18" TextWrapping="Wrap"/>
 
                     <Grid>
@@ -342,13 +354,14 @@
                 </Grid.RowDefinitions>
 
                 <StackPanel Grid.Row="0" Margin="0,0,12,12">
-                    <TextBlock Text="Monitor Points" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,6"/>
+                    <TextBlock FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,6">
+                        <Run Text="Settings ›" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <Run Text="Monitor Points"/>
+                    </TextBlock>
                     <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,10"
                                Text="Points are stored in the service appsettings.json. Edit a cell, then Save."/>
                     <StackPanel Orientation="Horizontal">
                         <Button Content="Add" Command="{Binding AddMonitorPointCommand}"
-                                Style="{StaticResource FooterButton}" Margin="0,0,8,0" Padding="18,6"/>
-                        <Button Content="Delete" Command="{Binding RemoveMonitorPointCommand}"
                                 Style="{StaticResource FooterButton}" Margin="0" Padding="18,6"/>
                     </StackPanel>
                 </StackPanel>
@@ -504,6 +517,33 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
                         <DataGridTextColumn Header="Interval" Binding="{Binding IntervalSeconds, UpdateSourceTrigger=PropertyChanged}" Width="80"/>
+                        <DataGridTemplateColumn Header="" Width="44" CanUserResize="False" CanUserSort="False">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Command="{Binding DataContext.RemoveMonitorPointCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                            CommandParameter="{Binding}"
+                                            ToolTip="Delete this monitor point"
+                                            Cursor="Hand" Width="28" Height="26"
+                                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border x:Name="Bg" Background="Transparent" CornerRadius="5">
+                                                    <Path x:Name="Bin" Width="13" Height="15" Stretch="Uniform"
+                                                          Fill="{DynamicResource TextSecondaryBrush}"
+                                                          Data="M 5,0 L 9,0 L 9,1.5 L 14,1.5 L 14,3.5 L 0,3.5 L 0,1.5 L 5,1.5 Z M 1.2,4.5 L 12.8,4.5 L 12,16 L 2,16 Z M 4,6.5 L 4,14 L 5.5,14 L 5.5,6.5 Z M 6.25,6.5 L 6.25,14 L 7.75,14 L 7.75,6.5 Z M 8.5,6.5 L 8.5,14 L 10,14 L 10,6.5 Z"/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="Bg" Property="Background" Value="{DynamicResource HoverBrush}"/>
+                                                        <Setter TargetName="Bin" Property="Fill" Value="{StaticResource AccentRedBrush}"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
                     </DataGrid.Columns>
                 </DataGrid>
             </Grid>
@@ -529,7 +569,10 @@
                 </Grid.RowDefinitions>
 
                 <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,12,12">
-                    <TextBlock Text="Device Specifications" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,6"/>
+                    <TextBlock FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,6">
+                        <Run Text="Settings ›" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <Run Text="Device Specifications"/>
+                    </TextBlock>
                     <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}"
                                Text="The left column is the minimum. Warning (yellow) and Problem (red) are percents. Alert sets the notification level. Leave 0 to skip a check."/>
                 </StackPanel>
