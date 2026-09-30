@@ -90,6 +90,61 @@
         <Setter Property="Background" Value="{DynamicResource InputBrush}"/>
         <Setter Property="Margin" Value="0,0,0,12"/>
     </Style>
+    <!-- Large check box for grid cells: put it in a CellTemplate so one click toggles it. -->
+    <Style x:Key="GridCheck" TargetType="CheckBox">
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <Border Background="Transparent" Padding="8,6">
+                        <Border x:Name="Box" Width="17" Height="17" CornerRadius="4"
+                                Background="{DynamicResource InputBrush}"
+                                BorderBrush="{DynamicResource TextSecondaryBrush}" BorderThickness="1.3">
+                            <Path x:Name="Mark" Data="M 3.9,8.9 L 7.3,12.3 L 13.1,5.4" Stroke="White" StrokeThickness="2.1"
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                  Width="17" Height="17" Margin="-1.3" Visibility="Collapsed"/>
+                        </Border>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource AccentGreenBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Box" Property="Background" Value="{DynamicResource AccentGreenBrush}"/>
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource AccentGreenBrush}"/>
+                            <Setter TargetName="Mark" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Read-only yes / no mark: green check when the bound value is true, red cross when false. -->
+    <Style x:Key="YesNoMark" TargetType="Path">
+        <Setter Property="Width" Value="16"/>
+        <Setter Property="Height" Value="16"/>
+        <Setter Property="StrokeThickness" Value="2.6"/>
+        <Setter Property="StrokeStartLineCap" Value="Round"/>
+        <Setter Property="StrokeEndLineCap" Value="Round"/>
+        <Setter Property="StrokeLineJoin" Value="Round"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Data" Value="M 3,3 L 13,13 M 13,3 L 3,13"/>
+        <Setter Property="Stroke" Value="{DynamicResource AccentRedBrush}"/>
+        <Setter Property="ToolTip" Value="No"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
+                <Setter Property="Data" Value="M 2,8.5 L 6.5,13 L 14,3.5"/>
+                <Setter Property="Stroke" Value="{DynamicResource AccentGreenBrush}"/>
+                <Setter Property="ToolTip" Value="Yes"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
     <Style x:Key="FieldCombo" TargetType="ComboBox">
         <Setter Property="Background" Value="{DynamicResource InputBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>

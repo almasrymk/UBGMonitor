@@ -73,20 +73,32 @@ public sealed class WebsiteMonitor : BackgroundService, IMonitoringModule
                 continue;
             }
 
+            var address = string.IsNullOrWhiteSpace(point.Address) ? "-" : point.Address.Trim();
+            _logger.LogInformation("[Website] Checking {Name} ({Address})...", point.DisplayName, address);
+            var watch = System.Diagnostics.Stopwatch.StartNew();
             var check = await CheckSchemesAsync(point.Address, cancellationToken);
             var interval = Math.Max(1, point.IntervalSeconds);
             _nextCheckUtc[point.MonitorPointId] = DateTime.UtcNow.AddSeconds(interval);
 
-            _lastStatus.TryGetValue(point.MonitorPointId, out var previous);
-            var address = string.IsNullOrWhiteSpace(point.Address) ? "-" : point.Address.Trim();
             if (check.Status == "Healthy")
             {
-                _health.SetPointHealth(point.MonitorPointId, true, check.Message, "Healthy");
+                _logger.LogInformation("[Website] {Name}: OK - {Message} ({Ms} ms, next check in {Interval}s)",
+                    point.DisplayName, check.Message, watch.ElapsedMilliseconds, interval);
+            }
+            else
+            {
+                _logger.LogWarning("[Website] {Name}: {Status} - {Reason} ({Ms} ms, next check in {Interval}s)",
+                    point.DisplayName, check.Status.ToUpperInvariant(), check.AlertReason, watch.ElapsedMilliseconds, interval);
+            }
+
+            if (check.Status == "Healthy")
+            {
+                _health.SetPointHealth(point.MonitorPointId, true, check.Message, "Healthy", watch.ElapsedMilliseconds);
                 _health.ClearIssue(IssueKey(point.MonitorPointId));
             }
             else if (check.Status == "Warning")
             {
-                _health.SetPointHealth(point.MonitorPointId, true, check.AlertReason, "Warning");
+                _health.SetPointHealth(point.MonitorPointId, true, check.AlertReason, "Warning", watch.ElapsedMilliseconds);
                 _health.SetIssue(
                     IssueKey(point.MonitorPointId),
                     "Warning",
@@ -103,19 +115,6 @@ public sealed class WebsiteMonitor : BackgroundService, IMonitoringModule
                     check.Title,
                     IssueText.WebsiteDown(point.DisplayName, address, check.AlertReason),
                     point.MonitorPointId);
-            }
-
-            if (previous is "Healthy" or "Warning" && check.Status == "Critical")
-            {
-                _logger.LogWarning("Website {Name} ({Address}) failed: {Message}", point.DisplayName, point.Address, check.Message);
-            }
-            else if (previous != "Warning" && check.Status == "Warning")
-            {
-                _logger.LogWarning("Website {Name} ({Address}) works on HTTP only", point.DisplayName, point.Address);
-            }
-            else if (previous is "Critical" or "Warning" && check.Status == "Healthy")
-            {
-                _logger.LogInformation("Website {Name} ({Address}) recovered", point.DisplayName, point.Address);
             }
 
             _lastStatus[point.MonitorPointId] = check.Status;

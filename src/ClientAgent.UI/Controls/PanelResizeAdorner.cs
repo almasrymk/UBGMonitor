@@ -95,7 +95,7 @@ public sealed class PanelResizeAdorner : Adorner
         {
             if (resizeHeight)
             {
-                _panel.Height = double.NaN;
+                _panel.MinHeight = 0;
             }
 
             _changed();
@@ -155,10 +155,12 @@ public sealed class PanelResizeAdorner : Adorner
             }
         }
 
+        // The dragged height is a minimum: a panel still grows when its content does (e.g. an expanded section).
         if (resizeHeight)
         {
             var height = Math.Max(MinPanelHeight, _start.Height + moved.Y);
-            _panel.Height = Math.Round(height / DashboardBoard.SnapStep) * DashboardBoard.SnapStep;
+            _panel.Height = double.NaN;
+            _panel.MinHeight = Math.Round(height / DashboardBoard.SnapStep) * DashboardBoard.SnapStep;
         }
     }
 }

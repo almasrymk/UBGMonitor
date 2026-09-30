@@ -20,11 +20,11 @@ public sealed partial class HardwareOsViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool _isLevel4Expanded;
     [ObservableProperty] private bool _isLevel5Expanded;
 
-    [ObservableProperty] private int _level1Count = 14;
-    [ObservableProperty] private int _level2Count = 16;
-    [ObservableProperty] private int _level3Count = 16;
-    [ObservableProperty] private int _level4Count = 24;
-    [ObservableProperty] private int _level5Count = 21;
+    [ObservableProperty] private int _level1Count;
+    [ObservableProperty] private int _level2Count;
+    [ObservableProperty] private int _level3Count;
+    [ObservableProperty] private int _level4Count;
+    [ObservableProperty] private int _level5Count;
 
     public ObservableCollection<InfoRowViewModel> Level1Rows { get; } = [];
     public ObservableCollection<InfoRowViewModel> Level2Rows { get; } = [];
@@ -83,6 +83,20 @@ public sealed partial class HardwareOsViewModel : ObservableObject, IDisposable
 
     public Task RefreshStaticAsync() => RefreshStaticCoreAsync();
 
+    public void Reset()
+    {
+        Level1Rows.Clear();
+        Level2Rows.Clear();
+        Level3Rows.Clear();
+        Level4Rows.Clear();
+        Level5Rows.Clear();
+        Level1Count = 0;
+        Level2Count = 0;
+        Level3Count = 0;
+        Level4Count = 0;
+        Level5Count = 0;
+    }
+
     private async Task RefreshStaticCoreAsync()
     {
         try
@@ -97,6 +111,12 @@ public sealed partial class HardwareOsViewModel : ObservableObject, IDisposable
             {
                 Apply(level);
             }
+
+            // The static levels leave out Network; load it too so its count shows while collapsed.
+            if (!IsLevel5Expanded)
+            {
+                await RefreshLevelAsync(5, force: true);
+            }
         }
         catch
         {
@@ -104,9 +124,9 @@ public sealed partial class HardwareOsViewModel : ObservableObject, IDisposable
         }
     }
 
-    private async Task RefreshLevelAsync(int level)
+    private async Task RefreshLevelAsync(int level, bool force = false)
     {
-        if (level == 5 && !IsLevel5Expanded)
+        if (level == 5 && !IsLevel5Expanded && !force)
         {
             return;
         }

@@ -6,6 +6,7 @@ using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ClientAgent.Shared.Models;
+using ClientAgent.Shared.Monitoring;
 using ClientAgent.UI.Enums;
 using ClientAgent.UI.Services;
 
@@ -14,15 +15,11 @@ namespace ClientAgent.UI.ViewModels;
 public sealed partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly AgentApiClient _client;
-    private readonly AppSettingsStore _appSettings = new();
     private readonly DispatcherTimer _timer;
-    private readonly DiskActivitySampler _diskSampler = new();
-    private readonly NetworkActivitySampler _networkSampler = new();
     private int _refreshing;
+    private bool _serviceConnected;
     private DateTime _nextServiceUtc = DateTime.MinValue;
     private DateTime _nextInternetUtc = DateTime.MinValue;
-    private readonly DateTime _firstSpeedTestUtc = DateTime.UtcNow.AddSeconds(20);
-    private DateTime? _lastSpeedTestUtc;
     private DateTime _nextCpuUtc = DateTime.MinValue;
     private DateTime _nextRamUtc = DateTime.MinValue;
     private DateTime _nextNetworkUtc = DateTime.MinValue;
@@ -37,7 +34,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private string _agentStatus = "Connecting...";
     [ObservableProperty] private bool _serviceRunning;
     [ObservableProperty] private bool _internetConnected;
-    [ObservableProperty] private string _internetStatus = "Internet: Disconnected";
+    [ObservableProperty] private string _internetStatus = "Internet: Checking...";
     [ObservableProperty] private bool _madkhalConnected;
     [ObservableProperty] private bool _centralConnected;
     [ObservableProperty] private string _madkhalStatus = "Unknown";
@@ -46,7 +43,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private string _cpuModelText = "CPU: -";
     [ObservableProperty] private string _ramTotalText = "RAM: -";
     [ObservableProperty] private string _osVersionText = "OS: -";
-    [ObservableProperty] private string _agentVersion = "Agent v1.0.0";
+    [ObservableProperty] private string _agentVersion = "Agent: -";
     [ObservableProperty] private string _configVersionText = "Config v1";
     [ObservableProperty] private string _lastSyncText = "Last Sync: never";
     [ObservableProperty] private int _criticalCount;
@@ -76,7 +73,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool _hasMonitorPoints;
     [ObservableProperty] private string? _selectedMonitorPointId;
 
-    public SettingsViewModel Settings { get; } = new();
+    public SettingsViewModel Settings { get; }
+
+    public ReportsViewModel Reports { get; }
 
     public CpuViewModel Cpu { get; } = new();
     public RamViewModel Ram { get; } = new();
@@ -100,6 +99,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public MainViewModel(AgentApiClient client)
     {
         _client = client;
+        Settings = new SettingsViewModel(client);
+        Reports = new ReportsViewModel(client) { ShowRequested = () => SelectedTab = ReportsTab };
         TopCpuCard = new ProcessListCardViewModel(_client, "Top 5 by CPU", ProcessSortBy.Cpu, ResourceBrush("AccentGreenBrush", Color.FromRgb(0x4C, 0xAF, 0x50)));
         TopRamCard = new ProcessListCardViewModel(_client, "Top 5 by RAM", ProcessSortBy.Ram, ResourceBrush("ProcessBarRamBrush", Color.FromRgb(0x21, 0x96, 0xF3)));
         TopNetworkCard = new ProcessListCardViewModel(_client, "Top 5 by Network", ProcessSortBy.Network, Brushes.White);
@@ -112,6 +113,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             await RefreshAsync();
         };
         Settings.ApplicationsLoaded += async (_, _) => await RefreshAsync();
+        Settings.ConnectRequested += async (_, _) =>
+        {
+            _serviceConnected = true;
+            MarkNotResponding();
+            await RefreshDueAsync();
+        };
         Settings.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(SettingsViewModel.Theme))
@@ -155,6 +162,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 ApplyDeviceSpec();
             }
         };
+        Network.StartSpeedTest = () => _client.StartSpeedTestAsync();
         ApplySavedRuntimeSettings();
         _timer.Interval = TimeSpan.FromSeconds(1);
         _timer.Tick += async (_, _) => await RefreshDueAsync();
@@ -166,7 +174,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     private void ApplySavedRuntimeSettings()
     {
-        _client.SetBaseAddress(Settings.ApiBaseUrl);
+        _client.SetBaseAddress(Settings.ApiBaseUrl, Settings.ClientAccessKey);
         HardwareOs.SetHardwareInterval(Settings.HardwareOsIntervalSeconds);
         HardwareOs.SetNetworkInterval(Settings.NetworkIntervalSeconds);
         _nextServiceUtc = DateTime.MinValue;
@@ -180,18 +188,6 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ShowNotifications));
     }
 
-    private async Task RunScheduledSpeedTestAsync()
-    {
-        try
-        {
-            await Network.RunSpeedTestCommand.ExecuteAsync(null);
-        }
-        finally
-        {
-            _lastSpeedTestUtc = DateTime.UtcNow;
-        }
-    }
-
     private async Task RefreshDueAsync()
     {
         if (Interlocked.Exchange(ref _refreshing, 1) == 1)
@@ -201,40 +197,59 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
         try
         {
-            if (await Task.Run(_diskSampler.Sample) is DiskActivity diskActivity)
+            // Everything on screen comes from the service: when it stops answering, the app goes back to its empty state.
+            var status = await _client.GetStatusAsync();
+            if (status is null)
             {
-                Disk.UpdateActivity(diskActivity);
+                MarkNotResponding();
+                return;
             }
 
-            var adapter = Network.AdapterName;
-            if (await Task.Run(() => _networkSampler.Sample(adapter)) is NetworkActivity networkActivity)
+            if (!_serviceConnected)
             {
-                Network.UpdateActivity(networkActivity);
+                _serviceConnected = true;
+                ApplySavedRuntimeSettings();
+            }
+
+            if (!Settings.IsLoaded && await Settings.LoadFromServiceAsync())
+            {
+                ApplySavedRuntimeSettings();
+            }
+
+            if (await _client.GetDiskActivityAsync() is { } diskActivity)
+            {
+                Disk.UpdateActivity(diskActivity);
             }
 
             var now = DateTime.UtcNow;
             if (now >= _nextServiceUtc)
             {
                 _nextServiceUtc = now.AddSeconds(AtLeastOne(Settings.RefreshInterval));
-                await RefreshServiceAsync();
+                await RefreshServiceAsync(status);
             }
 
-            if (now >= _nextInternetUtc)
+            // Every tick, so a fixed problem or a settings change shows up as soon as the service knows it.
+            if (await _client.GetNotificationsAsync() is { } notifications)
+            {
+                ApplyNotifications(notifications);
+            }
+
+            Network.SpeedTestEnabled = Settings.SpeedTestIntervalSeconds > 0;
+            if (now >= _nextInternetUtc || Network.IsSpeedTestRunning)
             {
                 _nextInternetUtc = now.AddSeconds(AtLeastOne(Settings.InternetIntervalSeconds));
-                await ProbeInternetAsync();
-            }
+                if (await _client.GetInternetAsync() is { } internet)
+                {
+                    if (internet.Connected is bool connected)
+                    {
+                        InternetConnected = connected;
+                        InternetStatus = connected ? "Internet: Connected" : "Internet: Disconnected";
+                        Network.SetInternetReachable(connected);
+                    }
 
-            var speedTestSeconds = Settings.SpeedTestIntervalSeconds;
-            if (speedTestSeconds > 0
-                && InternetConnected
-                && !Network.IsSpeedTestRunning
-                && now >= (_lastSpeedTestUtc?.AddSeconds(speedTestSeconds) ?? _firstSpeedTestUtc))
-            {
-                _ = RunScheduledSpeedTestAsync();
+                    Network.ApplyInternetState(internet);
+                }
             }
-
-            Network.SpeedTestEnabled = speedTestSeconds > 0;
 
             if (now >= _nextCpuUtc)
             {
@@ -299,15 +314,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    private async Task RefreshServiceAsync()
+    private async Task RefreshServiceAsync(AgentStatusDto status)
     {
-        var status = await _client.GetStatusAsync();
-        if (status is null)
-        {
-            MarkNotResponding();
-            return;
-        }
-
         WindowTitle = $"Agent Monitor — {(string.IsNullOrWhiteSpace(Settings.MachineName) ? status.AgentId : Settings.MachineName)}";
         AgentStatus = status.Status;
         ServiceRunning = string.Equals(status.Status, "Running", StringComparison.OrdinalIgnoreCase);
@@ -320,7 +328,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         ConfigVersionText = $"Config v{status.ConfigVersion}";
         LastSyncText = $"Last Sync: {FormatSync(status.LastSyncUtc)}";
 
-        var points = MergeMonitorPoints(_appSettings.LoadMonitorPoints(), await _client.GetMonitorPointsAsync() ?? []);
+        var points = MergeMonitorPoints(Settings.SavedMonitorPoints, await _client.GetMonitorPointsAsync() ?? []);
         var shortcutPoints = OrderDashboardPoints(points).ToList();
         HasMonitorPoints = shortcutPoints.Count > 0;
         Replace(MonitorPoints, points);
@@ -334,6 +342,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     partial void OnHasCurrentIssuesChanged(bool value) => OnPropertyChanged(nameof(ShowNotifications));
 
     private const string SettingsTab = "Settings";
+    private const string ReportsTab = "Reports";
 
     [RelayCommand]
     private async Task SelectTab(string tab)
@@ -378,6 +387,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(CanGoBack));
         OnPropertyChanged(nameof(BackToolTip));
         GoBackCommand.NotifyCanExecuteChanged();
+
+        if (newValue == ReportsTab && !Reports.HasReport && !Reports.IsLoading)
+        {
+            Reports.GenerateCommand.Execute(null);
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanGoBack))]
@@ -406,73 +420,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private Task RefreshAsync() => RefreshDueAsync();
 
-    partial void OnInternetConnectedChanged(bool value)
-        => InternetStatus = value ? "Internet: Connected" : "Internet: Disconnected";
-
-    private void ApplyInternet(NetworkInfo? network)
-    {
-        var known = InterpretInternet(network);
-        if (known is bool connected)
-        {
-            InternetConnected = connected;
-            return;
-        }
-
-        _ = ProbeInternetAsync();
-    }
-
-    private static bool? InterpretInternet(NetworkInfo? network)
-    {
-        if (network is null)
-        {
-            return null;
-        }
-
-        if (!string.Equals(network.Status, "Up", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        if (network.PacketLossPercent >= 100)
-        {
-            return false;
-        }
-
-        return network.PingMs is null ? null : true;
-    }
-
-    private async Task ProbeInternetAsync()
-    {
-        var connected = await Task.Run(ProbeInternet);
-        InternetConnected = connected;
-    }
-
-    private static bool ProbeInternet()
-    {
-        try
-        {
-            if (!NetworkInterface.GetIsNetworkAvailable())
-            {
-                return false;
-            }
-
-            using var ping = new Ping();
-            var reply = ping.Send("1.1.1.1", 800);
-            return reply?.Status == IPStatus.Success;
-        }
-        catch (Exception ex) when (ex is PingException or InvalidOperationException)
-        {
-            return false;
-        }
-    }
-
     private void ApplySnapshot(SystemSnapshot snapshot)
     {
         Cpu.Update(snapshot.Cpu);
         Ram.Update(snapshot.Ram);
         Disk.Update(snapshot.Partitions, snapshot.PhysicalDisks);
         Network.Update(snapshot.Network);
-        ApplyInternet(snapshot.Network);
         UpdateHardwareStatus(snapshot.Cpu, snapshot.Ram, snapshot.Os);
         Replace(TopRamProcesses, snapshot.TopProcesses.Take(5));
         Replace(TopCpuProcesses, snapshot.TopProcesses.OrderByDescending(p => p.CpuPercent).ThenByDescending(p => p.RamMB).Take(5));
@@ -490,7 +443,6 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (ram is not null) Ram.Update(ram);
         if (partitions is not null) Disk.Update(partitions, []);
         if (network is not null) Network.Update(network);
-        ApplyInternet(network);
         UpdateHardwareStatus(cpu, ram, await _client.GetOsAsync());
         if (processes is not null)
         {
@@ -503,7 +455,68 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         AgentStatus = "Service Not Responding";
         ServiceRunning = false;
-        _ = ProbeInternetAsync();
+        if (!_serviceConnected)
+        {
+            return;
+        }
+
+        _serviceConnected = false;
+        ClearServiceData();
+    }
+
+    /// <summary>Shows the app as it looks right after opening, before the service has sent anything.</summary>
+    private void ClearServiceData()
+    {
+        WindowTitle = "Agent Monitor";
+        MadkhalConnected = false;
+        CentralConnected = false;
+        MadkhalStatus = "Unknown";
+        CentralStatus = "Unknown";
+        Uptime = "-";
+        CpuModelText = "CPU: -";
+        RamTotalText = "RAM: -";
+        OsVersionText = "OS: -";
+        AgentVersion = "Agent: -";
+        ConfigVersionText = "Config v1";
+        LastSyncText = "Last Sync: never";
+        InternetConnected = false;
+        InternetStatus = "Internet: Checking...";
+        _operatingSystem = string.Empty;
+        _peakDownloadMbps = 0;
+        _peakUploadMbps = 0;
+
+        Cpu.Reset();
+        Ram.Reset();
+        Disk.Reset();
+        Network.Reset();
+        HardwareOs.Reset();
+        TopCpuProcesses.Clear();
+        TopRamProcesses.Clear();
+
+        MonitorPoints.Clear();
+        DashboardMonitorPoints.Clear();
+        HasMonitorPoints = false;
+        SelectedMonitorPointId = null;
+        CriticalCount = 0;
+        WarningCount = 0;
+        HealthyCount = 0;
+        UnknownCount = 0;
+        CurrentIssues.Clear();
+        HasCurrentIssues = false;
+        ClearSpecMarks();
+        Settings.Unload();
+    }
+
+    private void ClearSpecMarks()
+    {
+        CpuSpecOk = CpuSpecBad = false;
+        RamSpecOk = RamSpecBad = false;
+        DiskSpecOk = DiskSpecBad = false;
+        DownloadSpecOk = DownloadSpecBad = ShowDownloadSpec = false;
+        UploadSpecOk = UploadSpecBad = ShowUploadSpec = false;
+        InternetSpecOk = InternetSpecBad = ShowInternetSpec = false;
+        OsSpecOk = OsSpecBad = false;
+        HardwareOsSpecOk = HardwareOsSpecBad = false;
     }
 
     [RelayCommand]
@@ -559,6 +572,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     private void ApplyDeviceSpec()
     {
+        if (!_serviceConnected)
+        {
+            ClearSpecMarks();
+            return;
+        }
+
         if (Network.DownloadMbps > _peakDownloadMbps)
         {
             _peakDownloadMbps = Network.DownloadMbps;
@@ -611,24 +630,18 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         HardwareOsSpecBad = OsSpecBad || specRows.Contains(false);
         HardwareOsSpecOk = !HardwareOsSpecBad && (OsSpecOk || specRows.Contains(true));
 
-        var notifications = Settings.NotificationsEnabled
-            ? NotificationBuilder.HardwareOs(spec, HardwareOs.Level1Rows.Concat(HardwareOs.Level4Rows), OsSpecBad, _operatingSystem)
-                .Concat(NotificationBuilder.Sensors(HardwareOs.Level3Rows))
-                .Concat(result.Issues)
-                .Concat(NotificationBuilder.MonitorPoints(MonitorPoints))
-                .OrderBy(issue => SeverityRank(issue.Severity))
-                .ToList()
-            : [];
-        SyncIssues(notifications);
-        HasCurrentIssues = CurrentIssues.Count > 0;
+        if (!Settings.NotificationsEnabled)
+        {
+            ApplyNotifications([]);
+        }
     }
 
-    private static int SeverityRank(string severity) => severity switch
+    /// <summary>The notifications are built by the service; the app only shows them.</summary>
+    private void ApplyNotifications(IReadOnlyList<AgentIssueDto> notifications)
     {
-        "Critical" => 0,
-        "Warning" => 1,
-        _ => 2
-    };
+        SyncIssues(Settings.NotificationsEnabled ? notifications : []);
+        HasCurrentIssues = CurrentIssues.Count > 0;
+    }
 
     private void SyncIssues(IReadOnlyList<AgentIssueDto> issues)
     {
@@ -723,7 +736,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 IsUp = status?.IsUp,
                 Status = !enabled ? "Unknown" : status?.Status ?? "Unknown",
                 LastCheckedUtc = status?.LastCheckedUtc,
-                Message = status?.Message
+                Message = status?.Message,
+                ResponseMs = enabled ? status?.ResponseMs : null,
+                StatusSinceUtc = enabled ? status?.StatusSinceUtc : null,
+                Target = MonitorPointText.Target(point)
             };
         }).ToList();
     }
@@ -808,8 +824,6 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         _timer.Stop();
-        _diskSampler.Dispose();
-        _networkSampler.Dispose();
         HardwareOs.Dispose();
         TopCpuCard.Dispose();
         TopRamCard.Dispose();

@@ -3,8 +3,13 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Border Style="{StaticResource CardBorder}" Margin="10">
         <DockPanel>
-            <TextBlock DockPanel.Dock="Top" Text="Monitor Points" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
-            <DataGrid ItemsSource="{Binding MonitorPoints}">
+            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+                <TextBlock Text="Monitor Points" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+                <TextBlock Text="Double-click a monitor point to open its detailed report." Margin="16,0,0,0" FontSize="12"
+                           VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+            </DockPanel>
+            <DataGrid ItemsSource="{Binding MonitorPoints}" IsReadOnly="True"
+                      HorizontalScrollBarVisibility="Auto" MouseDoubleClick="Grid_MouseDoubleClick">
                 <DataGrid.Columns>
                     <DataGridTemplateColumn Width="46">
                         <DataGridTemplateColumn.CellTemplate>
@@ -41,29 +46,58 @@
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
                     <DataGridTextColumn Header="Id" Binding="{Binding MonitorPointId}" Width="72"/>
-                    <DataGridTextColumn Header="Name" Binding="{Binding DisplayName}" Width="2*" MinWidth="220"/>
-                    <DataGridTextColumn Header="Type" Binding="{Binding Type, Converter={StaticResource MonitorPointTypeLabelConverter}}" Width="140"/>
-                    <DataGridTemplateColumn Header="Address" Width="180">
+                    <DataGridTextColumn Header="Name" Binding="{Binding DisplayName}" Width="*" MinWidth="170"/>
+                    <DataGridTextColumn Header="Type" Binding="{Binding Type, Converter={StaticResource MonitorPointTypeLabelConverter}}" Width="100"/>
+                    <DataGridTextColumn Header="Device kind" Binding="{Binding DeviceKind, Converter={StaticResource MonitorPointFieldConverter}, ConverterParameter=DeviceKind}" Width="95"/>
+                    <DataGridTemplateColumn Header="Address / Target" Width="210" SortMemberPath="Target">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <StackPanel Orientation="Horizontal">
+                                <StackPanel Orientation="Horizontal" ToolTip="{Binding Target}">
                                     <Image Style="{StaticResource SiteLogoImage}"
                                            Source="{Binding Icon, Converter={StaticResource IconToImageConverter}}"/>
-                                    <TextBlock Text="{Binding Address}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Target}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                                 </StackPanel>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="90">
+                    <DataGridTextColumn Header="Location" Binding="{Binding Location}" Width="100"/>
+                    <DataGridTextColumn Header="Model" Binding="{Binding Model}" Width="100"/>
+                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="80">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="VerticalAlignment" Value="Center"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
                                 <Setter Property="Foreground" Value="{Binding Status, Converter={StaticResource HealthToBrushConverter}}"/>
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
-                    <DataGridCheckBoxColumn Header="Enabled" Binding="{Binding Enabled}" Width="80"/>
-                    <DataGridTextColumn Header="Interval" Binding="{Binding IntervalSeconds}" Width="80"/>
+                    <DataGridTextColumn Header="For" Binding="{Binding StatusSinceUtc, Converter={StaticResource MonitorPointFieldConverter}, ConverterParameter=Since}" Width="70"/>
+                    <DataGridTextColumn Header="Response" Binding="{Binding ResponseMs, Converter={StaticResource MonitorPointFieldConverter}, ConverterParameter=Response}" Width="80"/>
+                    <DataGridTextColumn Header="Last check" Binding="{Binding LastCheckedUtc, Converter={StaticResource MonitorPointFieldConverter}, ConverterParameter=Time}" Width="140"/>
+                    <DataGridTemplateColumn Header="Result" Width="220" SortMemberPath="Message">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Message}" ToolTip="{Binding Message}" VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTemplateColumn Header="Enabled" Width="70" SortMemberPath="Enabled">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Path Style="{StaticResource YesNoMark}" Tag="{Binding Enabled}"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTemplateColumn Header="Shortcut" Width="72" SortMemberPath="ShowInShortcut">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Path Style="{StaticResource YesNoMark}" Tag="{Binding ShowInShortcut}"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTextColumn Header="Alert" Binding="{Binding Alert, Converter={StaticResource MonitorPointFieldConverter}, ConverterParameter=Alert}" Width="70"/>
+                    <DataGridTextColumn Header="Interval" Binding="{Binding IntervalSeconds, Converter={StaticResource MonitorPointFieldConverter}, ConverterParameter=Seconds}" Width="70"/>
                 </DataGrid.Columns>
             </DataGrid>
         </DockPanel>

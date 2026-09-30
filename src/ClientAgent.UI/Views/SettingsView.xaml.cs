@@ -41,7 +41,7 @@ public partial class SettingsView : UserControl
             return;
         }
 
-        var dialog = new DatabaseLoginWindow(row.DatabaseLogin?.Copy());
+        var dialog = new DatabaseLoginWindow(row.DatabaseLogin?.Copy(), ((DataContext as MainViewModel)?.Settings ?? DataContext as SettingsViewModel)?.Client);
         dialog.Owner = Window.GetWindow(this);
         if (dialog.ShowDialog() == true && dialog.Result is not null)
         {

@@ -13,7 +13,14 @@ public interface INetworkService
     Task<NetworkInfo> GetNetworkAsync(CancellationToken cancellationToken = default);
 
     Task<HardwareLevelDto> GetLevelAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Ping and packet loss (measured again when stale), the Wi-Fi signal, and the byte counters of every active adapter.</summary>
+    Task<NetworkReading> ReadForReportAsync(CancellationToken cancellationToken = default);
 }
+
+/// <param name="ReceivedBytes">Total since the adapters started; compare two readings for the usage in between.</param>
+public sealed record NetworkReading(
+    double? PingMs, double? LossPercent, int? WifiSignalPercent, long ReceivedBytes, long SentBytes, string? ConnectionType);
 
 public sealed class NetworkService : BackgroundService, INetworkService
 {
@@ -95,6 +102,33 @@ public sealed class NetworkService : BackgroundService, INetworkService
             RefreshPublicIpIfStaleAsync(wait: true)).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
         return MapLevel(ReadSample());
+    }
+
+    public async Task<NetworkReading> ReadForReportAsync(CancellationToken cancellationToken = default)
+    {
+        await RefreshPingIfStaleAsync(wait: true).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        try
+        {
+            long received = 0;
+            long sent = 0;
+            foreach (var nic in ActiveInterfaces())
+            {
+                var (rx, tx) = ReadBytes(nic);
+                received += rx;
+                sent += tx;
+            }
+
+            var active = PickActiveInterface();
+            var type = active is null ? null : ClassifyConnection(active);
+            var signal = type == WifiType ? WifiInfoReader.Find(active!.Name, active.Description)?.SignalPercent : null;
+            return new NetworkReading(_cachedPingMs, _cachedLossPercent, signal, received, sent, type);
+        }
+        catch (NetworkInformationException ex)
+        {
+            _logger.LogDebug(ex, "Reading the network counters failed");
+            return new NetworkReading(_cachedPingMs, _cachedLossPercent, null, 0, 0, null);
+        }
     }
 
     private Sample ReadSample()

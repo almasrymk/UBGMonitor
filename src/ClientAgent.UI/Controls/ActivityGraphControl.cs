@@ -193,8 +193,11 @@ public sealed class ActivityGraphControl : FrameworkElement
                 dc.DrawText(Format(Title, labelBrush, dpi), new Point(4, 2));
             }
 
-            var scale = Format(ScaleText(max), labelBrush, dpi);
-            dc.DrawText(scale, new Point(width - scale.Width - 4, 2));
+            if (primary.Count > 0 || secondary.Count > 0)
+            {
+                var scale = Format(ScaleText(max), labelBrush, dpi);
+                dc.DrawText(scale, new Point(width - scale.Width - 4, 2));
+            }
         }
 
         if (!string.IsNullOrEmpty(ValueLabel))

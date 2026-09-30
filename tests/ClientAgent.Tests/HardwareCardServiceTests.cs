@@ -59,19 +59,20 @@ public sealed class HardwareCardServiceTests
     }
 
     [Fact]
-    public async Task NetworkService_GetLevelAsync_Returns20Items()
+    public async Task NetworkService_GetLevelAsync_ReturnsBaseItemsPlusWifiDetails()
     {
         var sut = new NetworkService(new FakeLocalConfigCache(), NullLogger<NetworkService>.Instance);
 
         var level = await sut.GetLevelAsync();
 
         Assert.Equal(5, level.Level);
-        Assert.Equal(21, level.ItemCount);
-        Assert.Equal(21, level.Items.Count);
+        var expected = level.Items.Any(item => item.Name.StartsWith("Wi-Fi", StringComparison.Ordinal)) ? 28 : 21;
+        Assert.Equal(expected, level.ItemCount);
+        Assert.Equal(expected, level.Items.Count);
         Assert.Equal("Hostname", level.Items[0].Name);
-        Assert.Equal("Local IP", level.Items[8].Name);
-        Assert.Equal("Public IP", level.Items[9].Name);
-        Assert.Equal("Packet Loss", level.Items[20].Name);
+        Assert.Contains(level.Items, item => item.Name == "Local IP");
+        Assert.Contains(level.Items, item => item.Name == "Public IP");
+        Assert.Contains(level.Items, item => item.Name == "Packet Loss");
         Assert.False(string.IsNullOrWhiteSpace(level.Items[0].Value));
     }
 }

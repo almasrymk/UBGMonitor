@@ -86,18 +86,19 @@ public sealed class DatabaseMonitor : BackgroundService, IMonitoringModule
             return;
         }
 
+        _logger.LogInformation("[Database] Checking the local database...");
         var up = await CanConnectAsync(connectionString, cancellationToken);
 
         _health.SetPointHealth("local-database", up);
         if (up)
         {
             _health.ClearIssue("database");
-            _logger.LogDebug("Local database is reachable");
+            _logger.LogInformation("[Database] Local database: OK - connected");
         }
         else
         {
             _health.SetIssue("database", "Critical", "Database unreachable", IssueText.DatabaseDown(), "local-database");
-            _logger.LogWarning("Local database connection failed");
+            _logger.LogWarning("[Database] Local database: CRITICAL - connection failed");
         }
     }
 
@@ -107,16 +108,20 @@ public sealed class DatabaseMonitor : BackgroundService, IMonitoringModule
         var key = $"database:{point.MonitorPointId}";
         if (login is null || string.IsNullOrWhiteSpace(login.Server) || string.IsNullOrWhiteSpace(login.Database))
         {
+            _logger.LogWarning("[Database] {Name}: CRITICAL - connection details are not configured", point.DisplayName);
             _health.SetPointHealth(point.MonitorPointId, false, "Database connection is not configured", "Critical");
             _health.SetIssue(key, "Critical", "Database not configured", IssueText.DatabasePointDown(point.DisplayName, "Database", "-", "The connection details have not been saved."), point.MonitorPointId);
             return;
         }
 
-        var failure = await ConnectFailureAsync(login, cancellationToken);
         var engine = EngineLabel(login.Engine);
+        _logger.LogInformation("[Database] Checking {Name} ({Engine} {Server}/{Database})...", point.DisplayName, engine, login.Server, login.Database);
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var failure = await ConnectFailureAsync(login, cancellationToken);
         if (failure is null)
         {
-            _health.SetPointHealth(point.MonitorPointId, true, $"{engine} is reachable", "Healthy");
+            _logger.LogInformation("[Database] {Name}: OK - connected ({Ms} ms)", point.DisplayName, watch.ElapsedMilliseconds);
+            _health.SetPointHealth(point.MonitorPointId, true, $"{engine} is reachable", "Healthy", watch.ElapsedMilliseconds);
             _health.ClearIssue(key);
             return;
         }
@@ -128,10 +133,11 @@ public sealed class DatabaseMonitor : BackgroundService, IMonitoringModule
             "Database unreachable",
             IssueText.DatabasePointDown(point.DisplayName, engine, login.Server, failure),
             point.MonitorPointId);
-        _logger.LogWarning("Database {Name} ({Engine} {Server}) is unreachable: {Reason}", point.DisplayName, engine, login.Server, failure);
+        _logger.LogWarning("[Database] {Name}: CRITICAL - {Reason} ({Ms} ms)", point.DisplayName, failure, watch.ElapsedMilliseconds);
     }
 
-    private static async Task<string?> ConnectFailureAsync(DatabaseLogin login, CancellationToken cancellationToken)
+    /// <summary>Null when the database answered; otherwise why it did not, with a hint for the usual causes.</summary>
+    public static async Task<string?> ConnectFailureAsync(DatabaseLogin login, CancellationToken cancellationToken)
     {
         try
         {
@@ -142,16 +148,64 @@ public sealed class DatabaseMonitor : BackgroundService, IMonitoringModule
             await command.ExecuteScalarAsync(cancellationToken);
             return null;
         }
-        catch (Exception ex) when (ex is DbException or InvalidOperationException or TimeoutException)
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             var message = ex.Message.ReplaceLineEndings(" ").Trim();
-            return message.Length > 240 ? message[..240] : message;
+            var hint = Hint(login, ex);
+            if (hint is not null && message.IndexOf(". ", StringComparison.Ordinal) is > 0 and var end)
+            {
+                message = message[..(end + 1)];
+            }
+
+            message = message.Length > 240 ? message[..240] + "..." : message;
+            return hint is null ? message : $"{message} {hint}";
         }
     }
 
+    private static string? Hint(DatabaseLogin login, Exception ex)
+    {
+        var text = ex.Message;
+        var port = login.Port > 0 ? login.Port : DefaultPort(login.Engine);
+        if (login.Engine == DatabaseEngine.SqlServer)
+        {
+            if (text.Contains("error: 26", StringComparison.OrdinalIgnoreCase) || text.Contains("Locating Server/Instance", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Hint: for a named instance (server\\instance) start the SQL Server Browser service on the server, or enter the instance's TCP port.";
+            }
+
+            if (text.Contains("network-related", StringComparison.OrdinalIgnoreCase) || text.Contains("error: 40", StringComparison.OrdinalIgnoreCase)
+                || text.Contains("was not found or was not accessible", StringComparison.OrdinalIgnoreCase) || ex is System.Net.Sockets.SocketException)
+            {
+                return $"Hint: connecting by IP or computer name needs TCP/IP. On the server open SQL Server Configuration Manager > SQL Server Network Configuration > Protocols, enable TCP/IP, restart the SQL Server service, and allow TCP port {port} in Windows Firewall.";
+            }
+
+            if (login.IntegratedSecurity && text.Contains("Login failed", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Hint: with Windows authentication the service signs in as this computer's account (NT AUTHORITY\\SYSTEM); use a SQL Server login instead.";
+            }
+
+            return null;
+        }
+
+        return text.Contains("timeout", StringComparison.OrdinalIgnoreCase) || text.Contains("connect", StringComparison.OrdinalIgnoreCase)
+            ? $"Hint: check the server address, that the database server accepts connections from other computers, and that TCP port {port} is open in its firewall."
+            : null;
+    }
+
+    private static int DefaultPort(DatabaseEngine engine) => engine switch
+    {
+        DatabaseEngine.PostgreSql => 5432,
+        DatabaseEngine.MySql => 3306,
+        _ => 1433
+    };
+
+    /// <summary>Passwords are saved encrypted; one typed in the app arrives as plain text until it is saved.</summary>
+    private static string Password(string? stored) =>
+        stored is { Length: > 0 } && !stored.StartsWith("dpapi:", StringComparison.Ordinal) ? stored : SecretProtector.Unprotect(stored);
+
     private static DbConnection CreateConnection(DatabaseLogin login)
     {
-        var password = SecretProtector.Unprotect(login.Password);
+        var password = Password(login.Password);
         return login.Engine switch
         {
             DatabaseEngine.PostgreSql => new NpgsqlConnection(new NpgsqlConnectionStringBuilder
@@ -180,9 +234,11 @@ public sealed class DatabaseMonitor : BackgroundService, IMonitoringModule
     {
         var builder = new SqlConnectionStringBuilder
         {
-            DataSource = login.Port is 0 or 1433 ? login.Server : $"{login.Server},{login.Port}",
+            DataSource = login.Port is 0 or 1433 || login.Server.Contains(',') ? login.Server.Trim() : $"{login.Server.Trim()},{login.Port}",
             InitialCatalog = login.Database,
             IntegratedSecurity = login.IntegratedSecurity,
+            // Older servers cannot do the TLS that the driver asks for by default.
+            Encrypt = SqlConnectionEncryptOption.Optional,
             TrustServerCertificate = true,
             ConnectTimeout = 8
         };

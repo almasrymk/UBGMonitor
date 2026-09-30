@@ -46,7 +46,23 @@ public sealed partial class NetworkViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(RunSpeedTestCommand))]
     private bool _isSpeedTestRunning;
 
-    private bool _hasLiveActivity;
+    private bool _internetReachable = true;
+    private NetworkInfo? _lastNetwork;
+
+    /// <summary>Keeps the connection text in line with the app-wide internet check (adapter up does not mean internet works).</summary>
+    public void SetInternetReachable(bool reachable)
+    {
+        if (_internetReachable == reachable)
+        {
+            return;
+        }
+
+        _internetReachable = reachable;
+        if (_lastNetwork is not null)
+        {
+            UpdateConnection(_lastNetwork);
+        }
+    }
 
     public string AdapterName { get; private set; } = string.Empty;
 
@@ -56,12 +72,44 @@ public sealed partial class NetworkViewModel : ObservableObject
     /// <summary>Sent throughput in Kbps.</summary>
     public ObservableCollection<double> UploadHistory { get; } = [];
 
-    public void UpdateActivity(NetworkActivity activity)
+    public void Reset()
     {
-        _hasLiveActivity = true;
-        ApplyThroughput(activity.ReceivedKbps / 1000d, activity.SentKbps / 1000d);
-        CpuViewModel.Push(History, activity.ReceivedKbps);
-        CpuViewModel.Push(UploadHistory, activity.SentKbps);
+        ActiveInterface = "Unknown";
+        StatusLine = "-";
+        IpAddress = "-";
+        PublicIp = "-";
+        MacAddress = "-";
+        Gateway = "-";
+        Dns = "-";
+        Download = "-";
+        Upload = "-";
+        TotalRx = "-";
+        TotalTx = "-";
+        Ping = "-";
+        PacketLoss = "0%";
+        Status = "Unknown";
+        DownloadMbps = 0;
+        UploadMbps = 0;
+        GaugeMaximum = 100;
+        ThroughputText = "0.0 Mbps | 0.0 Mbps";
+        ConnectionType = "Unknown";
+        IsWifi = false;
+        IsCable = false;
+        ConnectionIcon = "\uE774";
+        ConnectionText = "-";
+        ConnectionToolTip = "-";
+        WifiSignalPercent = null;
+        LinkSpeedMbps = null;
+        TestedDownloadMbps = null;
+        TestedUploadMbps = null;
+        IsSpeedTestRunning = false;
+        SpeedTestText = SpeedTestEnabled ? "Scheduled" : "Off";
+        SpeedTestToolTip = "Runs automatically based on General settings";
+        AdapterName = string.Empty;
+        History.Clear();
+        UploadHistory.Clear();
+        _lastNetwork = null;
+        _internetReachable = true;
     }
 
     private void ApplyThroughput(double downloadMbps, double uploadMbps)
@@ -91,12 +139,9 @@ public sealed partial class NetworkViewModel : ObservableObject
         Gateway = string.IsNullOrWhiteSpace(network.Gateway) ? "-" : network.Gateway;
         Dns = network.DnsServers.Length == 0 ? "-" : string.Join(", ", network.DnsServers.Take(2));
         AdapterName = network.AdapterName;
-        if (!_hasLiveActivity)
-        {
-            ApplyThroughput(network.DownloadMbps, network.UploadMbps);
-            CpuViewModel.Push(History, network.DownloadMbps * 1000d);
-            CpuViewModel.Push(UploadHistory, network.UploadMbps * 1000d);
-        }
+        ApplyThroughput(network.DownloadMbps, network.UploadMbps);
+        CpuViewModel.Push(History, network.DownloadMbps * 1000d);
+        CpuViewModel.Push(UploadHistory, network.UploadMbps * 1000d);
 
         TotalRx = $"{network.TotalRxGB:0.0} GB";
         TotalTx = $"{network.TotalTxGB:0.0} GB";
@@ -107,6 +152,7 @@ public sealed partial class NetworkViewModel : ObservableObject
 
     private void UpdateConnection(NetworkInfo network)
     {
+        _lastNetwork = network;
         var up = string.Equals(network.Status, "Up", StringComparison.OrdinalIgnoreCase);
         ConnectionType = network.ConnectionType;
         IsWifi = up && network.ConnectionType == "Wi-Fi";
@@ -156,37 +202,69 @@ public sealed partial class NetworkViewModel : ObservableObject
             ConnectionToolTip = string.Join(Environment.NewLine,
                 $"Adapter: {network.AdapterName}", $"Gateway: {Gateway}", $"DNS: {Dns}");
         }
+
+        if (!_internetReachable)
+        {
+            ConnectionText += " · No internet";
+            ConnectionToolTip = "Connected to the network, but the internet cannot be reached."
+                                + Environment.NewLine + Environment.NewLine + ConnectionToolTip;
+        }
     }
+
+    /// <summary>Asks the Agent service to run a speed test; the service runs it and reports through <see cref="ApplyInternetState"/>.</summary>
+    public Func<Task<InternetStateDto?>>? StartSpeedTest { get; set; }
 
     [RelayCommand(CanExecute = nameof(CanRunSpeedTest))]
     private async Task RunSpeedTestAsync()
     {
         IsSpeedTestRunning = true;
-        var progress = new Progress<string>(text => SpeedTestText = text);
-        try
-        {
-            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
-            var result = await InternetSpeedTester.RunAsync(progress, timeout.Token);
-            TestedDownloadMbps = result.DownloadMbps;
-            TestedUploadMbps = result.UploadMbps;
-            var upload = result.UploadMbps is double up ? FormatMbps(up) : "-";
-            SpeedTestText = $"↓ {FormatMbps(result.DownloadMbps)}  ↑ {upload}";
-            SpeedTestToolTip = $"Last speed test at {result.CompletedAt:HH:mm}{Environment.NewLine}"
-                               + $"Download: {FormatMbps(result.DownloadMbps)}{Environment.NewLine}"
-                               + $"Upload: {(result.UploadMbps is null ? "failed (server unavailable)" : upload)}";
-        }
-        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or IOException)
-        {
-            SpeedTestText = "Failed";
-            SpeedTestToolTip = $"Speed test failed: {ex.Message}";
-        }
-        finally
+        SpeedTestText = "Starting...";
+        var state = StartSpeedTest is null ? null : await StartSpeedTest();
+        if (state is null)
         {
             IsSpeedTestRunning = false;
+            SpeedTestText = "Failed";
+            SpeedTestToolTip = "The Agent service did not respond, so the speed test could not start.";
+            return;
         }
+
+        state.SpeedTestRunning = true;
+        ApplyInternetState(state);
     }
 
     private bool CanRunSpeedTest() => !IsSpeedTestRunning;
+
+    /// <summary>Shows the speed test state measured by the service.</summary>
+    public void ApplyInternetState(InternetStateDto state)
+    {
+        IsSpeedTestRunning = state.SpeedTestRunning;
+        if (state.SpeedTestRunning)
+        {
+            SpeedTestText = state.SpeedTestProgress ?? "Testing...";
+            return;
+        }
+
+        TestedDownloadMbps = state.DownloadMbps;
+        TestedUploadMbps = state.UploadMbps;
+        if (state.DownloadMbps is double download)
+        {
+            var upload = state.UploadMbps is double up ? FormatMbps(up) : "-";
+            SpeedTestText = $"↓ {FormatMbps(download)}  ↑ {upload}";
+            SpeedTestToolTip = $"Last speed test at {state.SpeedTestCompletedAt:HH:mm}{Environment.NewLine}"
+                               + $"Download: {FormatMbps(download)}{Environment.NewLine}"
+                               + $"Upload: {(state.UploadMbps is null ? "failed (server unavailable)" : upload)}"
+                               + (state.SpeedTestError is null ? string.Empty : $"{Environment.NewLine}Last attempt failed: {state.SpeedTestError}");
+        }
+        else if (state.SpeedTestError is not null)
+        {
+            SpeedTestText = "Failed";
+            SpeedTestToolTip = $"Speed test failed: {state.SpeedTestError}";
+        }
+        else
+        {
+            SpeedTestText = SpeedTestEnabled ? "Scheduled" : "Off";
+        }
+    }
 
     partial void OnSpeedTestEnabledChanged(bool value)
     {

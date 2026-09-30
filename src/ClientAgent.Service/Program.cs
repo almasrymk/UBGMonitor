@@ -3,12 +3,14 @@ using ClientAgent.Service.Connectivity;
 using ClientAgent.Service.LocalApi;
 using ClientAgent.Service.Monitoring;
 using ClientAgent.Service.Options;
+using ClientAgent.Service.Reports;
 using ClientAgent.Service.Runtime;
 using ClientAgent.Service.SystemInfo;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()
-    .WriteTo.File(@"C:\ProgramData\ClientAgent\logs\bootstrap-.log", rollingInterval: RollingInterval.Day)
+    .WriteTo.Console()
+    .WriteTo.File(@"C:\ProgramData\ClientAgent\logs\bootstrap-.log", rollingInterval: RollingInterval.Day, retainedFileCountLimit: null)
     .CreateBootstrapLogger();
 
 try
@@ -30,9 +32,15 @@ try
             .ReadFrom.Configuration(builder.Configuration)
             .ReadFrom.Services(services)
             .Enrich.FromLogContext()
+            .MinimumLevel.Override("Microsoft", Serilog.Events.LogEventLevel.Warning)
+            .MinimumLevel.Override("System.Net.Http", Serilog.Events.LogEventLevel.Warning)
+            .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
             .WriteTo.File(
-                builder.Configuration["Serilog:WriteTo:0:Args:path"] ?? @"C:\ProgramData\ClientAgent\logs\agent-.log",
-                rollingInterval: RollingInterval.Day));
+                DataCleaner.LogPath(builder.Configuration),
+                rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: null,
+                rollOnFileSizeLimit: true,
+                fileSizeLimitBytes: 50L * 1024 * 1024));
 
     builder.Services.Configure<AgentOptions>(builder.Configuration.GetSection(AgentOptions.SectionName));
     builder.Services.Configure<RoutingOptions>(builder.Configuration.GetSection(RoutingOptions.SectionName));
@@ -47,9 +55,27 @@ try
     builder.Services.AddSingleton<INetworkService>(sp => sp.GetRequiredService<NetworkService>());
     builder.Services.AddHostedService(sp => sp.GetRequiredService<NetworkService>());
     builder.Services.AddSingleton<ISystemInfoService, SystemInfoService>();
+    builder.Services.AddSingleton<DiskActivityService>();
+    builder.Services.AddSingleton<IDiskActivityService>(sp => sp.GetRequiredService<DiskActivityService>());
+    builder.Services.AddHostedService(sp => sp.GetRequiredService<DiskActivityService>());
     builder.Services.AddSingleton<IConnectivityTracker, ConnectivityTracker>();
     builder.Services.AddSingleton<IMonitorHealthStore, MonitorHealthStore>();
     builder.Services.AddSingleton<ILocalConfigCache, LocalConfigCache>();
+    builder.Services.AddSingleton<NotificationTrigger>();
+    builder.Services.AddSingleton<ReportStore>();
+    builder.Services.AddSingleton<ReportBuilder>();
+    builder.Services.AddHostedService<MetricsRecorder>();
+    builder.Services.AddHostedService<DataCleaner>();
+    builder.Services.AddSingleton<IssueDataLogger>();
+    builder.Services.AddSingleton<IIssueDataLogger>(sp => sp.GetRequiredService<IssueDataLogger>());
+    builder.Services.AddHostedService(sp => sp.GetRequiredService<IssueDataLogger>());
+    builder.Services.AddSingleton<InternetMonitor>();
+    builder.Services.AddSingleton<IInternetStatus>(sp => sp.GetRequiredService<InternetMonitor>());
+    builder.Services.AddHostedService(sp => sp.GetRequiredService<InternetMonitor>());
+    builder.Services.AddSingleton<IConnectivityFilter, ConnectivityFilter>();
+    builder.Services.AddSingleton<NotificationEngine>();
+    builder.Services.AddSingleton<INotificationStore>(sp => sp.GetRequiredService<NotificationEngine>());
+    builder.Services.AddHostedService(sp => sp.GetRequiredService<NotificationEngine>());
     builder.Services.AddHttpClient("madkhal");
     builder.Services.AddHttpClient("central");
     builder.Services.AddHttpClient("website", client =>
@@ -73,6 +99,8 @@ try
 catch (Exception ex)
 {
     Log.Fatal(ex, "Client agent terminated unexpectedly");
+    // A non-zero exit code makes the Windows service recovery actions restart the agent.
+    Environment.ExitCode = 1;
 }
 finally
 {

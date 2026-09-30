@@ -32,6 +32,8 @@ public static class UiTheme
         SetBrush("IssueBoardBrush", light ? Rgb(0xFA, 0xF0, 0xDE) : Rgb(0x1C, 0x15, 0x0D));
         SetBrush("IssueBoardBorderBrush", light ? Rgb(0xD9, 0xB8, 0x76) : Rgb(0x4E, 0x33, 0x12));
         SetBrush("IssueTextBrush", light ? Rgb(0x3A, 0x2A, 0x12) : Rgb(0xF0, 0xF0, 0xF0));
+        SetBrush("ToolTipBrush", light ? Colors.White : Rgb(0x2B, 0x2B, 0x2F));
+        SetBrush("ToolTipBorderBrush", light ? Rgb(0xC8, 0xC8, 0xC8) : Rgb(0x48, 0x48, 0x4E));
         Changed?.Invoke(null, EventArgs.Empty);
     }
 

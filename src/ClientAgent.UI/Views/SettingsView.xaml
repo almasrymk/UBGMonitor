@@ -47,6 +47,42 @@
         <Style x:Key="GeneralField" TargetType="TextBox" BasedOn="{StaticResource FieldInput}">
             <Setter Property="MaxWidth" Value="10000"/>
         </Style>
+        <!-- Which service this app shows; used in the General section and in the "not answering" banner. -->
+        <DataTemplate x:Key="ConnectFields">
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="28"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="This app connects to" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Text="{Binding ApiBaseUrl, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource GeneralField}"
+                                 ToolTip="For example 127.0.0.1:5050, 192.168.1.10:5050 or http://pc-name:5050"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Access key of that service (if it has one)" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Text="{Binding ClientAccessKey, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource GeneralField}"/>
+                    </StackPanel>
+                </Grid>
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="Connect" Command="{Binding ConnectCommand}" Style="{StaticResource FooterButton}" MinWidth="90"/>
+                    <TextBlock Text="{Binding ConnectionMessage}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="12,0,0,0" MaxWidth="700">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsConnectionOk}" Value="True">
+                                        <Setter Property="Foreground" Value="{StaticResource AccentGreenBrush}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </StackPanel>
+            </StackPanel>
+        </DataTemplate>
         <Style x:Key="OnOffToggle" TargetType="ToggleButton">
             <Setter Property="Width" Value="48"/>
             <Setter Property="Height" Value="24"/>
@@ -241,6 +277,7 @@
         </Border>
 
         <Border DockPanel.Dock="Bottom"
+                Visibility="{Binding IsLoaded, Converter={StaticResource BoolToVis}}"
                 Background="{DynamicResource SurfaceDarkAltBrush}"
                 BorderBrush="{DynamicResource BorderColorBrush}"
                 BorderThickness="0,1,0,0"
@@ -261,7 +298,28 @@
             </StackPanel>
         </Border>
 
-        <Grid>
+        <Border DockPanel.Dock="Top"
+                Margin="12,8,12,0"
+                Padding="12,10"
+                CornerRadius="4"
+                Background="{DynamicResource SurfaceDarkAltBrush}"
+                BorderBrush="{StaticResource AccentRedBrush}"
+                BorderThickness="1"
+                Visibility="{Binding IsLoaded, Converter={StaticResource InverseBoolToVis}}">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="16" Foreground="{StaticResource AccentRedBrush}"
+                               VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <TextBlock VerticalAlignment="Center" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}"
+                               Text="The Agent service is not answering. Settings are loaded from and saved by the service, so they will appear when it answers."/>
+                </StackPanel>
+                <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,10,0,8"
+                           Text="If the service is on another computer, or on another port, type its address and connect:"/>
+                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource ConnectFields}"/>
+            </StackPanel>
+        </Border>
+
+        <Grid Visibility="{Binding IsLoaded, Converter={StaticResource BoolToVis}}">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <ScrollViewer.Style>
                     <Style TargetType="ScrollViewer">
@@ -314,8 +372,11 @@
                             <TextBlock Text="Hardware &amp; OS (seconds)" Style="{StaticResource FieldLabel}"/>
                             <TextBox Text="{Binding HardwareOsIntervalSeconds, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource GeneralField}"/>
 
-                            <TextBlock Text="API Base URL" Style="{StaticResource FieldLabel}"/>
-                            <TextBox Text="{Binding ApiBaseUrl, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource GeneralField}"/>
+                            <TextBlock Text="Keep data for" Style="{StaticResource FieldLabel}"/>
+                            <ComboBox ItemsSource="{Binding RetentionOptions}" SelectedValuePath="Days" DisplayMemberPath="Label"
+                                      SelectedValue="{Binding DataRetentionDays}" Style="{StaticResource FieldCombo}" MaxWidth="10000" Margin="0,0,0,4"/>
+                            <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,14"
+                                       Text="Older logs, saved data and report history are deleted permanently."/>
                         </StackPanel>
                     </Grid>
 
@@ -334,6 +395,37 @@
                             <ToggleButton IsChecked="{Binding NotificationsEnabled}" Style="{StaticResource OnOffToggle}"/>
                         </StackPanel>
                     </Grid>
+
+                    <TextBlock Text="Service network access" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,22,0,2"/>
+                    <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,12"
+                               Text="Where the Agent service answers. To watch this computer from another computer, listen on all network cards or on one IP, and set an access key. Saved with the other General settings."/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="28"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Service listens on" Style="{StaticResource FieldLabel}"/>
+                            <ComboBox ItemsSource="{Binding ListenAddressOptions}" SelectedValuePath="Address" DisplayMemberPath="Label"
+                                      SelectedValue="{Binding ServiceListenAddress}" Style="{StaticResource FieldCombo}" MaxWidth="10000"/>
+
+                            <TextBlock Text="Service port" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Text="{Binding ServicePort, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource GeneralField}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Access key for other computers" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Text="{Binding RemoteAccessKey, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource GeneralField}"/>
+                            <TextBlock Foreground="{StaticResource AccentYellowBrush}" TextWrapping="Wrap" Margin="0,-8,0,14"
+                                       Visibility="{Binding IsServiceOpenWithoutKey, Converter={StaticResource BoolToVis}}"
+                                       Text="Without an access key, any computer on the network can read this computer's data and change its settings."/>
+                        </StackPanel>
+                    </Grid>
+
+                    <TextBlock Text="This app" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,10,0,2"/>
+                    <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,12"
+                               Text="The Agent service this app shows: the one on this computer (127.0.0.1) or one on another computer. Kept by this app only."/>
+                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource ConnectFields}"/>
                 </StackPanel>
             </ScrollViewer>
 
@@ -494,8 +586,22 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellEditingTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridCheckBoxColumn Header="Enabled" Binding="{Binding Enabled, UpdateSourceTrigger=PropertyChanged}" Width="80"/>
-                        <DataGridCheckBoxColumn Header="Shortcut" Binding="{Binding ShowInShortcut, UpdateSourceTrigger=PropertyChanged}" Width="90"/>
+                        <DataGridTemplateColumn Header="Enabled" Width="80" SortMemberPath="Enabled">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <CheckBox Style="{StaticResource GridCheck}" ToolTip="Check this monitor point"
+                                              IsChecked="{Binding Enabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Shortcut" Width="90" SortMemberPath="ShowInShortcut">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <CheckBox Style="{StaticResource GridCheck}" ToolTip="Show this monitor point on the dashboard"
+                                              IsChecked="{Binding ShowInShortcut, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
                         <DataGridTemplateColumn Header="Alert" Width="150">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>

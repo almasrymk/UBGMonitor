@@ -16,6 +16,19 @@ public sealed partial class CpuViewModel : ObservableObject
     [ObservableProperty] private int _processCount;
     public ObservableCollection<double> History { get; } = [];
 
+    public void Reset()
+    {
+        UsagePercent = 0;
+        Model = "Unknown";
+        PhysicalCores = 0;
+        LogicalCores = 0;
+        CoresText = "-";
+        SpeedText = "-";
+        Temperature = "N/A";
+        ProcessCount = 0;
+        History.Clear();
+    }
+
     public void Update(CpuInfo cpu)
     {
         UsagePercent = cpu.UsagePercent;

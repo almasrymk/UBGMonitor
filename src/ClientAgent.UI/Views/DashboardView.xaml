@@ -5,6 +5,15 @@
              xmlns:enums="clr-namespace:ClientAgent.UI.Enums"
              xmlns:views="clr-namespace:ClientAgent.UI.Views">
     <UserControl.Resources>
+        <Style x:Key="LevelCountText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Style.Triggers>
+                <Trigger Property="Text" Value="[0]">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
         <SolidColorBrush x:Key="MacAddressBrush" Color="#64B5F6"/>
         <SolidColorBrush x:Key="ValueYellowBrush" Color="#FFD54F"/>
         <SolidColorBrush x:Key="ValuePurpleBrush" Color="#BA68C8"/>
@@ -34,21 +43,14 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
-        <Style x:Key="CopyHintToolTip" TargetType="ToolTip">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="Foreground" Value="Black"/>
+        <Style x:Key="CopyHintToolTip" TargetType="ToolTip" BasedOn="{StaticResource {x:Type ToolTip}}">
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="BorderBrush" Value="#CCCCCC"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="10,5"/>
-            <Setter Property="HasDropShadow" Value="True"/>
         </Style>
         <ToolTip x:Key="ClickToCopyHint" x:Shared="False" Style="{StaticResource CopyHintToolTip}">
-            <TextBlock Text="Click to copy" Foreground="Black" FontWeight="Bold" FontSize="12"/>
+            <TextBlock Text="Click to copy" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="Bold" FontSize="12"/>
         </ToolTip>
         <Style x:Key="LegendText" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
@@ -72,14 +74,14 @@
         <ToolTip x:Key="NetworkGraphToolTip" x:Shared="False" Style="{StaticResource CopyHintToolTip}">
             <StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
-                    <Line Style="{StaticResource LegendLine}" Stroke="Black"/>
+                    <Line Style="{StaticResource LegendLine}" Stroke="{DynamicResource TextPrimaryBrush}"/>
                     <TextBlock Style="{StaticResource LegendText}">
                         <Run Text="Send: "/>
                         <Run Text="{Binding Network.Upload, Mode=OneWay}"/>
                     </TextBlock>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal">
-                    <Line Style="{StaticResource LegendLine}" Stroke="Black" StrokeDashArray="2,1"/>
+                    <Line Style="{StaticResource LegendLine}" Stroke="{DynamicResource TextPrimaryBrush}" StrokeDashArray="2,1"/>
                     <TextBlock Style="{StaticResource LegendText}">
                         <Run Text="Receive: "/>
                         <Run Text="{Binding Network.Download, Mode=OneWay}"/>
@@ -580,7 +582,7 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0" Text="Basic Hardware" FontSize="14" FontWeight="SemiBold"
                                                Foreground="{StaticResource AccentGreenBrush}"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding HardwareOs.Level1Count, StringFormat=[{0}]}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding HardwareOs.Level1Count, StringFormat=[{0}]}" Style="{StaticResource LevelCountText}"/>
                                 </Grid>
                             </Expander.Header>
                             <ItemsControl ItemsSource="{Binding HardwareOs.Level1Rows}" ItemTemplate="{StaticResource InfoRowTemplate}"/>
@@ -598,7 +600,7 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0" Text="Extended Hardware" FontSize="14" FontWeight="SemiBold"
                                                Foreground="{StaticResource AccentYellowBrush}"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding HardwareOs.Level2Count, StringFormat=[{0}]}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding HardwareOs.Level2Count, StringFormat=[{0}]}" Style="{StaticResource LevelCountText}"/>
                                 </Grid>
                             </Expander.Header>
                             <ItemsControl ItemsSource="{Binding HardwareOs.Level2Rows}" ItemTemplate="{StaticResource InfoRowTemplate}"/>
@@ -616,7 +618,7 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0" Text="Network" FontSize="14" FontWeight="SemiBold"
                                                Foreground="{StaticResource AccentBlueBrush}"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding HardwareOs.Level5Count, StringFormat=[{0}]}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding HardwareOs.Level5Count, StringFormat=[{0}]}" Style="{StaticResource LevelCountText}"/>
                                 </Grid>
                             </Expander.Header>
                             <ItemsControl ItemsSource="{Binding HardwareOs.Level5Rows}" ItemTemplate="{StaticResource NetworkRowTemplate}"/>
@@ -634,7 +636,7 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0" Text="Detailed Info" FontSize="14" FontWeight="SemiBold"
                                                Foreground="{StaticResource ProcessBarNetworkBrush}"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding HardwareOs.Level4Count, StringFormat=[{0}]}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding HardwareOs.Level4Count, StringFormat=[{0}]}" Style="{StaticResource LevelCountText}"/>
                                 </Grid>
                             </Expander.Header>
                             <ItemsControl ItemsSource="{Binding HardwareOs.Level4Rows}" ItemTemplate="{StaticResource InfoRowTemplate}"/>
@@ -652,7 +654,7 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0" Text="Live Sensors" FontSize="14" FontWeight="SemiBold"
                                                Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding HardwareOs.Level3Count, StringFormat=[{0}]}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding HardwareOs.Level3Count, StringFormat=[{0}]}" Style="{StaticResource LevelCountText}"/>
                                 </Grid>
                             </Expander.Header>
                             <ItemsControl ItemsSource="{Binding HardwareOs.Level3Rows}" ItemTemplate="{StaticResource InfoRowTemplate}"/>

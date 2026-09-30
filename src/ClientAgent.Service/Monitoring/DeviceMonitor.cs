@@ -52,10 +52,19 @@ public sealed class DeviceMonitor : BackgroundService, IMonitoringModule
 
         foreach (var device in devices)
         {
-            var up = await PingAsync(device.Address, cancellationToken);
-            _lastUp.TryGetValue(device.MonitorPointId, out var previousUp);
+            _logger.LogInformation("[Device] Pinging {Name} ({Address})...", device.DisplayName, device.Address);
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            var (up, roundTripMs) = await PingAsync(device.Address, cancellationToken);
+            if (up)
+            {
+                _logger.LogInformation("[Device] {Name}: OK - replied ({Ms} ms)", device.DisplayName, watch.ElapsedMilliseconds);
+            }
+            else
+            {
+                _logger.LogWarning("[Device] {Name}: CRITICAL - no reply ({Ms} ms)", device.DisplayName, watch.ElapsedMilliseconds);
+            }
 
-            _health.SetPointHealth(device.MonitorPointId, up, up ? "Device is reachable" : "Device is unreachable");
+            _health.SetPointHealth(device.MonitorPointId, up, up ? "Device is reachable" : "Device is unreachable", responseMs: roundTripMs);
             if (up)
             {
                 _health.ClearIssue($"device:{device.MonitorPointId}");
@@ -70,35 +79,26 @@ public sealed class DeviceMonitor : BackgroundService, IMonitoringModule
                     device.MonitorPointId);
             }
 
-            if (previousUp && !up)
-            {
-                _logger.LogWarning("Device {Name} ({Address}) is unreachable", device.DisplayName, device.Address);
-            }
-            else if (!previousUp && up && _lastUp.ContainsKey(device.MonitorPointId))
-            {
-                _logger.LogInformation("Device {Name} ({Address}) recovered", device.DisplayName, device.Address);
-            }
-
             _lastUp[device.MonitorPointId] = up;
         }
     }
 
-    private static async Task<bool> PingAsync(string address, CancellationToken cancellationToken)
+    private static async Task<(bool Up, double? RoundTripMs)> PingAsync(string address, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(address))
         {
-            return false;
+            return (false, null);
         }
 
         try
         {
             using var ping = new Ping();
             var reply = await ping.SendPingAsync(address, 1000);
-            return reply.Status == IPStatus.Success;
+            return reply.Status == IPStatus.Success ? (true, reply.RoundtripTime) : (false, null);
         }
         catch
         {
-            return false;
+            return (false, null);
         }
     }
 }

@@ -120,7 +120,7 @@ public partial class DashboardView : UserControl
                 DashboardBoard.GetLeft(slot),
                 DashboardBoard.GetWidthRatio(slot),
                 DashboardBoard.GetTop(slot),
-                double.IsNaN(slot.Height) ? null : slot.Height));
+                slot.MinHeight > 0 ? slot.MinHeight : null));
 
     private void ApplyLayout(IReadOnlyDictionary<string, PanelPlacement>? layout)
     {
@@ -137,9 +137,10 @@ public partial class DashboardView : UserControl
             DashboardBoard.SetWidthRatio(slot, width);
             DashboardBoard.SetLeft(slot, Math.Clamp(placement.Left, 0, 1 - width));
             DashboardBoard.SetTop(slot, placement.Top);
-            slot.Height = placement.Height is double height
+            slot.Height = double.NaN;
+            slot.MinHeight = placement.Height is double height
                 ? Math.Max(PanelResizeAdorner.MinPanelHeight, height)
-                : double.NaN;
+                : 0;
         }
     }
 
@@ -416,17 +417,17 @@ public partial class DashboardView : UserControl
     private static void SwapPlacement(Border a, Border b)
     {
         var (left, width, top, height) =
-            (DashboardBoard.GetLeft(a), DashboardBoard.GetWidthRatio(a), DashboardBoard.GetTop(a), a.Height);
+            (DashboardBoard.GetLeft(a), DashboardBoard.GetWidthRatio(a), DashboardBoard.GetTop(a), a.MinHeight);
 
         DashboardBoard.SetWidthRatio(a, DashboardBoard.GetWidthRatio(b));
         DashboardBoard.SetLeft(a, DashboardBoard.GetLeft(b));
         DashboardBoard.SetTop(a, DashboardBoard.GetTop(b));
-        a.Height = b.Height;
+        a.MinHeight = b.MinHeight;
 
         DashboardBoard.SetWidthRatio(b, width);
         DashboardBoard.SetLeft(b, left);
         DashboardBoard.SetTop(b, top);
-        b.Height = height;
+        b.MinHeight = height;
     }
 
     private void SetSwapHighlight(Border? target)
@@ -551,26 +552,16 @@ public partial class DashboardView : UserControl
 
     private static void ShowCopiedHint(FrameworkElement target)
     {
+        var text = new TextBlock { Text = "Copied", FontWeight = FontWeights.Bold, FontSize = 12 };
+        text.SetResourceReference(TextBlock.ForegroundProperty, "TextPrimaryBrush");
         var tip = new ToolTip
         {
-            Content = new TextBlock
-            {
-                Text = "Copied",
-                Foreground = Brushes.Black,
-                FontWeight = FontWeights.Bold,
-                FontSize = 12
-            },
+            Content = text,
             Placement = PlacementMode.Top,
             PlacementTarget = target,
             HorizontalOffset = 0,
             VerticalOffset = -2,
-            Background = Brushes.White,
-            Foreground = Brushes.Black,
-            BorderBrush = new SolidColorBrush(Color.FromRgb(0xCC, 0xCC, 0xCC)),
-            BorderThickness = new Thickness(1),
-            Padding = new Thickness(10, 5, 10, 5),
-            FontWeight = FontWeights.Bold,
-            HasDropShadow = true
+            FontWeight = FontWeights.Bold
         };
 
         tip.IsOpen = true;

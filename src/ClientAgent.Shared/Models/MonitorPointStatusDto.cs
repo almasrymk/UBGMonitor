@@ -35,4 +35,13 @@ public sealed class MonitorPointStatusDto
     public DateTime? LastCheckedUtc { get; init; }
 
     public string? Message { get; init; }
+
+    /// <summary>How long the last successful check took to get an answer.</summary>
+    public double? ResponseMs { get; init; }
+
+    /// <summary>When the current status started (UTC).</summary>
+    public DateTime? StatusSinceUtc { get; init; }
+
+    /// <summary>What is checked: the address, or the database engine, server and name.</summary>
+    public string Target { get; init; } = string.Empty;
 }

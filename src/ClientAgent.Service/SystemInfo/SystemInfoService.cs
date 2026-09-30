@@ -38,6 +38,13 @@ public sealed class SystemInfoService : ISystemInfoService
     private readonly object _networkLock = new();
     private Dictionary<int, ulong> _lastNetworkBytes = [];
     private long _lastNetworkTimestamp;
+    private readonly object _cpuLock = new();
+    private PerformanceCounter? _cpuTotal;
+    private PerformanceCounter[] _cpuCores = [];
+    private (double Total, double[] PerCore) _cpuSample = (0, []);
+    private long _cpuSampledAt;
+    private ProcessorDetails? _processor;
+    private bool _cpuTemperatureUnavailable;
 
     public SystemInfoService(
         ILogger<SystemInfoService> logger,
@@ -115,14 +122,9 @@ public sealed class SystemInfoService : ISystemInfoService
     {
         try
         {
-            var model = QueryFirst("Win32_Processor", "Name") ?? "Unknown";
-            var maxClock = ParseDouble(QueryFirst("Win32_Processor", "MaxClockSpeed"));
+            var (model, maxClock, physicalCores, logicalCores) = _processor ??= ReadProcessor();
             var currentClock = ParseDouble(QueryFirst("Win32_Processor", "CurrentClockSpeed"));
-            var physicalCores = ParseInt(QueryFirst("Win32_Processor", "NumberOfCores"), Environment.ProcessorCount);
-            var logicalCores = ParseInt(QueryFirst("Win32_Processor", "NumberOfLogicalProcessors"), Environment.ProcessorCount);
-
-            var usage = ReadCpuUsage();
-            var perCore = ReadPerCoreUsage(logicalCores);
+            var (usage, perCore) = ReadCpuCounters(logicalCores);
             var processes = Process.GetProcesses();
             var threadCount = processes.Sum(p =>
             {
@@ -478,42 +480,69 @@ public sealed class SystemInfoService : ISystemInfoService
         return rows;
     }
 
-    private static double ReadCpuUsage()
+    /// <summary>The processor's fixed details, read once: one WMI query each is the slow part of reading the CPU.</summary>
+    private static ProcessorDetails ReadProcessor() => new(
+        (QueryFirst("Win32_Processor", "Name") ?? "Unknown").Trim(),
+        ParseDouble(QueryFirst("Win32_Processor", "MaxClockSpeed")),
+        ParseInt(QueryFirst("Win32_Processor", "NumberOfCores"), Environment.ProcessorCount),
+        ParseInt(QueryFirst("Win32_Processor", "NumberOfLogicalProcessors"), Environment.ProcessorCount));
+
+    /// <summary>
+    /// Total and per-core usage from counters that stay open, so each reading is the average since the one before.
+    /// Readings less than half a second apart (the app and the notification checks) share the last one.
+    /// </summary>
+    private (double Total, double[] PerCore) ReadCpuCounters(int logicalCores)
     {
-        try
+        lock (_cpuLock)
         {
-            using var counter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
-            _ = counter.NextValue();
-            Thread.Sleep(200);
-            return counter.NextValue();
-        }
-        catch
-        {
-            return 0;
+            if (_cpuTotal is not null && Stopwatch.GetElapsedTime(_cpuSampledAt) < TimeSpan.FromMilliseconds(500))
+            {
+                return _cpuSample;
+            }
+
+            try
+            {
+                if (_cpuTotal is null)
+                {
+                    _cpuTotal = new PerformanceCounter("Processor", "% Processor Time", "_Total");
+                    _cpuCores = Enumerable.Range(0, logicalCores)
+                        .Select(i => new PerformanceCounter("Processor", "% Processor Time", i.ToString()))
+                        .ToArray();
+                    _ = _cpuTotal.NextValue();
+                    foreach (var core in _cpuCores)
+                    {
+                        _ = core.NextValue();
+                    }
+
+                    Thread.Sleep(200);
+                }
+
+                _cpuSample = (_cpuTotal.NextValue(), _cpuCores.Select(core => Math.Round((double)core.NextValue(), 1)).ToArray());
+                _cpuSampledAt = Stopwatch.GetTimestamp();
+                return _cpuSample;
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
+            {
+                _cpuTotal?.Dispose();
+                foreach (var core in _cpuCores)
+                {
+                    core.Dispose();
+                }
+
+                _cpuTotal = null;
+                _cpuCores = [];
+                return (0, []);
+            }
         }
     }
 
-    private static double[] ReadPerCoreUsage(int logicalCores)
+    private double? ReadCpuTemperature()
     {
-        try
+        if (_cpuTemperatureUnavailable)
         {
-            var counters = Enumerable.Range(0, logicalCores)
-                .Select(i => new PerformanceCounter("Processor", "% Processor Time", i.ToString()))
-                .ToArray();
-            foreach (var c in counters) { _ = c.NextValue(); }
-            Thread.Sleep(200);
-            var values = counters.Select(c => Math.Round((double)c.NextValue(), 1)).ToArray();
-            foreach (var c in counters) { c.Dispose(); }
-            return values;
+            return null;
         }
-        catch
-        {
-            return [];
-        }
-    }
 
-    private static double? ReadCpuTemperature()
-    {
         try
         {
             foreach (var obj in Query("MSAcpi_ThermalZoneTemperature", @"root\WMI"))
@@ -533,6 +562,8 @@ public sealed class SystemInfoService : ISystemInfoService
             // Temperature is frequently unavailable without admin rights.
         }
 
+        // Most devices do not expose it; asking again every second only slows down reading the CPU.
+        _cpuTemperatureUnavailable = true;
         return null;
     }
 
@@ -651,4 +682,6 @@ public sealed class SystemInfoService : ISystemInfoService
 
     private static double ParseDouble(string? value)
         => double.TryParse(value, out var parsed) ? parsed : 0;
+
+    private sealed record ProcessorDetails(string Model, double MaxClockMhz, int PhysicalCores, int LogicalCores);
 }

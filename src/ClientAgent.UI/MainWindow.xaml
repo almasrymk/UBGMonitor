@@ -182,6 +182,9 @@
                 <RadioButton Style="{StaticResource NavButton}" Content="Monitor Points" Tag="&#xE707;" GroupName="MainTabs"
                              Command="{Binding SelectTabCommand}" CommandParameter="Monitor Points"
                              IsChecked="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter=Monitor Points, Mode=OneWay}"/>
+                <RadioButton Style="{StaticResource NavButton}" Content="Reports" Tag="&#xE9D2;" GroupName="MainTabs"
+                             Command="{Binding SelectTabCommand}" CommandParameter="Reports"
+                             IsChecked="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter=Reports, Mode=OneWay}"/>
                 <RadioButton Style="{StaticResource NavButton}" Content="Settings" Tag="&#xE713;" GroupName="MainTabs"
                              Command="{Binding SelectTabCommand}" CommandParameter="Settings"
                              IsChecked="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter=Settings, Mode=OneWay}"/>
@@ -293,7 +296,7 @@
                             <TextBlock FontSize="12" FontWeight="SemiBold"
                                        Text="{Binding AgentStatus, StringFormat=Service: {0}}"/>
                             <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,1,0,0"
-                                       Text="{Binding Settings.MachineName, StringFormat=Device: {0}}"/>
+                                       Text="{Binding Settings.DeviceLabel, StringFormat=Device: {0}}"/>
                             <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,1,0,0"
                                        Text="{Binding AgentVersion}"/>
                         </StackPanel>
@@ -337,7 +340,7 @@
                             <TextBlock FontSize="11" FontWeight="SemiBold"
                                        Text="{Binding Uptime, StringFormat=Uptime: {0}}"/>
                             <TextBlock FontSize="11" FontWeight="SemiBold" Margin="12,0,0,0"
-                                       Text="{Binding Ram.TotalGb, StringFormat=RAM: {0:0.0} GB}"/>
+                                       Text="{Binding RamTotalText}"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -499,6 +502,9 @@
                                                                     <DataTrigger Binding="{Binding Severity}" Value="Unknown">
                                                                         <Setter Property="Foreground" Value="{DynamicResource AccentGrayBrush}"/>
                                                                     </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding Severity}" Value="Success">
+                                                                        <Setter Property="Foreground" Value="{StaticResource AccentGreenBrush}"/>
+                                                                    </DataTrigger>
                                                                 </Style.Triggers>
                                                             </Style>
                                                         </TextBlock.Style>
@@ -564,9 +570,21 @@
                     </Style>
                 </views:SettingsView.Style>
             </views:SettingsView>
-            <views:SimpleTabView TitleText="About" BodyText="Agent Monitor. English UI with Arabic support planned.">
-                <views:SimpleTabView.Style>
-                    <Style TargetType="views:SimpleTabView">
+            <views:ReportsView>
+                <views:ReportsView.Style>
+                    <Style TargetType="views:ReportsView">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding SelectedTab}" Value="Reports">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </views:ReportsView.Style>
+            </views:ReportsView>
+            <views:AboutView>
+                <views:AboutView.Style>
+                    <Style TargetType="views:AboutView">
                         <Setter Property="Visibility" Value="Collapsed"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding SelectedTab}" Value="About">
@@ -574,8 +592,8 @@
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
-                </views:SimpleTabView.Style>
-            </views:SimpleTabView>
+                </views:AboutView.Style>
+            </views:AboutView>
         </Grid>
         </Grid>
 

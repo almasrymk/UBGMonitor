@@ -46,9 +46,10 @@ public sealed class HardwareMonitorReader : IDisposable
             Rail5V = monitor.Rail5V,
             Rail33V = monitor.Rail33V,
             PowerDrawW = monitor.PowerDrawW,
-            BatteryLevelPercent = monitor.BatteryLevelPercent ?? level,
+            // Windows' own percentage (what the taskbar shows) first; the sensor library measures against design capacity.
+            BatteryLevelPercent = level ?? monitor.BatteryLevelPercent,
             BatteryStatus = status,
-            BatteryHealthPercent = monitor.BatteryHealthPercent ?? health,
+            BatteryHealthPercent = health ?? monitor.BatteryHealthPercent,
             DiskTempC = monitor.DiskTempC,
             DiskHealth = monitor.DiskHealth ?? disk.Health,
             DiskPowerOn = monitor.DiskPowerOn ?? disk.PowerOn
@@ -204,7 +205,10 @@ public sealed class HardwareMonitorReader : IDisposable
             PowerDrawW = PickPower(readings, "package", "cores", "cpu")
                          ?? Pick(readings, SensorType.Power, IsCpu)
                          ?? Pick(readings, SensorType.Power, _ => true),
-            BatteryLevelPercent = Pick(readings, SensorType.Level, t => t == HardwareType.Battery),
+            BatteryLevelPercent = PickByName(readings, SensorType.Level, ["charge"], t => t == HardwareType.Battery),
+            BatteryHealthPercent = PickByName(readings, SensorType.Level, ["degradation", "wear"], t => t == HardwareType.Battery) is double wear
+                ? Math.Round(Math.Clamp(100 - wear, 0, 100), 0)
+                : null,
             DiskTempC = Pick(readings, SensorType.Temperature, t => t == HardwareType.Storage)
                         ?? PickByName(readings, SensorType.Temperature, "hdd", "ssd", "drive", "storage"),
             DiskHealth = FormatOptional(Pick(readings, SensorType.Level, t => t == HardwareType.Storage)
@@ -396,10 +400,7 @@ public sealed class HardwareMonitorReader : IDisposable
                         }
                     }
 
-                    if (health is null)
-                    {
-                        health = ReadPortableBatteryHealth();
-                    }
+                    health ??= ReadWmiBatteryHealth() ?? ReadPortableBatteryHealth();
 
                     return (level, health, MapBatteryStatus(obj["BatteryStatus"]?.ToString()));
                 }
@@ -413,10 +414,53 @@ public sealed class HardwareMonitorReader : IDisposable
         return (null, ReadPortableBatteryHealth(), null);
     }
 
+    /// <summary>Full charge capacity vs. design capacity from the battery driver (root\wmi).</summary>
+    private static double? ReadWmiBatteryHealth()
+    {
+        try
+        {
+            double? full = null;
+            double? design = null;
+            using (var searcher = new ManagementObjectSearcher(@"root\wmi", "SELECT FullChargedCapacity FROM BatteryFullChargedCapacity"))
+            {
+                foreach (ManagementObject obj in searcher.Get())
+                {
+                    using (obj)
+                    {
+                        full ??= obj["FullChargedCapacity"] is null ? null : Convert.ToDouble(obj["FullChargedCapacity"]);
+                    }
+                }
+            }
+
+            using (var searcher = new ManagementObjectSearcher(@"root\wmi", "SELECT DesignedCapacity FROM BatteryStaticData"))
+            {
+                foreach (ManagementObject obj in searcher.Get())
+                {
+                    using (obj)
+                    {
+                        design ??= obj["DesignedCapacity"] is null ? null : Convert.ToDouble(obj["DesignedCapacity"]);
+                    }
+                }
+            }
+
+            if (full > 0 && design > 0)
+            {
+                return Math.Round(Math.Min(full.Value / design.Value * 100, 100), 0);
+            }
+        }
+        catch
+        {
+            // Needs the battery driver classes; not available on every machine.
+        }
+
+        return null;
+    }
+
+    // Win32_Battery.BatteryStatus: 1 = discharging, 2 = on AC power.
     private static string? MapBatteryStatus(string? raw) => raw switch
     {
-        "1" => "Other",
-        "2" => "Unknown",
+        "1" => "Discharging",
+        "2" => "Plugged in",
         "3" => "Fully Charged",
         "4" => "Low",
         "5" => "Critical",

@@ -58,12 +58,17 @@ public sealed class ApplicationMonitor : BackgroundService, IMonitoringModule
             _lastUp.Remove(id);
         }
 
+        if (points.Count == 0)
+        {
+            return;
+        }
+
+        _logger.LogInformation("[Application] Checking {Count} application(s) against the running processes...", points.Count);
         var running = RunningProcessNames();
         foreach (var point in points)
         {
             var processName = ProcessName(point);
             var up = !string.IsNullOrWhiteSpace(processName) && running.Contains(processName);
-            _lastUp.TryGetValue(point.MonitorPointId, out var previousUp);
             var message = up
                 ? $"Application is running ({processName})"
                 : string.IsNullOrWhiteSpace(processName)
@@ -85,13 +90,13 @@ public sealed class ApplicationMonitor : BackgroundService, IMonitoringModule
                     point.MonitorPointId);
             }
 
-            if (previousUp && !up)
+            if (up)
             {
-                _logger.LogWarning("Application {Name} is not running", point.DisplayName);
+                _logger.LogInformation("[Application] {Name}: OK - {Message}", point.DisplayName, message);
             }
-            else if (!previousUp && up && _lastUp.ContainsKey(point.MonitorPointId))
+            else
             {
-                _logger.LogInformation("Application {Name} is running again", point.DisplayName);
+                _logger.LogWarning("[Application] {Name}: CRITICAL - {Message}", point.DisplayName, message);
             }
 
             _lastUp[point.MonitorPointId] = up;

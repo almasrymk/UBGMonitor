@@ -11,4 +11,8 @@
     <PackageReference Include="System.Text.Json" Version="8.0.5" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="..\ClientAgent.UI\Assets\agent-monitor.png" LogicalName="ClientAgent.Shared.Logo.png" />
+  </ItemGroup>
+
 </Project>

@@ -1,8 +1,6 @@
 using System.Diagnostics;
-using System.IO;
-using System.Net.Http;
 
-namespace ClientAgent.UI.Services;
+namespace ClientAgent.Shared.Monitoring;
 
 public readonly record struct SpeedTestResult(double DownloadMbps, double? UploadMbps, DateTime CompletedAt);
 

@@ -50,6 +50,15 @@ public partial class MainWindow : Window
                 MessageBoxResult.No => false,
                 _ => null
             };
+        viewModel.Settings.ConfirmWarning = message => ThemedDialog.Show(
+                this,
+                "Warning",
+                message,
+                DialogKind.Warning,
+                [
+                    new DialogButton("Continue", MessageBoxResult.Yes),
+                    new DialogButton("Cancel", MessageBoxResult.Cancel, IsPrimary: true)
+                ]) == MessageBoxResult.Yes;
         DataContext = viewModel;
         StateChanged += (_, _) => MaximizeButton.Content = WindowState == WindowState.Maximized ? "❐" : "☐";
         Loaded += (_, _) => FitToWorkArea();

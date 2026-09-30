@@ -23,4 +23,8 @@ internal sealed class FakeLocalConfigCache : ILocalConfigCache
     public DateTime? GetLastSyncUtc() => null;
 
     public GeneralRuntimeSettings GetGeneral() => General;
+
+    public DeviceSpecSettings DeviceSpec { get; } = new();
+
+    public DeviceSpecSettings GetDeviceSpec() => DeviceSpec;
 }

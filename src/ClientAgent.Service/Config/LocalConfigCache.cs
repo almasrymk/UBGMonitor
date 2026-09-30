@@ -17,6 +17,8 @@ public interface ILocalConfigCache
     DateTime? GetLastSyncUtc();
 
     GeneralRuntimeSettings GetGeneral();
+
+    DeviceSpecSettings GetDeviceSpec();
 }
 
 public sealed class LocalConfigCache : ILocalConfigCache
@@ -42,6 +44,7 @@ public sealed class LocalConfigCache : ILocalConfigCache
     private DateTime _appSettingsStamp = DateTime.MinValue;
     private List<MonitorPoint>? _appSettingsPoints;
     private GeneralRuntimeSettings _general = new();
+    private DeviceSpecSettings _deviceSpec = new();
 
     public LocalConfigCache(IAgentIdentity identity, IConfiguration configuration, ILogger<LocalConfigCache> logger)
     {
@@ -110,6 +113,12 @@ public sealed class LocalConfigCache : ILocalConfigCache
     {
         TryReadMonitorPoints(out _);
         return _general;
+    }
+
+    public DeviceSpecSettings GetDeviceSpec()
+    {
+        TryReadMonitorPoints(out _);
+        return _deviceSpec;
     }
 
     public DateTime? GetLastSyncUtc()
@@ -192,6 +201,12 @@ public sealed class LocalConfigCache : ILocalConfigCache
                 && TryGetProperty(settingNode, "General", out var generalNode))
             {
                 _general = generalNode.Deserialize<GeneralRuntimeSettings>(AppSettingsJson) ?? new GeneralRuntimeSettings();
+            }
+
+            if (TryGetProperty(document.RootElement, "Setting", out var specParent)
+                && TryGetProperty(specParent, "DeviceSpec", out var specNode))
+            {
+                _deviceSpec = specNode.Deserialize<DeviceSpecSettings>(AppSettingsJson) ?? new DeviceSpecSettings();
             }
 
             _appSettingsStamp = stamp;

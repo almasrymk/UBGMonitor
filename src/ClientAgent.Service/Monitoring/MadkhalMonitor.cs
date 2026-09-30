@@ -15,7 +15,6 @@ public sealed class MadkhalMonitor : BackgroundService, IMonitoringModule
     private readonly RoutingOptions _routing;
     private readonly ILogger<MadkhalMonitor> _logger;
     private readonly int _intervalSeconds;
-    private bool? _lastAvailable;
 
     public MadkhalMonitor(
         IHttpClientFactory httpClientFactory,
@@ -56,14 +55,26 @@ public sealed class MadkhalMonitor : BackgroundService, IMonitoringModule
 
     public async Task RunCycleAsync(CancellationToken cancellationToken)
     {
+        _logger.LogInformation("[Madkhal] Checking the Madkhal server {Url}...", _routing.MadkhalServerUrl);
+        var watch = System.Diagnostics.Stopwatch.StartNew();
         var available = await IsAvailableAsync(cancellationToken);
+        if (available)
+        {
+            _logger.LogInformation("[Madkhal] OK - server is available ({Ms} ms)", watch.ElapsedMilliseconds);
+        }
+        else
+        {
+            _logger.LogWarning("[Madkhal] WARNING - server is unavailable ({Ms} ms)", watch.ElapsedMilliseconds);
+        }
+
         _connectivity.SetMadkhal(available);
-        _health.SetPointHealth("madkhal", available);
+        double? responseMs = available ? watch.ElapsedMilliseconds : null;
+        _health.SetPointHealth("madkhal", available, responseMs: responseMs);
 
         var config = await _configCache.GetConfigAsync(cancellationToken);
         foreach (var point in config.MonitorPoints.Where(p => p.Enabled && p.Type == MonitorPointType.Madkhal))
         {
-            _health.SetPointHealth(point.MonitorPointId, available);
+            _health.SetPointHealth(point.MonitorPointId, available, responseMs: responseMs);
         }
 
         if (available)
@@ -73,21 +84,6 @@ public sealed class MadkhalMonitor : BackgroundService, IMonitoringModule
         else
         {
             _health.SetIssue("madkhal", "Warning", "Madkhal unavailable", IssueText.MadkhalDown(), "madkhal");
-        }
-
-        if (_lastAvailable == available)
-        {
-            return;
-        }
-
-        _lastAvailable = available;
-        if (available)
-        {
-            _logger.LogInformation("Madkhal server is available at {Url}", _routing.MadkhalServerUrl);
-        }
-        else
-        {
-            _logger.LogWarning("Madkhal server is unavailable at {Url}", _routing.MadkhalServerUrl);
         }
     }
 

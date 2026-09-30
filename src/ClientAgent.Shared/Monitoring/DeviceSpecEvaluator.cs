@@ -1,9 +1,8 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using ClientAgent.Shared.Models;
-using ClientAgent.UI.Models;
 
-namespace ClientAgent.UI.Services;
+namespace ClientAgent.Shared.Monitoring;
 
 public readonly record struct DiskSlice(string Name, double TotalGb, double FreeGb, double UsagePercent);
 

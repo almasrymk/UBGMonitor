@@ -1,0 +1,277 @@
+<UserControl x:Class="ClientAgent.UI.Views.AboutView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Margin" Value="6,28,6,4"/>
+        </Style>
+        <Style x:Key="SectionIntro" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="LineHeight" Value="20"/>
+            <Setter Property="Margin" Value="6,0,6,8"/>
+        </Style>
+        <Style x:Key="FeatureCard" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource SurfaceDarkAltBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderColorBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16,14"/>
+            <Setter Property="Margin" Value="6"/>
+        </Style>
+        <Style x:Key="FeatureTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="FeatureText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="LineHeight" Value="19"/>
+            <Setter Property="Margin" Value="0,8,0,4"/>
+        </Style>
+        <Style x:Key="Bullet" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="LineHeight" Value="19"/>
+            <Setter Property="Margin" Value="4,3,0,0"/>
+        </Style>
+        <Style x:Key="FeatureDot" TargetType="Ellipse">
+            <Setter Property="Width" Value="12"/>
+            <Setter Property="Height" Value="12"/>
+            <Setter Property="Margin" Value="0,0,10,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="StepNumber" TargetType="Border">
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="CornerRadius" Value="15"/>
+            <Setter Property="Background" Value="{StaticResource AccentGreenBrush}"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
+            <Setter Property="Margin" Value="0,0,12,0"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Border Style="{StaticResource CardBorder}" Margin="10">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel MaxWidth="980" Margin="14,20,14,24">
+
+                <!-- Header -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Image Source="/Assets/agent-monitor.png" Width="64" Height="64" Margin="0,0,16,0"
+                           RenderOptions.BitmapScalingMode="HighQuality"/>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Agent Monitor" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <TextBlock Text="Computer, network and systems monitoring" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13"/>
+                        <TextBlock x:Name="VersionText" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- What is it -->
+                <TextBlock Text="What is Agent Monitor?" Style="{StaticResource SectionTitle}"/>
+                <Border Style="{StaticResource FeatureCard}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource FeatureText}" Margin="0" FontSize="14" LineHeight="22"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                   Text="Agent Monitor watches this computer and everything the work depends on: the device itself, the internet connection, and the websites, devices, applications and databases you choose."/>
+                        <TextBlock Style="{StaticResource FeatureText}" LineHeight="20"
+                                   Text="Instead of waiting for someone to report that something stopped working, the program checks everything on a schedule, shows the result with clear colors, and warns you the moment a value crosses a limit you set. The goal is to find problems early, understand where they are, and fix them before they stop the work."/>
+                    </StackPanel>
+                </Border>
+
+                <!-- How it works -->
+                <TextBlock Text="How it works" Style="{StaticResource SectionTitle}"/>
+                <TextBlock Style="{StaticResource SectionIntro}"
+                           Text="The program is made of two parts that work together."/>
+                <UniformGrid Columns="2">
+                    <Border Style="{StaticResource FeatureCard}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Style="{StaticResource FeatureDot}" Fill="{StaticResource AccentBlueBrush}"/>
+                                <TextBlock Text="The monitoring service" Style="{StaticResource FeatureTitle}"/>
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource FeatureText}"
+                                       Text="A Windows service that starts with Windows and runs in the background all the time."/>
+                            <TextBlock Style="{StaticResource Bullet}" Text="•  Collects the device, network and monitor point readings."/>
+                            <TextBlock Style="{StaticResource Bullet}" Text="•  Compares every reading with your limits and decides its status."/>
+                            <TextBlock Style="{StaticResource Bullet}" Text="•  Keeps working even when this window is closed or nobody is signed in."/>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource FeatureCard}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Style="{StaticResource FeatureDot}" Fill="{StaticResource AccentGreenBrush}"/>
+                                <TextBlock Text="This app" Style="{StaticResource FeatureTitle}"/>
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource FeatureText}"
+                                       Text="The window you are using now. It connects to the service and presents what it found."/>
+                            <TextBlock Style="{StaticResource Bullet}" Text="•  Shows live status on the dashboard and in each screen."/>
+                            <TextBlock Style="{StaticResource Bullet}" Text="•  Lists warnings and problems and shows Windows notifications."/>
+                            <TextBlock Style="{StaticResource Bullet}" Text="•  Lets you manage monitor points, limits and check intervals in Settings."/>
+                        </StackPanel>
+                    </Border>
+                </UniformGrid>
+
+                <!-- Features -->
+                <TextBlock Text="What it monitors" Style="{StaticResource SectionTitle}"/>
+                <TextBlock Style="{StaticResource SectionIntro}"
+                           Text="Each area is checked on its own interval, which you can change in Settings › General."/>
+                <UniformGrid Columns="2">
+                    <Border Style="{StaticResource FeatureCard}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Style="{StaticResource FeatureDot}" Fill="{StaticResource AccentBlueBrush}"/>
+                                <TextBlock Text="Device health" Style="{StaticResource FeatureTitle}"/>
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource FeatureText}"
+                                       Text="The state of this computer compared with the specifications you set in Settings › Device Specifications."/>
+                            <TextBlock Style="{StaticResource Bullet}" Text="•  CPU: number of cores and usage, with warning and problem percentages."/>
+                            <TextBlock Style="{StaticResource Bullet}" Text="•  Memory: installed RAM and usage."/>
+                            <TextBlock Style="{StaticResource Bullet}" Text="•  Disk: size and remaining free space on every partition."/>
+                            <TextBlock Style="{StaticResource Bullet}" Text="•  Hardware and operating system details."/>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource FeatureCard}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Style="{StaticResource FeatureDot}" Fill="{StaticResource AccentYellowBrush}"/>
+                                <TextBlock Text="Internet &amp; network" Style="{StaticResource FeatureTitle}"/>
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource FeatureText}"
+                                       Text="Makes sure the computer is connected and the connection is fast enough."/>
+                            <TextBlock Style="{StaticResource Bullet}" Text="•  Checks whether the internet is reachable."/>
+                            <TextBlock Style="{StaticResource Bullet}" Text="•  Runs download and upload speed tests on a schedule."/>
+                            <TextBlock Style="{StaticResource Bullet}" Text="•  Alerts you when the speed drops below the minimum you set."/>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource FeatureCard}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Style="{StaticResource FeatureDot}" Fill="{StaticResource AccentOrangeBrush}"/>
+                                <TextBlock Text="Monitor points" Style="{StaticResource FeatureTitle}"/>
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource FeatureText}"
+                                       Text="Anything else the work depends on. Add as many as you need in Settings › Monitor Points."/>
+                            <TextBlock Style="{StaticResource Bullet}" Text="•  Websites: checks that the site opens and responds."/>
+                            <TextBlock Style="{StaticResource Bullet}" Text="•  Devices: printers, servers, cameras or any device on the network."/>
+                            <TextBlock Style="{StaticResource Bullet}" Text="•  Applications: checks that a program is running on this computer."/>
+                            <TextBlock Style="{StaticResource Bullet}" Text="•  Databases: SQL Server, MySQL and PostgreSQL connections."/>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource FeatureCard}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Style="{StaticResource FeatureDot}" Fill="{StaticResource AccentRedBrush}"/>
+                                <TextBlock Text="Messages &amp; issues" Style="{StaticResource FeatureTitle}"/>
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource FeatureText}"
+                                       Text="Every warning and problem is collected in one board, so nothing gets missed."/>
+                            <TextBlock Style="{StaticResource Bullet}" Text="•  Shows what went wrong, where, and when."/>
+                            <TextBlock Style="{StaticResource Bullet}" Text="•  Sends Windows notifications (can be turned off in Settings)."/>
+                            <TextBlock Style="{StaticResource Bullet}" Text="•  Clears automatically when the problem is solved."/>
+                        </StackPanel>
+                    </Border>
+                </UniformGrid>
+
+                <!-- Status colors -->
+                <TextBlock Text="Understanding the colors" Style="{StaticResource SectionTitle}"/>
+                <TextBlock Style="{StaticResource SectionIntro}"
+                           Text="The same colors are used everywhere in the program, so you can read the status at a glance."/>
+                <UniformGrid Columns="4">
+                    <Border Style="{StaticResource FeatureCard}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Style="{StaticResource FeatureDot}" Fill="{StaticResource AccentGreenBrush}"/>
+                                <TextBlock Text="OK" Style="{StaticResource FeatureTitle}"/>
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource FeatureText}" Text="Working normally. Nothing to do."/>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource FeatureCard}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Style="{StaticResource FeatureDot}" Fill="{StaticResource AccentYellowBrush}"/>
+                                <TextBlock Text="Warning" Style="{StaticResource FeatureTitle}"/>
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource FeatureText}" Text="Still working, but getting close to a limit. Keep an eye on it."/>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource FeatureCard}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Style="{StaticResource FeatureDot}" Fill="{StaticResource AccentRedBrush}"/>
+                                <TextBlock Text="Problem" Style="{StaticResource FeatureTitle}"/>
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource FeatureText}" Text="Stopped or over the limit. Needs attention now."/>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource FeatureCard}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Style="{StaticResource FeatureDot}" Fill="{StaticResource AccentGrayBrush}"/>
+                                <TextBlock Text="Unknown" Style="{StaticResource FeatureTitle}"/>
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource FeatureText}" Text="Not checked yet, or the result could not be read."/>
+                        </StackPanel>
+                    </Border>
+                </UniformGrid>
+
+                <!-- Getting started -->
+                <TextBlock Text="Getting started" Style="{StaticResource SectionTitle}"/>
+                <TextBlock Style="{StaticResource SectionIntro}"
+                           Text="Three steps are enough to set up the program for a new computer."/>
+                <Border Style="{StaticResource FeatureCard}">
+                    <StackPanel>
+                        <DockPanel Margin="0,4,0,10">
+                            <Border Style="{StaticResource StepNumber}">
+                                <TextBlock Text="1" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel>
+                                <TextBlock Text="Settings › General" Style="{StaticResource FeatureTitle}"/>
+                                <TextBlock Style="{StaticResource FeatureText}" Margin="0,4,0,0"
+                                           Text="Give the device a name, choose how often each area is checked, and pick the theme and notifications."/>
+                            </StackPanel>
+                        </DockPanel>
+                        <DockPanel Margin="0,0,0,10">
+                            <Border Style="{StaticResource StepNumber}">
+                                <TextBlock Text="2" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel>
+                                <TextBlock Text="Settings › Monitor Points" Style="{StaticResource FeatureTitle}"/>
+                                <TextBlock Style="{StaticResource FeatureText}" Margin="0,4,0,0"
+                                           Text="Add the websites, devices, applications and databases you want to watch, and choose the alert level for each one."/>
+                            </StackPanel>
+                        </DockPanel>
+                        <DockPanel>
+                            <Border Style="{StaticResource StepNumber}">
+                                <TextBlock Text="3" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel>
+                                <TextBlock Text="Settings › Device Specifications" Style="{StaticResource FeatureTitle}"/>
+                                <TextBlock Style="{StaticResource FeatureText}" Margin="0,4,0,0"
+                                           Text="Set the minimum specifications and the warning and problem limits for CPU, memory, disk and internet speed."/>
+                            </StackPanel>
+                        </DockPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Tips -->
+                <TextBlock Text="Tips" Style="{StaticResource SectionTitle}"/>
+                <Border Style="{StaticResource FeatureCard}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Bullet}" Margin="0" Text="•  Drag the dashboard panels to any empty place, drop one on another to swap them, and resize them from their edges."/>
+                        <TextBlock Style="{StaticResource Bullet}" Text="•  Hold Ctrl and click several panels to select them and move them together."/>
+                        <TextBlock Style="{StaticResource Bullet}" Text="•  Use Reset layout in the title bar to go back to your saved layout or the original one."/>
+                        <TextBlock Style="{StaticResource Bullet}" Text="•  Use the pin buttons to auto-hide the menu and the Service Status panel and get more space."/>
+                        <TextBlock Style="{StaticResource Bullet}" Text="•  The Back button, the mouse back button or Alt+Left return to the previous screens."/>
+                        <TextBlock Style="{StaticResource Bullet}" Text="•  Each Settings tab is saved on its own. You will be asked before leaving a tab with unsaved changes."/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </Border>
+</UserControl>

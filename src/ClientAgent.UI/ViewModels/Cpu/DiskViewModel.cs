@@ -37,7 +37,34 @@ public sealed partial class DiskViewModel : ObservableObject
     [ObservableProperty] private string _health = "-";
     [ObservableProperty] private string _temperature = "N/A";
 
-    public void UpdateActivity(DiskActivity activity)
+    /// <summary>Back to the state before any data arrived from the service.</summary>
+    public void Reset()
+    {
+        Partitions.Clear();
+        PhysicalDisks.Clear();
+        History.Clear();
+        ActiveHistory.Clear();
+        ReadHistory.Clear();
+        WriteHistory.Clear();
+        SelectedPartition = null;
+        UsagePercent = 0;
+        TotalGb = 0;
+        UsedGb = 0;
+        FreeGb = 0;
+        PartitionCount = 0;
+        ActiveTimePercent = 0;
+        ReadSpeed = "-";
+        WriteSpeed = "-";
+        ResponseTime = "-";
+        QueueLength = "-";
+        HasActivity = false;
+        Model = "-";
+        DiskType = "-";
+        Health = "-";
+        Temperature = "N/A";
+    }
+
+    public void UpdateActivity(DiskActivityDto activity)
     {
         HasActivity = true;
         ActiveTimePercent = activity.ActiveTimePercent;

@@ -1,27 +1,26 @@
 using ClientAgent.Shared.Models;
-using ClientAgent.UI.Enums;
-using ClientAgent.UI.Models;
-using ClientAgent.UI.ViewModels;
+using ClientAgent.Shared.Monitoring;
 
-namespace ClientAgent.UI.Services;
+namespace ClientAgent.Service.Monitoring;
 
-public static class NotificationBuilder
+/// <summary>Turns hardware rows, sensors and monitor point statuses into the notifications shown by the app.</summary>
+public static class NotificationRules
 {
     public static IEnumerable<AgentIssueDto> HardwareOs(
-        DeviceSpecSettings spec, IEnumerable<InfoRowViewModel> rows, bool osSpecBad, string operatingSystem)
+        DeviceSpecSettings spec, IEnumerable<HardwareItemDto> rows, bool osSpecBad, string operatingSystem)
     {
         var osReported = false;
-        foreach (var row in rows.Where(row => row.SpecMet == false))
+        foreach (var row in rows.Where(row => DeviceSpecEvaluator.RowMeetsSpec(spec, row.Name, row.Value) == false))
         {
-            switch (row.Label)
+            switch (row.Name)
             {
                 case "CPU Cores":
-                    yield return Issue($"hw:{row.Label}", "Critical", "Hardware & OS: not enough CPU cores",
+                    yield return Issue($"hw:{row.Name}", "Critical", "Hardware & OS: not enough CPU cores",
                         $"This device has {row.Value} CPU cores, but Device Specifications require at least {spec.CpuMinCores}. " +
                         "Upgrade the processor or lower the minimum in Settings > Device Specifications.");
                     break;
                 case "RAM Total":
-                    yield return Issue($"hw:{row.Label}", "Critical", "Hardware & OS: not enough memory (RAM)",
+                    yield return Issue($"hw:{row.Name}", "Critical", "Hardware & OS: not enough memory (RAM)",
                         $"This device has {row.Value} of RAM, but Device Specifications require at least {spec.RamMinGb:0.#} GB. " +
                         "Add more memory or lower the minimum in Settings > Device Specifications.");
                     break;
@@ -34,8 +33,8 @@ public static class NotificationBuilder
 
                     break;
                 default:
-                    yield return Issue($"hw:{row.Label}", "Critical", $"Hardware & OS: {row.Label} does not match",
-                        $"{row.Label} is \"{row.Value}\", which does not meet the minimum in Settings > Device Specifications.");
+                    yield return Issue($"hw:{row.Name}", "Critical", $"Hardware & OS: {row.Name} does not match",
+                        $"{row.Name} is \"{row.Value}\", which does not meet the minimum in Settings > Device Specifications.");
                     break;
             }
         }
@@ -46,19 +45,20 @@ public static class NotificationBuilder
         }
     }
 
-    public static IEnumerable<AgentIssueDto> Sensors(IEnumerable<InfoRowViewModel> rows)
+    /// <summary>Temperatures the sensors level marks red (above 85°C).</summary>
+    public static IEnumerable<AgentIssueDto> Sensors(IEnumerable<HardwareItemDto> rows)
     {
         foreach (var row in rows)
         {
-            if (row.Health != SensorHealth.Critical
-                || !row.Label.Contains("Temp", StringComparison.OrdinalIgnoreCase)
+            if (row.Status != "Red"
+                || !row.Name.Contains("Temp", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(row.Value, "-", StringComparison.Ordinal))
             {
                 continue;
             }
 
-            var part = row.Label.Replace("Temp", string.Empty, StringComparison.OrdinalIgnoreCase).Trim();
-            yield return Issue($"sensor:{row.Label}", "Critical", $"High temperature: {part} ({row.Value})",
+            var part = row.Name.Replace("Temp", string.Empty, StringComparison.OrdinalIgnoreCase).Trim();
+            yield return Issue($"sensor:{row.Name}", "Critical", $"High temperature: {part} ({row.Value})",
                 $"The {part} temperature is {row.Value}, above the safe limit of 85°C (Live Sensors shows it in red). " +
                 "Check that the fans are working, the air vents are not blocked, and the device is not covered with dust. " +
                 "The device may slow down or shut down to protect itself.");

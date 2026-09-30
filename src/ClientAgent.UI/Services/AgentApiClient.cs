@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using System.Text.Json;
 using ClientAgent.Shared.Constants;
 using ClientAgent.Shared.Models;
+using ClientAgent.Shared.Models.Reports;
 using ClientAgent.UI.Enums;
 using ClientAgent.UI.Models;
 
@@ -27,15 +28,46 @@ public sealed class AgentApiClient
         _http = CreateClient(new Uri("http://127.0.0.1:5050"));
     }
 
-    public void SetBaseAddress(string? url)
+    /// <summary>The service address as typed ("192.168.1.10", "pc-name:5050" or a full URL); null when it is not valid.</summary>
+    public static Uri? ParseAddress(string? text)
     {
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)
-            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        var value = text?.Trim() ?? string.Empty;
+        if (value.Length == 0)
+        {
+            return null;
+        }
+
+        if (!value.Contains("://", StringComparison.Ordinal))
+        {
+            value = "http://" + value;
+        }
+
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            return null;
+        }
+
+        return uri.IsDefaultPort && !text!.Contains($":{uri.Port}", StringComparison.Ordinal)
+            ? new UriBuilder(uri) { Port = 5050 }.Uri
+            : uri;
+    }
+
+    private string _accessKey = string.Empty;
+
+    /// <summary>True when the service is on this computer, so secrets can be encrypted here for it.</summary>
+    public bool IsLocal => _http.BaseAddress is not { } address
+        || address.IsLoopback
+        || address.Host.Equals(Environment.MachineName, StringComparison.OrdinalIgnoreCase);
+
+    public void SetBaseAddress(string? url, string? accessKey = null)
+    {
+        if (ParseAddress(url) is not { } uri)
         {
             return;
         }
 
-        if (_http.BaseAddress is not null && SameRequestUri(_http.BaseAddress, uri))
+        var key = accessKey?.Trim() ?? string.Empty;
+        if (_http.BaseAddress is not null && SameRequestUri(_http.BaseAddress, uri) && key == _accessKey)
         {
             return;
         }
@@ -45,7 +77,13 @@ public sealed class AgentApiClient
             return;
         }
 
+        _accessKey = key;
         var replacement = CreateClient(uri);
+        if (key.Length > 0)
+        {
+            replacement.DefaultRequestHeaders.Add(ApiRoutes.AccessKeyHeader, key);
+        }
+
         var previous = _http;
         _http = replacement;
         previous.Dispose();
@@ -62,8 +100,109 @@ public sealed class AgentApiClient
         }
     }
 
+    /// <summary>Warnings and problems built by the service (the app only displays them).</summary>
+    public Task<List<AgentIssueDto>?> GetNotificationsAsync(CancellationToken ct = default)
+        => GetAsync<List<AgentIssueDto>>(ApiRoutes.Notifications, "notifications", ct);
+
+    public Task<InternetStateDto?> GetInternetAsync(CancellationToken ct = default)
+        => GetAsync<InternetStateDto>(ApiRoutes.Internet, "internet", ct);
+
+    public async Task<InternetStateDto?> StartSpeedTestAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            using var response = await _http.PostAsync(ApiRoutes.InternetSpeedTest, null, ct);
+            return response.IsSuccessStatusCode
+                ? await response.Content.ReadFromJsonAsync<InternetStateDto>(JsonOptions, ct)
+                : null;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            Debug.WriteLine($"[AgentApiClient] speed test start failed: {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>The "Setting" section of the service's appsettings.json.</summary>
+    public Task<System.Text.Json.Nodes.JsonObject?> GetSettingsAsync(CancellationToken ct = default)
+        => GetAsync<System.Text.Json.Nodes.JsonObject>(ApiRoutes.Settings, "settings", ct);
+
+    /// <summary>Asks the service to save its settings; returns null on success, otherwise why it failed.</summary>
+    public async Task<string?> SaveSettingsAsync(System.Text.Json.Nodes.JsonObject section, CancellationToken ct = default)
+    {
+        try
+        {
+            using var response = await _http.PutAsync(ApiRoutes.Settings, JsonContent.Create(section), ct);
+            if (response.IsSuccessStatusCode)
+            {
+                return null;
+            }
+
+            var detail = string.Empty;
+            try
+            {
+                detail = System.Text.Json.Nodes.JsonNode.Parse(await response.Content.ReadAsStringAsync(ct))?["detail"]?.GetValue<string>() ?? string.Empty;
+            }
+            catch (JsonException)
+            {
+            }
+
+            return string.IsNullOrWhiteSpace(detail)
+                ? $"The Agent service could not save the settings (HTTP {(int)response.StatusCode})."
+                : detail;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            return "The Agent service is not running, so the settings could not be saved.";
+        }
+    }
+
     public Task<AgentStatusDto?> GetStatusAsync(CancellationToken ct = default)
         => GetAsync<AgentStatusDto>(ApiRoutes.Status, "status", ct);
+
+    /// <summary>Why the service at the current address does not answer: null when it does.</summary>
+    public async Task<string?> CheckConnectionAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            using var response = await _http.GetAsync(ApiRoutes.Status, ct);
+            return response.StatusCode switch
+            {
+                HttpStatusCode.Unauthorized => "The service asks for an access key, and the one in this app is missing or wrong.",
+                _ when response.IsSuccessStatusCode => null,
+                _ => $"The service answered with HTTP {(int)response.StatusCode}."
+            };
+        }
+        catch (HttpRequestException ex)
+        {
+            return $"No Agent service answers at {_http.BaseAddress}: {ex.Message}";
+        }
+        catch (TaskCanceledException)
+        {
+            return $"No Agent service answered at {_http.BaseAddress} in time.";
+        }
+    }
+
+    /// <summary>Tries the connection from the service's computer, the same way the monitor point will.</summary>
+    public async Task<DatabaseTestResultDto> TestDatabaseAsync(DatabaseLogin login, CancellationToken ct = default)
+    {
+        try
+        {
+            using var response = await _http.PostAsJsonAsync(ApiRoutes.DatabaseTest, login, ct);
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                return new DatabaseTestResultDto(false, "The Agent service is too old for this test; reinstall it.");
+            }
+
+            return response.IsSuccessStatusCode
+                ? await response.Content.ReadFromJsonAsync<DatabaseTestResultDto>(JsonOptions, ct) ?? new DatabaseTestResultDto(false, "No answer.")
+                : new DatabaseTestResultDto(false, $"The Agent service answered with HTTP {(int)response.StatusCode}.");
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            return new DatabaseTestResultDto(false, "The Agent service is not answering, so the connection could not be tested.");
+        }
+    }
 
     public Task<SystemSnapshot?> GetSnapshotAsync(CancellationToken ct = default)
         => GetAsync<SystemSnapshot>(ApiRoutes.Snapshot, "snapshot", ct);
@@ -79,6 +218,9 @@ public sealed class AgentApiClient
 
     public Task<List<PhysicalDisk>?> GetPhysicalDisksAsync(CancellationToken ct = default)
         => GetAsync<List<PhysicalDisk>>(ApiRoutes.DiskPhysical, "physical-disks", ct);
+
+    public Task<DiskActivityDto?> GetDiskActivityAsync(CancellationToken ct = default)
+        => GetAsync<DiskActivityDto>(ApiRoutes.DiskActivity, "disk-activity", ct);
 
     public Task<NetworkInfo?> GetNetworkAsync(CancellationToken ct = default)
         => GetAsync<NetworkInfo>(ApiRoutes.Network, "network", ct);
@@ -213,6 +355,17 @@ public sealed class AgentApiClient
     public Task<List<AgentIssueDto>?> GetIssuesAsync(CancellationToken ct = default)
         => GetAsync<List<AgentIssueDto>>(ApiRoutes.Issues, "issues", ct);
 
+    /// <param name="from">Local time.</param>
+    /// <param name="to">Local time.</param>
+    public Task<ReportDto?> GetReportAsync(string type, DateTime from, DateTime to, string? subject = null, CancellationToken ct = default)
+        => GetAsync<ReportDto>(
+            $"{ApiRoutes.Reports}/{Uri.EscapeDataString(type)}?from={from:yyyy-MM-ddTHH:mm:ss}&to={to:yyyy-MM-ddTHH:mm:ss}"
+                + (string.IsNullOrEmpty(subject) ? string.Empty : $"&subject={Uri.EscapeDataString(subject)}"),
+            $"report-{type}", ct);
+
+    public Task<List<ReportSubject>?> GetReportSubjectsAsync(CancellationToken ct = default)
+        => GetAsync<List<ReportSubject>>(ApiRoutes.ReportSubjects, "report-subjects", ct);
+
     private async Task<T?> GetAsync<T>(string route, string name, CancellationToken ct)
         where T : class
     {
@@ -251,23 +404,32 @@ public sealed class AgentApiClient
     private static bool SameRequestUri(Uri left, Uri right)
         => Uri.Compare(left, right, UriComponents.HttpRequestUrl, UriFormat.SafeUnescaped, StringComparison.OrdinalIgnoreCase) == 0;
 
-    private static IPAddress ResolveConnectAddress(string host)
+    /// <summary>IPv4 only: "localhost" is 127.0.0.1 (the service does not listen on ::1), a computer name is looked up.</summary>
+    private static async Task<IPAddress> ResolveConnectAddressAsync(string host, CancellationToken cancellationToken)
     {
         if (IPAddress.TryParse(host, out var parsed) && parsed.AddressFamily == AddressFamily.InterNetwork)
         {
             return parsed;
         }
 
-        return IPAddress.Loopback;
+        if (host.Equals("localhost", StringComparison.OrdinalIgnoreCase) || host.Equals(Environment.MachineName, StringComparison.OrdinalIgnoreCase))
+        {
+            return IPAddress.Loopback;
+        }
+
+        var addresses = await Dns.GetHostAddressesAsync(host, AddressFamily.InterNetwork, cancellationToken).ConfigureAwait(false);
+        return addresses.FirstOrDefault() ?? throw new HttpRequestException($"The computer \"{host}\" was not found.");
     }
 
     private static SocketsHttpHandler CreateIpv4Handler()
     {
         return new SocketsHttpHandler
         {
+            ConnectTimeout = TimeSpan.FromSeconds(5),
             ConnectCallback = async (context, cancellationToken) =>
             {
-                var endpoint = new IPEndPoint(ResolveConnectAddress(context.DnsEndPoint.Host), context.DnsEndPoint.Port);
+                var address = await ResolveConnectAddressAsync(context.DnsEndPoint.Host, cancellationToken).ConfigureAwait(false);
+                var endpoint = new IPEndPoint(address, context.DnsEndPoint.Port);
                 var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                 try
                 {

@@ -53,15 +53,20 @@
 
             <TextBlock x:Name="PasswordLabel" Text="Password" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,4"/>
             <PasswordBox x:Name="PasswordInput" Margin="0,0,0,8"/>
-            <TextBlock Text="The password is encrypted and is written to the file only when you click Save."
+            <TextBlock x:Name="PasswordNote" Text="The password is encrypted and is written to the file only when you click Save."
                        Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" FontSize="11" Margin="0,0,0,8"/>
+
+            <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" FontSize="11" Margin="0,0,0,8"
+                       Text="With an IP or computer name as the server, SQL Server must accept TCP/IP connections (SQL Server Configuration Manager › Protocols › TCP/IP = Enabled, then restart SQL Server) and the firewall must allow its port."/>
 
             <TextBlock x:Name="ErrorText" Foreground="{StaticResource AccentRedBrush}" TextWrapping="Wrap" Margin="0,0,0,12"/>
 
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="OK" Width="90" Margin="0,0,8,0" Padding="8,6" Click="Ok_Click" IsDefault="True"/>
-                <Button Content="Cancel" Width="90" Padding="8,6" Click="Cancel_Click" IsCancel="True"/>
-            </StackPanel>
+            <DockPanel LastChildFill="False">
+                <Button x:Name="TestButton" DockPanel.Dock="Left" Content="Test connection" Padding="12,6" Click="Test_Click"
+                        ToolTip="The Agent service tries to connect, from its own computer, the same way the monitor point will."/>
+                <Button DockPanel.Dock="Right" Content="Cancel" Width="90" Padding="8,6" Click="Cancel_Click" IsCancel="True"/>
+                <Button DockPanel.Dock="Right" Content="OK" Width="90" Margin="0,0,8,0" Padding="8,6" Click="Ok_Click" IsDefault="True"/>
+            </DockPanel>
         </StackPanel>
     </Border>
 </Window>

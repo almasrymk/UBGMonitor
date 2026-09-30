@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using ClientAgent.Shared.Models;
 using ClientAgent.Shared.Security;
+using ClientAgent.UI.Services;
 
 namespace ClientAgent.UI.Views;
 
@@ -14,13 +15,22 @@ public partial class DatabaseLoginWindow : Window
         new(DatabaseEngine.MySql, "MySQL", 3306)
     ];
 
+    private readonly AgentApiClient? _client;
     private bool _loading;
+
+    /// <summary>The password as saved; kept when the user does not type a new one.</summary>
+    private string _storedPassword = string.Empty;
+
+    /// <summary>What the password box showed on opening (empty when the saved password is encrypted for another computer).</summary>
+    private string _shownPassword = string.Empty;
 
     public DatabaseLogin? Result { get; private set; }
 
-    public DatabaseLoginWindow(DatabaseLogin? current)
+    public DatabaseLoginWindow(DatabaseLogin? current, AgentApiClient? client = null)
     {
         InitializeComponent();
+        _client = client;
+        TestButton.Visibility = client is null ? Visibility.Collapsed : Visibility.Visible;
         EngineBox.ItemsSource = _engines;
         Load(current);
     }
@@ -35,7 +45,16 @@ public partial class DatabaseLoginWindow : Window
         DatabaseBox.Text = current?.Database ?? string.Empty;
         UserBox.Text = current?.Username ?? string.Empty;
         IntegratedBox.IsChecked = current?.IntegratedSecurity == true;
-        PasswordInput.Password = SecretProtector.Unprotect(current?.Password);
+        _storedPassword = current?.Password ?? string.Empty;
+        _shownPassword = _storedPassword.StartsWith("dpapi:", StringComparison.Ordinal)
+            ? SecretProtector.Unprotect(_storedPassword)
+            : _storedPassword;
+        PasswordInput.Password = _shownPassword;
+        if (_storedPassword.Length > 0 && _shownPassword.Length == 0)
+        {
+            PasswordNote.Text = "The saved password is encrypted on the service's computer. Leave the box empty to keep it, or type a new one.";
+        }
+
         _loading = false;
         UpdateIntegratedState();
     }
@@ -68,13 +87,15 @@ public partial class DatabaseLoginWindow : Window
         PasswordInput.Visibility = credentials ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    private void Ok_Click(object sender, RoutedEventArgs e)
+    /// <summary>The login as typed; null (with the reason shown) when something required is missing.</summary>
+    private DatabaseLogin? ReadLogin()
     {
+        ErrorText.Foreground = (System.Windows.Media.Brush)FindResource("AccentRedBrush");
         ErrorText.Text = string.Empty;
         if (EngineBox.SelectedItem is not EngineChoice choice)
         {
             ErrorText.Text = "Choose a database type.";
-            return;
+            return null;
         }
 
         var server = ServerBox.Text.Trim();
@@ -82,14 +103,14 @@ public partial class DatabaseLoginWindow : Window
         if (string.IsNullOrWhiteSpace(server) || string.IsNullOrWhiteSpace(database))
         {
             ErrorText.Text = "Server and database are required.";
-            return;
+            return null;
         }
 
         var integrated = choice.Engine == DatabaseEngine.SqlServer && IntegratedBox.IsChecked == true;
         if (!integrated && string.IsNullOrWhiteSpace(UserBox.Text))
         {
             ErrorText.Text = "Username is required.";
-            return;
+            return null;
         }
 
         if (!int.TryParse(PortBox.Text.Trim(), out var port) || port < 1)
@@ -97,16 +118,63 @@ public partial class DatabaseLoginWindow : Window
             port = choice.DefaultPort;
         }
 
-        Result = new DatabaseLogin
+        return new DatabaseLogin
         {
             Engine = choice.Engine,
             Server = server,
             Port = port,
             Database = database,
             Username = integrated ? string.Empty : UserBox.Text.Trim(),
-            Password = integrated ? string.Empty : SecretProtector.Protect(PasswordInput.Password),
+            Password = integrated ? string.Empty : Password(),
             IntegratedSecurity = integrated
         };
+    }
+
+    /// <summary>
+    /// The saved password when it was not changed. A new one is encrypted here when the service is on this computer;
+    /// for a service on another computer it is sent as typed and the service encrypts it for its own computer.
+    /// </summary>
+    private string Password()
+    {
+        var typed = PasswordInput.Password;
+        if (typed == _shownPassword && _storedPassword.Length > 0)
+        {
+            return _storedPassword;
+        }
+
+        return _client is null || _client.IsLocal ? SecretProtector.Protect(typed) : typed;
+    }
+
+    private async void Test_Click(object sender, RoutedEventArgs e)
+    {
+        if (_client is null || ReadLogin() is not { } login)
+        {
+            return;
+        }
+
+        TestButton.IsEnabled = false;
+        ErrorText.Foreground = (System.Windows.Media.Brush)FindResource("TextSecondaryBrush");
+        ErrorText.Text = "Testing the connection...";
+        try
+        {
+            var result = await _client.TestDatabaseAsync(login);
+            ErrorText.Foreground = (System.Windows.Media.Brush)FindResource(result.Success ? "AccentGreenBrush" : "AccentRedBrush");
+            ErrorText.Text = result.Message;
+        }
+        finally
+        {
+            TestButton.IsEnabled = true;
+        }
+    }
+
+    private void Ok_Click(object sender, RoutedEventArgs e)
+    {
+        if (ReadLogin() is not { } login)
+        {
+            return;
+        }
+
+        Result = login;
         DialogResult = true;
     }
 

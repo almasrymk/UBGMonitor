@@ -29,8 +29,13 @@ public sealed partial class SettingsViewModel : ObservableObject
     private const string DefaultApiBaseUrl = "http://127.0.0.1:5050";
     private const string DefaultTheme = "Dark";
     private const bool DefaultNotificationsEnabled = true;
+    private const int DefaultRetentionDays = 90;
+    private const int DefaultServicePort = 5050;
+    private const string LocalOnlyAddress = "127.0.0.1";
+    private const string AllAddresses = "0.0.0.0";
 
     private readonly AppSettingsStore _store;
+    private readonly AgentApiClient _client;
     private UiAppSettings _snapshot = new();
     private List<MonitorPoint> _monitorPointSnapshot = [];
 
@@ -45,8 +50,19 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private int _diskIntervalSeconds = DefaultDiskInterval;
     [ObservableProperty] private int _hardwareOsIntervalSeconds = DefaultHardwareOsInterval;
     [ObservableProperty] private string _apiBaseUrl = DefaultApiBaseUrl;
+    [ObservableProperty] private string _clientAccessKey = string.Empty;
+    [ObservableProperty] private string _connectionMessage = string.Empty;
+    [ObservableProperty] private bool _isConnectionOk;
     [ObservableProperty] private string _theme = DefaultTheme;
     [ObservableProperty] private bool _notificationsEnabled = DefaultNotificationsEnabled;
+    [ObservableProperty] private int _dataRetentionDays = DefaultRetentionDays;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsServiceOpenWithoutKey))]
+    private string _serviceListenAddress = LocalOnlyAddress;
+    [ObservableProperty] private int _servicePort = DefaultServicePort;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsServiceOpenWithoutKey))]
+    private string _remoteAccessKey = string.Empty;
     [ObservableProperty] private int _cpuMinCores = 4;
     [ObservableProperty] private int _cpuWarningPercent = 85;
     [ObservableProperty] private int _cpuProblemPercent = 95;
@@ -81,19 +97,18 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public event EventHandler? ApplicationsLoaded;
 
-    public SettingsViewModel() : this(new AppSettingsStore())
-    {
-    }
+    /// <summary>The app was pointed at another service (or the same one with another key): everything must reload from it.</summary>
+    public event EventHandler? ConnectRequested;
 
-    public SettingsViewModel(AppSettingsStore store)
+    /// <summary>Asks the user to go on with a change that cannot be undone; the argument is the warning. True = go on.</summary>
+    public Func<string, bool>? ConfirmWarning { get; set; }
+
+    public SettingsViewModel(AgentApiClient client)
     {
-        _store = store;
+        _client = client;
+        _store = new AppSettingsStore(client);
         TargetOptions.Add(new TargetOption(AllMonitorPointsId, "All monitor points"));
-        Apply(_store.Load());
-        ReplaceMonitorPoints(_store.LoadMonitorPoints());
-        _snapshot = Capture();
-        _monitorPointSnapshot = CaptureMonitorPoints();
-        MarkAllClean();
+        ShowUnloaded();
         _statusTimer.Tick += (_, _) =>
         {
             _statusTimer.Stop();
@@ -136,6 +151,215 @@ public sealed partial class SettingsViewModel : ObservableObject
 
         _ = LoadInstalledApplicationsAsync();
     }
+
+    /// <summary>True once the settings came from the service; editing and saving need the service.</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    [NotifyPropertyChangedFor(nameof(DeviceLabel))]
+    private bool _isLoaded;
+
+    /// <summary>The device name from the service's settings, or "-" while the service is not answering.</summary>
+    public string DeviceLabel => IsLoaded ? MachineName : "-";
+
+    partial void OnMachineNameChanged(string value) => OnPropertyChanged(nameof(DeviceLabel));
+
+    /// <summary>The connection to the service whose settings these are.</summary>
+    public AgentApiClient Client => _client;
+
+    /// <summary>The monitor points as last loaded from / saved to the service.</summary>
+    public IReadOnlyList<MonitorPoint> SavedMonitorPoints => _monitorPointSnapshot;
+
+    /// <summary>Loads the settings from the service; false when it did not answer.</summary>
+    public async Task<bool> LoadFromServiceAsync()
+    {
+        if (IsLoaded)
+        {
+            return true;
+        }
+
+        if (await _store.LoadAsync() is not { } loaded)
+        {
+            return false;
+        }
+
+        ApplyAll(loaded.Settings, loaded.MonitorPoints);
+        IsLoaded = true;
+        SavePreferences();
+        await LoadServiceAddressesAsync();
+        return true;
+    }
+
+    private async Task LoadServiceAddressesAsync()
+    {
+        var addresses = (await _client.GetStatusAsync())?.Addresses ?? [];
+        foreach (var address in addresses)
+        {
+            AddListenOption(address);
+        }
+    }
+
+    /// <summary>Points the app at the service typed in "This app connects to" and reloads everything from it.</summary>
+    [RelayCommand]
+    private async Task Connect()
+    {
+        if (AgentApiClient.ParseAddress(ApiBaseUrl) is not { } uri)
+        {
+            IsConnectionOk = false;
+            ConnectionMessage = "Type the service address, for example 192.168.1.10:5050 or http://pc-name:5050.";
+            return;
+        }
+
+        ApiBaseUrl = uri.GetLeftPart(UriPartial.Authority);
+        ClientAccessKey = ClientAccessKey.Trim();
+        SavePreferences();
+        _client.SetBaseAddress(ApiBaseUrl, ClientAccessKey);
+        IsConnectionOk = false;
+        ConnectionMessage = "Connecting...";
+        var error = await _client.CheckConnectionAsync();
+        IsConnectionOk = error is null;
+        ConnectionMessage = error ?? $"Connected to {ApiBaseUrl}.";
+        ConnectRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    public IReadOnlyList<RetentionOption> RetentionOptions { get; } =
+    [
+        new(30, "1 month"),
+        new(60, "2 months"),
+        new(90, "3 months"),
+        new(180, "6 months"),
+        new(270, "9 months"),
+        new(365, "1 year")
+    ];
+
+    /// <summary>127.0.0.1 = this computer only, 0.0.0.0 = all network cards, then the service computer's own IPs.</summary>
+    public ObservableCollection<ListenOption> ListenAddressOptions { get; } =
+    [
+        new(LocalOnlyAddress, "127.0.0.1  (this computer only)"),
+        new(AllAddresses, "0.0.0.0  (all network cards)")
+    ];
+
+    private void AddListenOption(string address)
+    {
+        if (ListenAddressOptions.All(option => option.Address != address))
+        {
+            ListenAddressOptions.Add(new ListenOption(address, $"{address}  (this network card only)"));
+        }
+    }
+
+    /// <summary>The service is open to the network and any computer can use it.</summary>
+    public bool IsServiceOpenWithoutKey =>
+        ServiceListenAddress.Trim() != LocalOnlyAddress && string.IsNullOrWhiteSpace(RemoteAccessKey);
+
+    private static int RetentionDays(int days) => days <= 0 ? DefaultRetentionDays : Math.Clamp(days, 30, 365);
+
+    private static string RetentionLabel(int days) => days switch
+    {
+        365 => "1 year",
+        _ when days % 30 == 0 => days / 30 == 1 ? "1 month" : $"{days / 30} months",
+        _ => $"{days} days"
+    };
+
+    private static bool IsListenAddress(string address) =>
+        System.Net.IPAddress.TryParse(address, out var ip) && ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork;
+
+    /// <summary>Shows the warnings for the General changes being saved; false when the user said no to one.</summary>
+    private bool ConfirmGeneralChanges(GeneralSettings current, GeneralSettings saved)
+    {
+        if (ConfirmWarning is null)
+        {
+            return true;
+        }
+
+        if (current.DataRetentionDays < saved.DataRetentionDays
+            && !ConfirmWarning($"The data will now be kept for {RetentionLabel(current.DataRetentionDays)} instead of {RetentionLabel(saved.DataRetentionDays)}.\n\n"
+                + $"Logs, saved data and report history older than {RetentionLabel(current.DataRetentionDays)} will be deleted permanently. "
+                + "Deleted data cannot be restored.\n\nDo you want to continue?"))
+        {
+            return false;
+        }
+
+        if (current.DataRetentionDays > saved.DataRetentionDays
+            && !ConfirmWarning($"The data will now be kept for {RetentionLabel(current.DataRetentionDays)}.\n\n"
+                + $"From now on, logs, saved data and report history older than {RetentionLabel(current.DataRetentionDays)} are deleted permanently and cannot be restored. "
+                + "Data that was already deleted does not come back.\n\nDo you want to continue?"))
+        {
+            return false;
+        }
+
+        var listenChanged = current.ServiceListenAddress != saved.ServiceListenAddress || current.ServicePort != saved.ServicePort;
+        var remote = AgentApiClient.ParseAddress(ApiBaseUrl) is { IsLoopback: false };
+        return !listenChanged || !remote
+            || ConfirmWarning("This app is connected to the service from another computer. After the service moves to "
+                + $"{current.ServiceListenAddress}:{current.ServicePort}, this app may lose the connection and need its address changed.\n\nDo you want to continue?");
+    }
+
+    /// <summary>After the service on this computer moves to another port, the app follows it.</summary>
+    private void FollowServicePort(GeneralSettings current, GeneralSettings saved)
+    {
+        if (current.ServicePort == saved.ServicePort || AgentApiClient.ParseAddress(ApiBaseUrl) is not { IsLoopback: true } uri)
+        {
+            return;
+        }
+
+        ApiBaseUrl = new UriBuilder(uri) { Port = current.ServicePort }.Uri.GetLeftPart(UriPartial.Authority);
+        SavePreferences();
+    }
+
+    /// <summary>The service stopped: back to empty defaults, keeping only the theme and the service address.</summary>
+    public void Unload()
+    {
+        if (!IsLoaded)
+        {
+            return;
+        }
+
+        IsLoaded = false;
+        ShowUnloaded();
+    }
+
+    private void ShowUnloaded()
+    {
+        var preferences = ClientPreferences.Load();
+        var defaults = new UiAppSettings();
+        defaults.General.Theme = preferences.Theme;
+        ApiBaseUrl = string.IsNullOrWhiteSpace(preferences.ApiBaseUrl) ? DefaultApiBaseUrl : preferences.ApiBaseUrl.Trim();
+        ClientAccessKey = preferences.AccessKey;
+        while (ListenAddressOptions.Count > 2)
+        {
+            ListenAddressOptions.RemoveAt(ListenAddressOptions.Count - 1);
+        }
+
+        ApplyAll(defaults, []);
+        StatusMessage = string.Empty;
+    }
+
+    private void ApplyAll(UiAppSettings settings, IReadOnlyList<MonitorPoint> points)
+    {
+        _suspendChangeTracking = true;
+        try
+        {
+            Apply(settings);
+            ReplaceMonitorPoints(points);
+        }
+        finally
+        {
+            _suspendChangeTracking = false;
+        }
+
+        _snapshot = Capture();
+        _monitorPointSnapshot = CaptureMonitorPoints();
+        MarkAllClean();
+    }
+
+    private void SavePreferences() =>
+        new ClientPreferences
+        {
+            ApiBaseUrl = string.IsNullOrWhiteSpace(ApiBaseUrl) ? DefaultApiBaseUrl : ApiBaseUrl.Trim(),
+            AccessKey = ClientAccessKey.Trim(),
+            Theme = _snapshot.General.Theme
+        }.Save();
+
+    private bool CanSave() => HasChanges && IsLoaded;
 
     private static readonly string[] Sections = [SectionGeneral, SectionMonitorPoints, SectionConditions];
     private static readonly TimeSpan StatusMessageDuration = TimeSpan.FromSeconds(4);
@@ -395,7 +619,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     }
 
     /// <summary>Saves only the selected section; the other sections keep their last saved values.</summary>
-    [RelayCommand(CanExecute = nameof(HasChanges))]
+    [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task Save()
     {
         var section = SelectedSection;
@@ -409,6 +633,26 @@ public sealed partial class SettingsViewModel : ObservableObject
 
             var current = Capture();
             var saved = Clone(_snapshot);
+            if (section == SectionGeneral)
+            {
+                if (!IsListenAddress(current.General.ServiceListenAddress))
+                {
+                    StatusMessage = "\"Service listens on\" must be an IPv4 address, such as 127.0.0.1, 0.0.0.0 or one of this computer's IPs.";
+                    return;
+                }
+
+                if (current.General.ServicePort is < 1 or > 65535)
+                {
+                    StatusMessage = "The service port must be between 1 and 65535.";
+                    return;
+                }
+
+                if (!ConfirmGeneralChanges(current.General, saved.General))
+                {
+                    return;
+                }
+            }
+
             var settings = new UiAppSettings
             {
                 General = section == SectionGeneral ? current.General : saved.General,
@@ -419,9 +663,15 @@ public sealed partial class SettingsViewModel : ObservableObject
                 ? CaptureMonitorPoints()
                 : _monitorPointSnapshot.Select(ClonePoint).ToList();
 
-            _store.Save(settings, points);
+            await _store.SaveAsync(settings, points);
+            if (section == SectionGeneral)
+            {
+                FollowServicePort(current.General, saved.General);
+            }
+
             _snapshot = Clone(settings);
             _monitorPointSnapshot = points.Select(ClonePoint).ToList();
+            SavePreferences();
             MarkClean(section);
             StatusMessage = section == SectionMonitorPoints && points.Any(point => point.Type == MonitorPointType.Website && string.IsNullOrWhiteSpace(point.Icon) && !string.IsNullOrWhiteSpace(point.Address))
                 ? "No icon was found for one or more websites."
@@ -429,13 +679,9 @@ public sealed partial class SettingsViewModel : ObservableObject
             ShowSavedBadge();
             Saved?.Invoke(this, EventArgs.Empty);
         }
-        catch (UnauthorizedAccessException)
-        {
-            StatusMessage = $"Access denied to {_store.FilePath}. Run Agent Monitor as administrator or allow writing to the service folder.";
-        }
         catch (IOException ex)
         {
-            StatusMessage = $"Could not save service appsettings.json: {ex.Message}";
+            StatusMessage = ex.Message;
         }
     }
 
@@ -582,9 +828,22 @@ public sealed partial class SettingsViewModel : ObservableObject
         NetworkIntervalSeconds = InternetIntervalSeconds;
         DiskIntervalSeconds = AtLeastOne(general.DiskIntervalSeconds, DefaultDiskInterval);
         HardwareOsIntervalSeconds = AtLeastOne(general.HardwareOsIntervalSeconds, DefaultHardwareOsInterval);
-        ApiBaseUrl = string.IsNullOrWhiteSpace(general.ApiBaseUrl) ? DefaultApiBaseUrl : general.ApiBaseUrl.Trim();
         Theme = general.Theme is "Dark" or "Light" ? general.Theme : DefaultTheme;
         NotificationsEnabled = general.NotificationsEnabled;
+        DataRetentionDays = RetentionDays(general.DataRetentionDays);
+        if (RetentionOptions.All(option => option.Days != DataRetentionDays))
+        {
+            DataRetentionDays = DefaultRetentionDays;
+        }
+
+        ServiceListenAddress = string.IsNullOrWhiteSpace(general.ServiceListenAddress) ? LocalOnlyAddress : general.ServiceListenAddress.Trim();
+        AddListenOption(ServiceListenAddress);
+
+        // 0 = the service's own default port, which is the one this app reached it on.
+        ServicePort = general.ServicePort is > 0 and <= 65535
+            ? general.ServicePort
+            : AgentApiClient.ParseAddress(ApiBaseUrl)?.Port ?? DefaultServicePort;
+        RemoteAccessKey = general.RemoteAccessKey?.Trim() ?? string.Empty;
     }
 
     private UiAppSettings Capture()
@@ -649,9 +908,12 @@ public sealed partial class SettingsViewModel : ObservableObject
             NetworkIntervalSeconds = AtLeastOne(InternetIntervalSeconds, DefaultInternetInterval),
             DiskIntervalSeconds = AtLeastOne(DiskIntervalSeconds, DefaultDiskInterval),
             HardwareOsIntervalSeconds = AtLeastOne(HardwareOsIntervalSeconds, DefaultHardwareOsInterval),
-            ApiBaseUrl = string.IsNullOrWhiteSpace(ApiBaseUrl) ? DefaultApiBaseUrl : ApiBaseUrl.Trim(),
             Theme = Theme is "Dark" or "Light" ? Theme : DefaultTheme,
-            NotificationsEnabled = NotificationsEnabled
+            NotificationsEnabled = NotificationsEnabled,
+            DataRetentionDays = RetentionDays(DataRetentionDays),
+            ServiceListenAddress = string.IsNullOrWhiteSpace(ServiceListenAddress) ? LocalOnlyAddress : ServiceListenAddress.Trim(),
+            ServicePort = ServicePort,
+            RemoteAccessKey = RemoteAccessKey?.Trim() ?? string.Empty
         };
 
     private static GeneralSettings CloneGeneral(GeneralSettings? general)
@@ -666,9 +928,12 @@ public sealed partial class SettingsViewModel : ObservableObject
             NetworkIntervalSeconds = AtLeastOne(general?.NetworkIntervalSeconds ?? 0, DefaultNetworkInterval),
             DiskIntervalSeconds = AtLeastOne(general?.DiskIntervalSeconds ?? 0, DefaultDiskInterval),
             HardwareOsIntervalSeconds = AtLeastOne(general?.HardwareOsIntervalSeconds ?? 0, DefaultHardwareOsInterval),
-            ApiBaseUrl = general?.ApiBaseUrl ?? DefaultApiBaseUrl,
             Theme = general?.Theme ?? DefaultTheme,
-            NotificationsEnabled = general?.NotificationsEnabled ?? DefaultNotificationsEnabled
+            NotificationsEnabled = general?.NotificationsEnabled ?? DefaultNotificationsEnabled,
+            DataRetentionDays = RetentionDays(general?.DataRetentionDays ?? 0),
+            ServiceListenAddress = general?.ServiceListenAddress ?? LocalOnlyAddress,
+            ServicePort = general?.ServicePort ?? DefaultServicePort,
+            RemoteAccessKey = general?.RemoteAccessKey ?? string.Empty
         };
 
     private void ApplyDeviceSpec(DeviceSpecSettings? spec)
@@ -920,6 +1185,10 @@ public sealed class DeviceKindOption(GarageDeviceKind kind, string label, string
 
     public string Glyph { get; } = glyph;
 }
+
+public sealed record RetentionOption(int Days, string Label);
+
+public sealed record ListenOption(string Address, string Label);
 
 public sealed class MonitorPointTypeOption(MonitorPointType type, string label)
 {

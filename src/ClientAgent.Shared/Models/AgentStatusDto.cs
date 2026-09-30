@@ -8,4 +8,6 @@ public sealed record AgentStatusDto(
     bool MadkhalConnected,
     bool CentralConnected,
     string ConfigVersion = "1",
-    DateTime? LastSyncUtc = null);
+    DateTime? LastSyncUtc = null,
+    string[]? ListenUrls = null,
+    List<string>? Addresses = null);
