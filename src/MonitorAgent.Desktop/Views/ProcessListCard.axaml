@@ -33,7 +33,7 @@
                        Foreground="{Binding #Root.AccentColor}" Margin="0,8,0,8"/>
             <ListBox x:Name="Processes" Classes="procs" DockPanel.Dock="Top" VerticalAlignment="Top"
                      ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}"
-                     BorderThickness="0" Padding="0" Cursor="Hand"
+                     BorderThickness="0" Cursor="Hand"
                      ScrollViewer.VerticalScrollBarVisibility="Disabled"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      DoubleTapped="Processes_DoubleTapped"
@@ -52,8 +52,9 @@
                                        VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Grid.Column="2" Text="{Binding Pid}" FontSize="11"
                                        Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                            <!-- A value wider than its column keeps its right end, cut on the left, as in the Windows app. -->
                             <TextBlock Grid.Column="3" Text="{Binding DisplayValue}" FontSize="11" VerticalAlignment="Center"
-                                       HorizontalAlignment="Right" Margin="0,0,6,0"/>
+                                       HorizontalAlignment="Right" TextAlignment="Right" ClipToBounds="True" Margin="0,0,6,0"/>
                             <ProgressBar Grid.Column="4" Minimum="0" Maximum="100" Value="{Binding Percent}"
                                          Height="6" MinHeight="6" VerticalAlignment="Center">
                                 <ProgressBar.Foreground>

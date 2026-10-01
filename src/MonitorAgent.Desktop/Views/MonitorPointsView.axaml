@@ -17,7 +17,7 @@
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <Panel Width="28" Height="28" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                    <mi:MaterialIcon Kind="{Binding Glyph, Converter={StaticResource GlyphToIcon}}" Width="18" Height="18"
+                                    <controls:GlyphIcon Glyph="{Binding Glyph}" Size="16" HorizontalAlignment="Center"
                                                      Foreground="{DynamicResource TextPrimaryBrush}"
                                                      IsVisible="{Binding #PointIcon.Source, Converter={x:Static ObjectConverters.IsNull}}"/>
                                     <Image x:Name="PointIcon" Width="22" Height="22" Stretch="Uniform"

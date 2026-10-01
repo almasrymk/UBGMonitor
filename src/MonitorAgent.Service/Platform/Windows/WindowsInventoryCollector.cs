@@ -8,20 +8,26 @@ namespace MonitorAgent.Service.Platform.Windows;
 [SupportedOSPlatform("windows")]
 public sealed class WindowsInventoryCollector : IInventoryCollector
 {
+    /// <summary>
+    /// Classes that cannot change while Windows is running are read once. They include the slowest queries
+    /// (Win32_Processor, SoftwareLicensingService), which otherwise ran on every refresh of the hardware screen.
+    /// </summary>
+    private readonly Dictionary<string, List<Dictionary<string, string?>>> _fixed = new();
+
     public HardwareInventory Collect()
     {
         var system = First("Win32_ComputerSystem");
-        var product = First("Win32_ComputerSystemProduct");
-        var processor = First("Win32_Processor");
-        var bios = First("Win32_BIOS");
-        var board = First("Win32_BaseBoard");
-        var enclosure = First("Win32_SystemEnclosure");
+        var product = Fixed("Win32_ComputerSystemProduct").FirstOrDefault() ?? [];
+        var processor = Fixed("Win32_Processor").FirstOrDefault() ?? [];
+        var bios = Fixed("Win32_BIOS").FirstOrDefault() ?? [];
+        var board = Fixed("Win32_BaseBoard").FirstOrDefault() ?? [];
+        var enclosure = Fixed("Win32_SystemEnclosure").FirstOrDefault() ?? [];
         var os = First("Win32_OperatingSystem");
         var timezone = First("Win32_TimeZone");
         var gpu = First("Win32_VideoController");
-        var memoryArray = First("Win32_PhysicalMemoryArray");
-        var license = First("SoftwareLicensingService");
-        var memories = All("Win32_PhysicalMemory");
+        var memoryArray = Fixed("Win32_PhysicalMemoryArray").FirstOrDefault() ?? [];
+        var license = Fixed("SoftwareLicensingService").FirstOrDefault() ?? [];
+        var memories = Fixed("Win32_PhysicalMemory");
         var disks = All("Win32_DiskDrive");
         var adapters = All("Win32_NetworkAdapter");
         var monitors = All("Win32_DesktopMonitor");
@@ -117,13 +123,28 @@ public sealed class WindowsInventoryCollector : IInventoryCollector
     private static Dictionary<string, string?> First(string className)
         => All(className).FirstOrDefault() ?? [];
 
+    private List<Dictionary<string, string?>> Fixed(string className)
+    {
+        lock (_fixed)
+        {
+            if (!_fixed.TryGetValue(className, out var rows) || rows.Count == 0)
+            {
+                rows = All(className);
+                _fixed[className] = rows;
+            }
+
+            return rows;
+        }
+    }
+
     private static List<Dictionary<string, string?>> All(string className, string scope = @"root\cimv2")
     {
         var rows = new List<Dictionary<string, string?>>();
         try
         {
             using var searcher = new ManagementObjectSearcher(scope, $"SELECT * FROM {className}");
-            foreach (ManagementObject obj in searcher.Get())
+            using var results = searcher.Get();
+            foreach (ManagementObject obj in results)
             {
                 using (obj)
                 {
@@ -151,7 +172,8 @@ public sealed class WindowsInventoryCollector : IInventoryCollector
         try
         {
             using var searcher = new ManagementObjectSearcher($"SELECT __PATH FROM {className}");
-            count += searcher.Get().Count;
+            using var results = searcher.Get();
+            count += results.Count;
         }
         catch
         {

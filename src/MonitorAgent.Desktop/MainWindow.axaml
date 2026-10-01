@@ -1,8 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="using:MonitorAgent.Desktop.Views"
-        xmlns:mi="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
-        xmlns:mik="clr-namespace:Material.Icons;assembly=Material.Icons"
+        xmlns:controls="using:MonitorAgent.Desktop.Controls"
         x:Class="MonitorAgent.Desktop.MainWindow"
         Title="{Binding WindowTitle}"
         Icon="/Assets/monitoragent.ico"
@@ -120,7 +119,7 @@
                             </ContextMenu>
                         </Button.ContextMenu>
                         <StackPanel Orientation="Horizontal">
-                            <mi:MaterialIcon Kind="Refresh" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <controls:GlyphIcon Glyph="&#xE72C;" Size="12" Margin="0,0,6,0"/>
                             <TextBlock Text="Reset layout" FontSize="12" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -133,7 +132,7 @@
                 <StackPanel x:Name="TitleLeft" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button Classes="titlebar" Margin="4,0,0,0" Padding="9,0" Click="ToggleMenu_Click"
                             ToolTip.Tip="Show / auto hide the menu">
-                        <mi:MaterialIcon Kind="Menu" Width="16" Height="16"/>
+                        <controls:GlyphIcon Glyph="&#xE700;" Size="14"/>
                     </Button>
                     <Button Classes="titlebar" Margin="2,0,0,0" Padding="9,0"
                             Command="{Binding GoBackCommand}" ToolTip.Tip="{Binding BackToolTip}"
@@ -149,7 +148,7 @@
 
         <Border x:Name="NavStrip" Grid.Row="1" Grid.Column="0" Classes="strip" IsVisible="False"
                 BorderThickness="0,0,1,0" ToolTip.Tip="Menu">
-            <mi:MaterialIcon Kind="ChevronRight" Width="12" Height="12" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+            <controls:GlyphIcon Glyph="&#xE76C;" Size="11" HorizontalAlignment="Center"/>
         </Border>
 
         <Border x:Name="NavPanel" Grid.Row="1" Grid.Column="0" Width="92" HorizontalAlignment="Left" ZIndex="20"
@@ -160,19 +159,19 @@
                 <TranslateTransform/>
             </Border.RenderTransform>
             <StackPanel Margin="0,8,0,8">
-                <Button Classes="nav" Content="Dashboard" Tag="{x:Static mik:MaterialIconKind.Home}" 
+                <Button Classes="nav" Content="Dashboard" Tag="&#xE80F;" 
                              Command="{Binding SelectTabCommand}" CommandParameter="Dashboard"
                              Classes.selected="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter='Dashboard'}"/>
-                <Button Classes="nav" Content="Monitor Points" Tag="{x:Static mik:MaterialIconKind.MapMarker}" 
+                <Button Classes="nav" Content="Monitor Points" Tag="&#xE707;" 
                              Command="{Binding SelectTabCommand}" CommandParameter="Monitor Points"
                              Classes.selected="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter='Monitor Points'}"/>
-                <Button Classes="nav" Content="Reports" Tag="{x:Static mik:MaterialIconKind.ChartAreaspline}" 
+                <Button Classes="nav" Content="Reports" Tag="&#xE9D2;" 
                              Command="{Binding SelectTabCommand}" CommandParameter="Reports"
                              Classes.selected="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter='Reports'}"/>
-                <Button Classes="nav" Content="Settings" Tag="{x:Static mik:MaterialIconKind.Cog}" 
+                <Button Classes="nav" Content="Settings" Tag="&#xE713;" 
                              Command="{Binding SelectTabCommand}" CommandParameter="Settings"
                              Classes.selected="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter='Settings'}"/>
-                <Button Classes="nav" Content="About" Tag="{x:Static mik:MaterialIconKind.Information}" 
+                <Button Classes="nav" Content="About" Tag="&#xE946;" 
                              Command="{Binding SelectTabCommand}" CommandParameter="About"
                              Classes.selected="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter='About'}"/>
             </StackPanel>
@@ -186,7 +185,7 @@
 
             <Border x:Name="StatusStrip" Grid.Row="0" Classes="strip" IsVisible="False"
                     BorderThickness="0,0,0,1" ToolTip.Tip="Service Status">
-                <mi:MaterialIcon Kind="ChevronDown" Width="12" Height="12" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                <controls:GlyphIcon Glyph="&#xE70D;" Size="11" HorizontalAlignment="Center"/>
             </Border>
 
             <Border x:Name="StatusPanel" Grid.Row="0" VerticalAlignment="Top" ZIndex="20"
@@ -205,8 +204,8 @@
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <Grid Width="24" Height="24" Margin="0,0,8,0">
                                     <Ellipse Fill="{Binding ServiceRunning, Converter={StaticResource BoolToStatusBrushConverter}}"/>
-                                    <mi:MaterialIcon Kind="Check" Width="14" Height="14" Foreground="White" IsVisible="{Binding ServiceRunning}"/>
-                                    <mi:MaterialIcon Kind="Close" Width="14" Height="14" Foreground="White" IsVisible="{Binding !ServiceRunning}"/>
+                                    <controls:GlyphIcon Glyph="&#xE73E;" Size="12" Foreground="White" HorizontalAlignment="Center" IsVisible="{Binding ServiceRunning}"/>
+                                    <controls:GlyphIcon Glyph="&#xE711;" Size="12" Foreground="White" HorizontalAlignment="Center" IsVisible="{Binding !ServiceRunning}"/>
                                 </Grid>
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock FontSize="12" FontWeight="SemiBold" Text="{Binding AgentStatus, StringFormat='Service: {0}'}"/>
@@ -219,8 +218,8 @@
                             <StackPanel Orientation="Horizontal" Margin="0,6,0,0" VerticalAlignment="Center">
                                 <Grid Width="24" Height="24" Margin="0,0,8,0">
                                     <Ellipse Fill="{Binding InternetConnected, Converter={StaticResource BoolToStatusBrushConverter}}"/>
-                                    <mi:MaterialIcon Kind="Wifi" Width="14" Height="14" Foreground="White"/>
-                                    <mi:MaterialIcon Kind="Close" Width="10" Height="10" Foreground="White"
+                                    <controls:GlyphIcon Glyph="&#xE701;" Size="12" Foreground="White" HorizontalAlignment="Center"/>
+                                    <controls:GlyphIcon Glyph="&#xE711;" Size="9" Foreground="White"
                                                      HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-2,-2"
                                                      IsVisible="{Binding !InternetConnected}"/>
                                 </Grid>
@@ -234,7 +233,7 @@
                             </Border>
                         </StackPanel>
 
-                        <Rectangle Grid.Column="1" Width="1" Fill="{DynamicResource BorderColorBrush}" Margin="10,2"
+                        <Rectangle Grid.Column="1" Width="{StaticResource Hairline}" Fill="{DynamicResource BorderColorBrush}" Margin="10,2"
                                    IsVisible="{Binding HasMonitorPoints}"/>
 
                         <DockPanel Grid.Column="2" Margin="10,0" VerticalAlignment="Top" IsVisible="{Binding HasMonitorPoints}">
@@ -264,8 +263,8 @@
                                                             <Ellipse Width="46" Height="46" Fill="{DynamicResource ChipFillBrush}"
                                                                      Stroke="{Binding Status, Converter={StaticResource HealthToBrushConverter}}"
                                                                      StrokeThickness="2"/>
-                                                            <mi:MaterialIcon Kind="{Binding Glyph, Converter={StaticResource GlyphToIcon}}"
-                                                                             Width="22" Height="22" Foreground="{DynamicResource TextPrimaryBrush}"
+                                                            <controls:GlyphIcon Glyph="{Binding Glyph}" Size="20" HorizontalAlignment="Center"
+                                                                             Foreground="{DynamicResource TextPrimaryBrush}"
                                                                              IsVisible="{Binding #PointLogo.Source, Converter={x:Static ObjectConverters.IsNull}}"/>
                                                             <Image x:Name="PointLogo" Classes="logo" Width="28" Height="28" Margin="0"
                                                                    Source="{Binding Icon, Converter={StaticResource IconToImageConverter}}"/>
@@ -287,7 +286,7 @@
                             </Grid>
                         </DockPanel>
 
-                        <Rectangle Grid.Column="3" Width="1" Fill="{DynamicResource BorderColorBrush}" Margin="10,2"
+                        <Rectangle Grid.Column="3" Width="{StaticResource Hairline}" Fill="{DynamicResource BorderColorBrush}" Margin="10,2"
                                    IsVisible="{Binding ShowNotifications}"/>
 
                         <DockPanel Grid.Column="4" Margin="10,0,0,0" VerticalAlignment="Top" IsVisible="{Binding ShowNotifications}">

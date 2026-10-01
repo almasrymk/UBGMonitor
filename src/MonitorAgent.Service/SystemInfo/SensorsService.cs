@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using MonitorAgent.Service.Platform;
 using MonitorAgent.Shared.Models;
 
@@ -8,11 +9,20 @@ public interface ISensorsService
     Task<SensorsInfo> GetSensorsAsync(CancellationToken cancellationToken = default);
 
     Task<HardwareLevelDto> GetLevelAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>The sensors level from a reading no older than <paramref name="maxAge"/>, for checks that don't need it live.</summary>
+    Task<HardwareLevelDto> GetLevelAsync(TimeSpan maxAge, CancellationToken cancellationToken = default);
 }
 
 public sealed class SensorsService : ISensorsService
 {
+    /// <summary>Callers asking at about the same time (the app, the device checks, the data logger) share one reading.</summary>
+    private static readonly TimeSpan SharedFor = TimeSpan.FromSeconds(1.5);
+
     private readonly ISensorReader _reader;
+    private readonly object _lock = new();
+    private SensorsInfo? _last;
+    private long _lastAt;
 
     public SensorsService(ISensorReader reader)
     {
@@ -21,10 +31,27 @@ public sealed class SensorsService : ISensorsService
     }
 
     public Task<SensorsInfo> GetSensorsAsync(CancellationToken cancellationToken = default)
-        => Task.Run(_reader.Read, cancellationToken);
+        => Task.Run(() => Read(SharedFor), cancellationToken);
 
     public Task<HardwareLevelDto> GetLevelAsync(CancellationToken cancellationToken = default)
-        => Task.Run(() => MapLevel(_reader.Read()), cancellationToken);
+        => GetLevelAsync(SharedFor, cancellationToken);
+
+    public Task<HardwareLevelDto> GetLevelAsync(TimeSpan maxAge, CancellationToken cancellationToken = default)
+        => Task.Run(() => MapLevel(Read(maxAge)), cancellationToken);
+
+    private SensorsInfo Read(TimeSpan maxAge)
+    {
+        lock (_lock)
+        {
+            if (_last is null || Stopwatch.GetElapsedTime(_lastAt) > maxAge)
+            {
+                _last = _reader.Read();
+                _lastAt = Stopwatch.GetTimestamp();
+            }
+
+            return _last;
+        }
+    }
 
     private static HardwareLevelDto MapLevel(SensorsInfo sensors)
     {

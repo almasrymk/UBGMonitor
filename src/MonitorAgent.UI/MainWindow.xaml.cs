@@ -59,8 +59,7 @@ public partial class MainWindow : Window
                     new DialogButton("Continue", MessageBoxResult.Yes),
                     new DialogButton("Cancel", MessageBoxResult.Cancel, IsPrimary: true)
                 ]) == MessageBoxResult.Yes);
-        DataContext = viewModel;
-        StateChanged += (_, _) => MaximizeButton.Content = WindowState == WindowState.Maximized ? "❐" : "☐";
+        DataContext = viewModel;        StateChanged += (_, _) => MaximizeButton.Content = WindowState == WindowState.Maximized ? "❐" : "☐";
         Loaded += (_, _) => FitToWorkArea();
 
         _nav = new AutoHidePanel(NavPanel, NavStrip, NavShift, horizontal: true, pinned =>

@@ -43,6 +43,7 @@
     <Compile Include="..\MonitorAgent.UI\Services\AgentApiClient.cs" Link="Shared\Services\AgentApiClient.cs" />
     <Compile Include="..\MonitorAgent.UI\Services\AppSettingsStore.cs" Link="Shared\Services\AppSettingsStore.cs" />
     <Compile Include="..\MonitorAgent.UI\Services\DeviceIcons.cs" Link="Shared\Services\DeviceIcons.cs" />
+    <Compile Include="..\MonitorAgent.UI\Services\DatabaseLogos.Programs.cs" Link="Shared\Services\DatabaseLogos.Programs.cs" />
     <Compile Include="..\MonitorAgent.UI\Services\ProcessQueryNotSupportedException.cs" Link="Shared\Services\ProcessQueryNotSupportedException.cs" />
     <Compile Include="..\MonitorAgent.UI\Services\TopProcessesQueryResult.cs" Link="Shared\Services\TopProcessesQueryResult.cs" />
     <Compile Include="..\MonitorAgent.UI\Services\SiteLogoCache.cs" Link="Shared\Services\SiteLogoCache.cs" />

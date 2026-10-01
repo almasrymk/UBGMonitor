@@ -13,7 +13,14 @@ public sealed class HardwareMonitorReader : Platform.ISensorReader, IDisposable
     private readonly object _lock = new();
     private Computer? _computer;
     private bool _isOpen;
+    private bool _updatedOnce;
     private bool _loggedInventory;
+    private readonly object _slowLock = new();
+    private (double? BatteryHealth, (string? Health, string? PowerOn) Disk)? _slow;
+    private long _slowAt;
+
+    /// <summary>Battery wear and the disk's own status hardly move, so their WMI queries don't run on every reading.</summary>
+    private static readonly TimeSpan SlowReadingsFor = TimeSpan.FromMinutes(10);
 
     public HardwareMonitorReader(ILogger<HardwareMonitorReader>? logger = null)
     {
@@ -31,9 +38,10 @@ public sealed class HardwareMonitorReader : Platform.ISensorReader, IDisposable
     public SensorsInfo Read()
     {
         var monitor = ReadMonitor();
-        var (level, health, status) = ReadBattery();
+        var (level, batteryHealth, status) = ReadBattery();
         var acpiTemps = ReadAcpiTemps();
-        var disk = ReadDiskFallback();
+        var (slowHealth, disk) = ReadSlow();
+        var health = batteryHealth ?? slowHealth;
 
         return new SensorsInfo
         {
@@ -69,8 +77,14 @@ public sealed class HardwareMonitorReader : Platform.ISensorReader, IDisposable
 
             try
             {
-                UpdateAll();
-                Thread.Sleep(50);
+                // Load sensors are worked out between two updates; after the first reading the previous one serves.
+                if (!_updatedOnce)
+                {
+                    UpdateAll();
+                    Thread.Sleep(50);
+                    _updatedOnce = true;
+                }
+
                 UpdateAll();
 
                 var readings = Flatten();
@@ -401,8 +415,6 @@ public sealed class HardwareMonitorReader : Platform.ISensorReader, IDisposable
                         }
                     }
 
-                    health ??= ReadWmiBatteryHealth() ?? ReadPortableBatteryHealth();
-
                     return (level, health, MapBatteryStatus(obj["BatteryStatus"]?.ToString()));
                 }
             }
@@ -412,7 +424,21 @@ public sealed class HardwareMonitorReader : Platform.ISensorReader, IDisposable
             // Desktops often have no battery.
         }
 
-        return (null, ReadPortableBatteryHealth(), null);
+        return (null, null, null);
+    }
+
+    private (double? BatteryHealth, (string? Health, string? PowerOn) Disk) ReadSlow()
+    {
+        lock (_slowLock)
+        {
+            if (_slow is null || Stopwatch.GetElapsedTime(_slowAt) > SlowReadingsFor)
+            {
+                _slow = (ReadWmiBatteryHealth() ?? ReadPortableBatteryHealth(), ReadDiskFallback());
+                _slowAt = Stopwatch.GetTimestamp();
+            }
+
+            return _slow.Value;
+        }
     }
 
     /// <summary>Full charge capacity vs. design capacity from the battery driver (root\wmi).</summary>

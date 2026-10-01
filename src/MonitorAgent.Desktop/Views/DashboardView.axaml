@@ -160,7 +160,7 @@
                                     </Grid>
                                 </DockPanel>
                             </Grid>
-                            <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource DividerBrush}"/>
+                            <Border DockPanel.Dock="Top" Height="{StaticResource Hairline}" Background="{DynamicResource DividerBrush}"/>
                             <views:ProcessListCard DockPanel.Dock="Top" VerticalAlignment="Top" Title="Top 5 by CPU"
                                                    SortBy="{x:Static enums:ProcessSortBy.Cpu}"
                                                    AccentColor="{DynamicResource AccentGreenBrush}"
@@ -213,7 +213,7 @@
                                     </Grid>
                                 </DockPanel>
                             </Grid>
-                            <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource DividerBrush}"/>
+                            <Border DockPanel.Dock="Top" Height="{StaticResource Hairline}" Background="{DynamicResource DividerBrush}"/>
                             <views:ProcessListCard DockPanel.Dock="Top" VerticalAlignment="Top" Title="Top 5 by RAM"
                                                    SortBy="{x:Static enums:ProcessSortBy.Ram}"
                                                    AccentColor="{DynamicResource AccentBlueBrush}"
@@ -266,7 +266,7 @@
                                     </Grid>
                                 </DockPanel>
                             </Grid>
-                            <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource DividerBrush}"/>
+                            <Border DockPanel.Dock="Top" Height="{StaticResource Hairline}" Background="{DynamicResource DividerBrush}"/>
                             <views:ProcessListCard DockPanel.Dock="Top" VerticalAlignment="Top" Title="Top 5 by Disk"
                                                    SortBy="{x:Static enums:ProcessSortBy.Disk}"
                                                    AccentColor="{DynamicResource ProcessBarDiskBrush}"
@@ -338,9 +338,8 @@
                                                 <ToolTip.Tip>
                                                     <TextBlock Classes="legend" Text="{Binding Network.ConnectionToolTip}"/>
                                                 </ToolTip.Tip>
-                                                <mi:MaterialIcon Kind="{Binding Network.ConnectionIcon, Converter={StaticResource GlyphToIcon}}"
-                                                                 Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,6,0"
-                                                                 Foreground="{DynamicResource AccentBlueBrush}"/>
+                                                <controls:GlyphIcon Glyph="{Binding Network.ConnectionIcon}" Size="13"
+                                                                 Margin="0,0,6,0" Foreground="{DynamicResource AccentBlueBrush}"/>
                                                 <TextBlock FontSize="12" FontWeight="SemiBold" Text="{Binding Network.ConnectionText}"
                                                            TextTrimming="CharacterEllipsis"/>
                                             </StackPanel>
@@ -379,7 +378,7 @@
                                     </Grid>
                                 </DockPanel>
                             </Grid>
-                            <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource DividerBrush}"/>
+                            <Border DockPanel.Dock="Top" Height="{StaticResource Hairline}" Background="{DynamicResource DividerBrush}"/>
                             <views:ProcessListCard DockPanel.Dock="Top" VerticalAlignment="Top" Title="Top 5 by Network"
                                                    SortBy="{x:Static enums:ProcessSortBy.Network}"
                                                    AccentColor="{DynamicResource TextPrimaryBrush}"
@@ -412,7 +411,7 @@
                                     <DataGridTemplateColumn Header="Usage" Width="120">
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
-                                                <ProgressBar Minimum="0" Maximum="100" Value="{Binding UsagePercent}" Margin="6,0"
+                                                <ProgressBar Minimum="0" Maximum="100" Value="{Binding UsagePercent}" Height="8"
                                                              VerticalAlignment="Center"
                                                              Foreground="{Binding UsagePercent, Converter={StaticResource PercentToBrushConverter}}"/>
                                             </DataTemplate>
@@ -421,7 +420,7 @@
                                     <DataGridTemplateColumn Header="Status" Width="*">
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
-                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="6,0">
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                     <Ellipse Width="8" Height="8" Margin="0,0,6,0"
                                                              Fill="{Binding Status, Converter={StaticResource HealthToBrushConverter}}"/>
                                                     <TextBlock Text="{Binding Status}"/>
@@ -488,7 +487,7 @@
                                 <ItemsControl ItemsSource="{Binding HardwareOs.Level1Rows}" ItemTemplate="{StaticResource InfoRowTemplate}"/>
                             </Expander>
 
-                            <Border Height="1" Background="{DynamicResource DividerBrush}" Margin="0,8"/>
+                            <Border Height="{StaticResource Hairline}" Background="{DynamicResource DividerBrush}" Margin="0,8"/>
 
                             <Expander Classes="section" IsExpanded="{Binding HardwareOs.IsLevel2Expanded, Mode=TwoWay}">
                                 <Expander.Header>
@@ -501,7 +500,7 @@
                                 <ItemsControl ItemsSource="{Binding HardwareOs.Level2Rows}" ItemTemplate="{StaticResource InfoRowTemplate}"/>
                             </Expander>
 
-                            <Border Height="1" Background="{DynamicResource DividerBrush}" Margin="0,8"/>
+                            <Border Height="{StaticResource Hairline}" Background="{DynamicResource DividerBrush}" Margin="0,8"/>
 
                             <Expander Classes="section" IsExpanded="{Binding HardwareOs.IsLevel5Expanded, Mode=TwoWay}">
                                 <Expander.Header>
@@ -514,7 +513,7 @@
                                 <ItemsControl ItemsSource="{Binding HardwareOs.Level5Rows}" ItemTemplate="{StaticResource NetworkRowTemplate}"/>
                             </Expander>
 
-                            <Border Height="1" Background="{DynamicResource DividerBrush}" Margin="0,8"/>
+                            <Border Height="{StaticResource Hairline}" Background="{DynamicResource DividerBrush}" Margin="0,8"/>
 
                             <Expander Classes="section" IsExpanded="{Binding HardwareOs.IsLevel4Expanded, Mode=TwoWay}">
                                 <Expander.Header>
@@ -527,7 +526,7 @@
                                 <ItemsControl ItemsSource="{Binding HardwareOs.Level4Rows}" ItemTemplate="{StaticResource InfoRowTemplate}"/>
                             </Expander>
 
-                            <Border Height="1" Background="{DynamicResource DividerBrush}" Margin="0,8"/>
+                            <Border Height="{StaticResource Hairline}" Background="{DynamicResource DividerBrush}" Margin="0,8"/>
 
                             <Expander Classes="section" IsExpanded="{Binding HardwareOs.IsLevel3Expanded, Mode=TwoWay}">
                                 <Expander.Header>

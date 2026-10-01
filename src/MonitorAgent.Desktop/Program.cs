@@ -21,6 +21,12 @@ internal static class Program
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()
             .WithInterFont()
-            .With(new FontManagerOptions { DefaultFamilyName = "fonts:Inter#Inter" })
+            .With(OperatingSystem.IsWindows()
+                ? new FontManagerOptions
+                {
+                    DefaultFamilyName = "Segoe UI",
+                    FontFallbacks = [new FontFallback { FontFamily = new FontFamily("Segoe UI Symbol") }]
+                }
+                : new FontManagerOptions { DefaultFamilyName = "fonts:Inter#Inter" })
             .LogToTrace();
 }

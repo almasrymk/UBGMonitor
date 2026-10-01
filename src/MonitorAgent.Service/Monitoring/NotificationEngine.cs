@@ -20,6 +20,9 @@ public interface INotificationStore
 /// </summary>
 public sealed class NotificationEngine : BackgroundService, INotificationStore
 {
+    /// <summary>Temperatures and fans change slowly, and reading every sensor is the heaviest part of a round.</summary>
+    private static readonly TimeSpan SensorsMaxAge = TimeSpan.FromSeconds(30);
+
     private readonly IServiceProvider _services;
     private readonly ILocalConfigCache _config;
     private readonly IInternetStatus _internet;
@@ -136,7 +139,7 @@ public sealed class NotificationEngine : BackgroundService, INotificationStore
         var osTask = hardware.GetOsAsync(cancellationToken);
         var level1Task = hardware.GetLevelAsync(1, cancellationToken);
         var level4Task = hardware.GetLevelAsync(4, cancellationToken);
-        var sensorsTask = sensors.GetLevelAsync(cancellationToken);
+        var sensorsTask = sensors.GetLevelAsync(SensorsMaxAge, cancellationToken);
         var pointsTask = MonitorPointStatusBuilder.BuildAsync(_services, cancellationToken);
         await Task.WhenAll(cpuTask, ramTask, partitionsTask, networkTask, osTask, level1Task, level4Task, sensorsTask, pointsTask);
 

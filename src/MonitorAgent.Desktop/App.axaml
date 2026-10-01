@@ -1,6 +1,7 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:conv="using:MonitorAgent.Desktop.Converters"
+             xmlns:controls="using:MonitorAgent.Desktop.Controls"
              xmlns:mi="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="MonitorAgent.Desktop.App"
              RequestedThemeVariant="Dark"
@@ -43,6 +44,24 @@
         <SolidColorBrush x:Key="ProcessBarRamBrush" Color="#2196F3"/>
         <SolidColorBrush x:Key="ProcessBarNetworkBrush" Color="#9C27B0"/>
         <SolidColorBrush x:Key="ProcessBarDiskBrush" Color="#AB47BC"/>
+        <x:Double x:Key="ScrollBarSize">16</x:Double>
+        <!-- A one-pixel line: Avalonia rounds sizes up to whole pixels, so 1 would be two pixels at 125%. -->
+        <x:Double x:Key="Hairline">0.8</x:Double>
+        <ControlTemplate x:Key="AppScrollBarTemplate" TargetType="ScrollBar">
+            <Border Background="{DynamicResource SurfaceDarkBrush}" CornerRadius="8" Padding="3">
+                <Track Name="PART_Track" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
+                       Value="{TemplateBinding Value, Mode=TwoWay}" ViewportSize="{TemplateBinding ViewportSize}"
+                       Orientation="{TemplateBinding Orientation}" IsDirectionReversed="False">
+                    <Track.DecreaseButton>
+                        <RepeatButton Name="PART_PageUpButton" Classes="scrollpage" Focusable="False"/>
+                    </Track.DecreaseButton>
+                    <Track.IncreaseButton>
+                        <RepeatButton Name="PART_PageDownButton" Classes="scrollpage" Focusable="False"/>
+                    </Track.IncreaseButton>
+                    <Thumb Classes="scroll"/>
+                </Track>
+            </Border>
+        </ControlTemplate>
 
         <conv:PercentToBrushConverter x:Key="PercentToBrushConverter"/>
         <conv:EqualsConverter x:Key="EqualsConverter"/>
@@ -141,7 +160,7 @@
                     <Border Name="Bd" Background="Transparent" BorderBrush="Transparent" BorderThickness="0,0,0,2"
                             CornerRadius="4" Padding="{TemplateBinding Padding}">
                         <StackPanel HorizontalAlignment="Center">
-                            <mi:MaterialIcon Kind="{TemplateBinding Tag}" Width="22" Height="22" Margin="0,0,0,6"
+                            <controls:GlyphIcon Glyph="{TemplateBinding Tag}" Size="22" Margin="0,0,0,6"
                                              Foreground="{TemplateBinding Foreground}" HorizontalAlignment="Center"/>
                             <ContentPresenter Content="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}"
                                               FontSize="10" TextWrapping="Wrap" HorizontalAlignment="Center"
@@ -243,6 +262,7 @@
         <!-- A button that is only its content (icons, links, chips). -->
         <Style Selector="Button.plain, ToggleButton.plain">
             <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
@@ -293,7 +313,7 @@
             <Setter Property="Template">
                 <ControlTemplate>
                     <StackPanel>
-                        <ToggleButton Classes="plain" Padding="6,4" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                        <ToggleButton Classes="plain" Padding="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                                       IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
                             <Grid ColumnDefinitions="Auto,*">
                                 <TextBlock Name="Arrow" Text="▶" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}"
@@ -313,22 +333,28 @@
         </Style>
 
         <!-- Inputs -->
+        <!-- Text boxes and drop-downs as in the Windows app: square, one-pixel border, blue border on hover and focus. -->
         <Style Selector="TextBox">
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
             <Setter Property="CaretBrush" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="CornerRadius" Value="3"/>
-        </Style>
-        <Style Selector="TextBox /template/ Border#PART_BorderElement">
             <Setter Property="Background" Value="{DynamicResource InputBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderColorBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+        <Style Selector="TextBox /template/ ScrollViewer#PART_ScrollViewer">
+            <Setter Property="Margin" Value="2,0"/>
         </Style>
         <Style Selector="TextBox:pointerover /template/ Border#PART_BorderElement">
             <Setter Property="Background" Value="{DynamicResource InputBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="BorderBrush" Value="#7EB4EA"/>
         </Style>
         <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
             <Setter Property="Background" Value="{DynamicResource InputBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource AccentGreenBrush}"/>
+            <Setter Property="BorderBrush" Value="#569DE5"/>
+            <Setter Property="BorderThickness" Value="1"/>
         </Style>
         <Style Selector="TextBox.field, ComboBox.field">
             <Setter Property="Padding" Value="8,6"/>
@@ -338,18 +364,50 @@
         </Style>
         <Style Selector="ComboBox">
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="CornerRadius" Value="3"/>
-        </Style>
-        <Style Selector="ComboBox /template/ Border#Background">
             <Setter Property="Background" Value="{DynamicResource InputBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderColorBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <!-- As in the Windows app: the selected item sits at the same place whatever the padding, with a small solid arrow. -->
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Grid>
+                        <Border Name="Background" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}"/>
+                        <TextBlock Name="PlaceholderTextBlock" Margin="8,6,28,6" VerticalAlignment="Center"
+                                   Text="{TemplateBinding PlaceholderText}" Foreground="{TemplateBinding PlaceholderForeground}"
+                                   IsVisible="{TemplateBinding SelectionBoxItem, Converter={x:Static ObjectConverters.IsNull}}"/>
+                        <ContentControl Name="ContentPresenter" Margin="8,6,28,6" HorizontalAlignment="Left" VerticalAlignment="Center"
+                                        Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"/>
+                        <Path Width="8" Height="5" Margin="0,0,10,0" HorizontalAlignment="Right" VerticalAlignment="Center"
+                              Stretch="Fill" Fill="{DynamicResource TextPrimaryBrush}" Data="M 0 0 L 8 0 L 4 5 Z" IsHitTestVisible="False"/>
+                        <Popup Name="PART_Popup" WindowManagerAddShadowHint="False" PlacementTarget="Background"
+                               IsOpen="{TemplateBinding IsDropDownOpen, Mode=TwoWay}" IsLightDismissEnabled="True" InheritsTransform="True"
+                               MinWidth="{Binding Bounds.Width, RelativeSource={RelativeSource TemplatedParent}}"
+                               MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                            <Border Name="PopupBorder" Background="{DynamicResource InputBrush}"
+                                    BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1">
+                                <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                                    <ItemsPresenter Name="PART_ItemsPresenter" ItemsPanel="{TemplateBinding ItemsPanel}"/>
+                                </ScrollViewer>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                </ControlTemplate>
+            </Setter>
         </Style>
         <Style Selector="ComboBox:pointerover /template/ Border#Background">
             <Setter Property="Background" Value="{DynamicResource HoverBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderColorBrush}"/>
         </Style>
-        <Style Selector="ComboBox /template/ Border#PopupBorder">
-            <Setter Property="Background" Value="{DynamicResource InputBrush}"/>
+        <Style Selector="ComboBox:pressed /template/ Border#Background">
+            <Setter Property="Background" Value="{DynamicResource HoverBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderColorBrush}"/>
+        </Style>
+        <Style Selector="ComboBox:dropdownopen /template/ Border#Background">
+            <Setter Property="Background" Value="{DynamicResource HoverBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderColorBrush}"/>
         </Style>
         <Style Selector="ComboBoxItem">
@@ -425,7 +483,7 @@
             <Setter Property="Height" Value="8"/>
             <Setter Property="MinHeight" Value="8"/>
             <Setter Property="MinWidth" Value="0"/>
-            <Setter Property="CornerRadius" Value="2"/>
+            <Setter Property="CornerRadius" Value="0"/>
             <Setter Property="Background" Value="{DynamicResource ButtonBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource AccentGreenBrush}"/>
         </Style>
@@ -442,36 +500,48 @@
             <Setter Property="IsReadOnly" Value="True"/>
             <Setter Property="SelectionMode" Value="Single"/>
             <Setter Property="CanUserResizeColumns" Value="True"/>
-            <Setter Property="CanUserReorderColumns" Value="False"/>
+            <Setter Property="CanUserReorderColumns" Value="True"/>
             <Setter Property="FontSize" Value="12"/>
         </Style>
         <Style Selector="DataGridColumnHeader">
             <Setter Property="Background" Value="{DynamicResource SurfaceDarkAltBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
             <Setter Property="Padding" Value="8,6"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="12"/>
-            <Setter Property="MinHeight" Value="30"/>
+            <Setter Property="MinHeight" Value="0"/>
             <Setter Property="Template">
                 <ControlTemplate>
-                    <Border Background="{TemplateBinding Background}" BorderBrush="{DynamicResource DividerBrush}"
-                            BorderThickness="0,0,1,1" Padding="{TemplateBinding Padding}">
+                    <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
                         <ContentPresenter Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
                                           VerticalAlignment="Center"/>
                     </Border>
                 </ControlTemplate>
             </Setter>
         </Style>
+        <Style Selector="DataGrid /template/ Rectangle#PART_ColumnHeadersAndRowsSeparator">
+            <Setter Property="IsVisible" Value="False"/>
+        </Style>
+        <!-- Scroll bars beside and below the rows, not over them. -->
+        <Style Selector="DataGrid /template/ DataGridRowsPresenter#PART_RowsPresenter">
+            <Setter Property="Grid.RowSpan" Value="1"/>
+            <Setter Property="Grid.ColumnSpan" Value="2"/>
+        </Style>
+        <Style Selector="DataGrid /template/ Rectangle#PART_BottomRightCorner">
+            <Setter Property="Fill" Value="Transparent"/>
+        </Style>
+        <!-- Text wider than its column is cut at the column edge, as in the Windows app. -->
         <Style Selector="DataGridCell TextBlock">
             <Setter Property="Margin" Value="0"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="ClipToBounds" Value="True"/>
         </Style>
         <Style Selector="DataGridCell > TextBlock">
-            <Setter Property="Margin" Value="8,0"/>
+            <Setter Property="Margin" Value="2,0"/>
         </Style>
         <Style Selector="DataGridRow">
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="MinHeight" Value="28"/>
+            <Setter Property="MinHeight" Value="24"/>
         </Style>
         <Style Selector="DataGridRow.alt">
             <Setter Property="Background" Value="{DynamicResource AltRowBrush}"/>
@@ -485,16 +555,80 @@
             <Setter Property="Opacity" Value="1"/>
         </Style>
         <Style Selector="DataGridCell">
+            <Setter Property="MinHeight" Value="0"/>
             <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <!-- As in the Windows app. The stock template puts the content in a grid that hands it its full width,
+                 so text wider than the column ran past it instead of being cut at the column edge. -->
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Name="CellBorder" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         </Style>
-        <Style Selector="DataGridCell /template/ Grid#FocusVisual">
-            <Setter Property="IsVisible" Value="False"/>
-        </Style>
 
+        <!-- The Windows list keeps one unit between its edge and the items, whatever its padding. -->
         <Style Selector="ListBox">
             <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="1"/>
+        </Style>
+
+        <!-- Scrollbars: always shown beside the content (not over it), 16 wide, rounded track and thumb, no arrows. -->
+        <Style Selector="ScrollViewer">
+            <Setter Property="AllowAutoHide" Value="False"/>
+        </Style>
+        <!-- These pass their own value to the scroll viewer in their template, which beats the style above. -->
+        <Style Selector="ListBox, ComboBox, TextBox, TreeView, DataGrid">
+            <Setter Property="ScrollViewer.AllowAutoHide" Value="False"/>
+        </Style>
+        <Style Selector="ScrollBar">
+            <Setter Property="AllowAutoHide" Value="False"/>
+        </Style>
+        <!-- Fluent sets its template under :vertical / :horizontal, which outranks a plain ScrollBar selector. -->
+        <Style Selector="ScrollBar:vertical">
+            <Setter Property="Template" Value="{StaticResource AppScrollBarTemplate}"/>
+            <Setter Property="Width" Value="16"/>
+            <Setter Property="MinWidth" Value="16"/>
+        </Style>
+        <Style Selector="ScrollBar:vertical /template/ Track#PART_Track">
+            <Setter Property="IsDirectionReversed" Value="True"/>
+        </Style>
+        <Style Selector="ScrollBar:vertical /template/ Thumb">
+            <Setter Property="MinHeight" Value="24"/>
+        </Style>
+        <Style Selector="ScrollBar:horizontal">
+            <Setter Property="Template" Value="{StaticResource AppScrollBarTemplate}"/>
+            <Setter Property="Height" Value="16"/>
+            <Setter Property="MinHeight" Value="16"/>
+        </Style>
+        <Style Selector="ScrollBar:horizontal /template/ Thumb">
+            <Setter Property="MinWidth" Value="24"/>
+        </Style>
+        <Style Selector="RepeatButton.scrollpage">
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Background="Transparent"/>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="Thumb.scroll">
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Name="ThumbBorder" CornerRadius="5" Background="{DynamicResource ScrollThumbBrush}"/>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="Thumb.scroll:pointerover /template/ Border#ThumbBorder">
+            <Setter Property="Background" Value="{DynamicResource ScrollThumbHoverBrush}"/>
+        </Style>
+        <Style Selector="Thumb.scroll:pressed /template/ Border#ThumbBorder">
+            <Setter Property="Background" Value="{DynamicResource ScrollThumbDragBrush}"/>
         </Style>
     </Application.Styles>
 </Application>

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Management;
+using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using MonitorAgent.Service.SystemInfo;
 using MonitorAgent.Shared.Models;
@@ -15,6 +16,11 @@ public sealed class WindowsSystemProbe : ISystemProbe, IDisposable
     private (double Total, double[] PerCore) _cpuSample = (0, []);
     private long _cpuSampledAt;
     private bool _cpuTemperatureUnavailable;
+    private readonly object _clockLock = new();
+    private PerformanceCounter? _performance;
+    private double _baseClockMhz;
+    private readonly object _memoryLock = new();
+    private PerformanceCounter? _cacheBytes;
 
     /// <summary>The processor's fixed details: one WMI query each is the slow part of reading the CPU.</summary>
     public ProcessorDetails ReadProcessor() => new(
@@ -23,7 +29,38 @@ public sealed class WindowsSystemProbe : ISystemProbe, IDisposable
         ParseInt(QueryFirst("Win32_Processor", "NumberOfCores"), Environment.ProcessorCount),
         ParseInt(QueryFirst("Win32_Processor", "NumberOfLogicalProcessors"), Environment.ProcessorCount));
 
-    public double ReadCurrentClockMhz() => ParseDouble(QueryFirst("Win32_Processor", "CurrentClockSpeed"));
+    /// <summary>
+    /// The clock as Task Manager shows it: the processor's performance counter against its base clock. Asking WMI's
+    /// Win32_Processor every few seconds kept the WMI host busy; WMI is only the fallback.
+    /// </summary>
+    public double ReadCurrentClockMhz()
+    {
+        lock (_clockLock)
+        {
+            try
+            {
+                if (_performance is null)
+                {
+                    _performance = new PerformanceCounter("Processor Information", "% Processor Performance", "_Total", readOnly: true);
+                    _baseClockMhz = ParseDouble(QueryFirst("Win32_Processor", "MaxClockSpeed"));
+                    _ = _performance.NextValue();
+                }
+
+                var percent = _performance.NextValue();
+                if (percent > 0 && _baseClockMhz > 0)
+                {
+                    return Math.Round(_baseClockMhz * percent / 100);
+                }
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
+            {
+                _performance?.Dispose();
+                _performance = null;
+            }
+
+            return ParseDouble(QueryFirst("Win32_Processor", "CurrentClockSpeed"));
+        }
+    }
 
     /// <summary>
     /// Total and per-core usage from counters that stay open, so each reading is the average since the one before.
@@ -98,14 +135,38 @@ public sealed class WindowsSystemProbe : ISystemProbe, IDisposable
         return null;
     }
 
+    /// <summary>
+    /// The same figures WMI's Win32_OperatingSystem gives (available memory and the commit limit), read straight from
+    /// Windows: five WMI queries every few seconds were most of the service's processor time.
+    /// </summary>
     public RamInfo ReadMemory()
     {
-        var totalBytes = ParseLong(QueryFirst("Win32_ComputerSystem", "TotalPhysicalMemory"));
-        var freeKb = ParseLong(QueryFirst("Win32_OperatingSystem", "FreePhysicalMemory"));
-        var totalSwapKb = ParseLong(QueryFirst("Win32_OperatingSystem", "TotalVirtualMemorySize"));
-        var freeSwapKb = ParseLong(QueryFirst("Win32_OperatingSystem", "FreeVirtualMemory"));
-        var cachedKb = ParseLong(QueryFirst("Win32_PerfFormattedData_PerfOS_Memory", "CacheBytes")) / 1024;
-        return Measure.Ram(totalBytes, freeKb * 1024, cachedKb * 1024, totalSwapKb * 1024, freeSwapKb * 1024);
+        var status = new MemoryStatusEx { Length = (uint)Marshal.SizeOf<MemoryStatusEx>() };
+        if (!GlobalMemoryStatusEx(ref status))
+        {
+            return new RamInfo();
+        }
+
+        return Measure.Ram((long)status.TotalPhys, (long)status.AvailPhys, ReadCacheBytes(),
+            (long)status.TotalPageFile, (long)status.AvailPageFile);
+    }
+
+    private long ReadCacheBytes()
+    {
+        lock (_memoryLock)
+        {
+            try
+            {
+                _cacheBytes ??= new PerformanceCounter("Memory", "Cache Bytes", readOnly: true);
+                return _cacheBytes.RawValue;
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
+            {
+                _cacheBytes?.Dispose();
+                _cacheBytes = null;
+                return 0;
+            }
+        }
     }
 
     public IEnumerable<DriveInfo> LocalDrives()
@@ -146,6 +207,18 @@ public sealed class WindowsSystemProbe : ISystemProbe, IDisposable
         lock (_cpuLock)
         {
             DisposeCounters();
+        }
+
+        lock (_clockLock)
+        {
+            _performance?.Dispose();
+            _performance = null;
+        }
+
+        lock (_memoryLock)
+        {
+            _cacheBytes?.Dispose();
+            _cacheBytes = null;
         }
     }
 
@@ -233,10 +306,11 @@ public sealed class WindowsSystemProbe : ISystemProbe, IDisposable
         return letters;
     }
 
-    private static IEnumerable<ManagementObject> Query(string className, string scope = @"root\cimv2")
+    private static IEnumerable<ManagementObject> Query(string className, string scope = @"root\cimv2", string properties = "*")
     {
-        using var searcher = new ManagementObjectSearcher(scope, $"SELECT * FROM {className}");
-        foreach (ManagementObject obj in searcher.Get())
+        using var searcher = new ManagementObjectSearcher(scope, $"SELECT {properties} FROM {className}");
+        using var results = searcher.Get();
+        foreach (ManagementObject obj in results)
         {
             yield return obj;
         }
@@ -246,7 +320,7 @@ public sealed class WindowsSystemProbe : ISystemProbe, IDisposable
     {
         try
         {
-            foreach (var obj in Query(className))
+            foreach (var obj in Query(className, properties: property))
             {
                 using (obj)
                 {
@@ -270,4 +344,22 @@ public sealed class WindowsSystemProbe : ISystemProbe, IDisposable
 
     private static double ParseDouble(string? value)
         => double.TryParse(value, out var parsed) ? parsed : 0;
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GlobalMemoryStatusEx(ref MemoryStatusEx buffer);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MemoryStatusEx
+    {
+        public uint Length;
+        public uint MemoryLoad;
+        public ulong TotalPhys;
+        public ulong AvailPhys;
+        public ulong TotalPageFile;
+        public ulong AvailPageFile;
+        public ulong TotalVirtual;
+        public ulong AvailVirtual;
+        public ulong AvailExtendedVirtual;
+    }
 }

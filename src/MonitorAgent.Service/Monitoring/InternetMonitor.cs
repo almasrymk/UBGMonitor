@@ -38,6 +38,9 @@ public sealed class InternetMonitor : BackgroundService, IInternetStatus
     private static readonly TimeSpan FirstSpeedTestDelay = TimeSpan.FromSeconds(20);
     private static readonly TimeSpan RecheckAge = TimeSpan.FromSeconds(3);
 
+    /// <summary>A test fills the line for about 16 seconds, so a shorter gap would leave one running all the time.</summary>
+    private const int MinSpeedTestIntervalSeconds = 300;
+
     private readonly ILocalConfigCache _config;
     private readonly IIssueDataLogger _dataLogger;
     private readonly NotificationTrigger _trigger;
@@ -141,7 +144,7 @@ public sealed class InternetMonitor : BackgroundService, IInternetStatus
             }
 
             var connected = Problem == ConnectivityProblem.None;
-            var interval = general.SpeedTestIntervalSeconds;
+            var interval = general.SpeedTestIntervalSeconds > 0 ? Math.Max(MinSpeedTestIntervalSeconds, general.SpeedTestIntervalSeconds) : 0;
             var now = DateTime.UtcNow;
             if (interval > 0 && connected
                 && now >= (_lastSpeedTestUtc?.AddSeconds(interval) ?? _startedUtc + FirstSpeedTestDelay))
