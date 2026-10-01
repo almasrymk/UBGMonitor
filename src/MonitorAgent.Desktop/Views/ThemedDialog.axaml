@@ -1,0 +1,35 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="MonitorAgent.Desktop.Views.ThemedDialog"
+        Icon="avares://MonitorAgent/Assets/monitoragent.png"
+        Width="440"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        SystemDecorations="None"
+        ShowInTaskbar="False"
+        Background="{DynamicResource SurfaceDarkBrush}"
+        BorderBrush="{DynamicResource BorderColorBrush}"
+        BorderThickness="1">
+    <Grid RowDefinitions="Auto,Auto,Auto">
+        <DockPanel Grid.Row="0" Margin="18,14,10,0" Background="Transparent" PointerPressed="Header_PointerPressed">
+            <Button DockPanel.Dock="Right" Classes="caption close" Width="32" Height="28" Content="✕" FontSize="11"
+                    Click="Close_Click" IsTabStop="False" VerticalAlignment="Top"/>
+            <Grid Width="28" Height="28" VerticalAlignment="Center" Margin="0,0,12,0">
+                <Ellipse x:Name="IconCircle" Fill="{DynamicResource AccentOrangeBrush}"/>
+                <TextBlock x:Name="IconText" Text="!" Foreground="White" FontWeight="Bold" FontSize="16"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Grid>
+            <TextBlock x:Name="TitleText" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"
+                       TextTrimming="CharacterEllipsis"/>
+        </DockPanel>
+
+        <TextBlock x:Name="MessageText" Grid.Row="1" Margin="58,10,22,18" TextWrapping="Wrap"
+                   Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" LineHeight="19"/>
+
+        <Border Grid.Row="2" Background="{DynamicResource SurfaceDarkAltBrush}"
+                BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,1,0,0" Padding="16,12">
+            <StackPanel x:Name="ButtonsPanel" Orientation="Horizontal" HorizontalAlignment="Right"/>
+        </Border>
+    </Grid>
+</Window>

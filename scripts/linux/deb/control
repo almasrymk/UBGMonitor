@@ -1,0 +1,11 @@
+Package: monitoragent
+Version: {VERSION}
+Architecture: {ARCH}
+Maintainer: MonitorAgent <support@ubg.local>
+Section: admin
+Priority: optional
+Depends: libc6, libgcc-s1 | libgcc1, libstdc++6, zlib1g, libssl3t64 | libssl3 | libssl1.1, libicu74 | libicu72 | libicu71 | libicu70 | libicu67 | libicu66 | libicu63, ca-certificates, systemd, libfontconfig1, libx11-6, libice6, libsm6
+Description: MonitorAgent - computer, network and systems monitoring
+ The MonitorAgent background service (systemd unit "monitoragent") that collects
+ the device, network and monitor point readings, and the MonitorAgent desktop
+ app that shows them.

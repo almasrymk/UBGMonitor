@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=MonitorAgent
+Comment=Computer, network and systems monitoring
+Exec=/opt/monitoragent-desktop/MonitorAgent
+Icon=monitoragent
+Terminal=false
+Categories=System;Monitor;
+StartupWMClass=MonitorAgent

@@ -1,0 +1,548 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:MonitorAgent.Desktop.Controls"
+             xmlns:views="using:MonitorAgent.Desktop.Views"
+             xmlns:enums="using:MonitorAgent.UI.Enums"
+             xmlns:mi="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="MonitorAgent.Desktop.Views.DashboardView"
+             Focusable="True">
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="MacAddressBrush" Color="#64B5F6"/>
+        <SolidColorBrush x:Key="ValueYellowBrush" Color="#FFD54F"/>
+        <SolidColorBrush x:Key="ValuePurpleBrush" Color="#BA68C8"/>
+
+        <DataTemplate x:Key="InfoRowTemplate">
+            <Grid Margin="0,0,0,6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="InfoLabel"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="{Binding Label}" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,16,0"/>
+                <TextBlock Grid.Column="1" Classes="value" Text="{Binding Value}" TextWrapping="Wrap"
+                           Classes.copy="{Binding CanCopy}" Classes.hl="{Binding IsHighlighted}"
+                           Classes.os="{Binding IsOsHighlighted}" Classes.mac="{Binding IsMacHighlighted}"/>
+                <Ellipse Grid.Column="2" Width="10" Height="10" Margin="12,0,10,0" VerticalAlignment="Center"
+                         Fill="{Binding Health, Converter={StaticResource SensorHealthToBrushConverter}}"
+                         IsVisible="{Binding ShowHealthDot}"/>
+                <Panel Grid.Column="2" Width="14" Margin="10,0,8,0" VerticalAlignment="Center" IsVisible="{Binding UsesSpecMark}">
+                    <TextBlock Text="✓" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource AccentGreenBrush}"
+                               HorizontalAlignment="Center" ToolTip.Tip="Meets Device Specifications"
+                               IsVisible="{Binding SpecMet, Converter={StaticResource EqualsConverter}, ConverterParameter=True}"/>
+                    <TextBlock Text="✕" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource AccentRedBrush}"
+                               HorizontalAlignment="Center" ToolTip.Tip="Below Device Specifications"
+                               IsVisible="{Binding SpecMet, Converter={StaticResource EqualsConverter}, ConverterParameter=False}"/>
+                </Panel>
+            </Grid>
+        </DataTemplate>
+        <DataTemplate x:Key="NetworkRowTemplate">
+            <Grid Margin="0,0,0,6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="InfoLabel"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="{Binding Label}" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,16,0"/>
+                <TextBlock Grid.Column="1" Classes="value" Text="{Binding Value}" TextWrapping="Wrap"
+                           Classes.copy="{Binding CanCopy}" Classes.hl="{Binding IsHighlighted}" Classes.netmac="{Binding IsMacHighlighted}"/>
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
+    <UserControl.Styles>
+        <Style Selector="TextBlock.value">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.value.copy">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="ToolTip.Tip" Value="Click to copy"/>
+        </Style>
+        <Style Selector="TextBlock.value.hl, TextBlock.value.netmac">
+            <Setter Property="Foreground" Value="{StaticResource MacAddressBrush}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="TextBlock.value.os">
+            <Setter Property="Foreground" Value="{StaticResource ValuePurpleBrush}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="TextBlock.value.mac">
+            <Setter Property="Foreground" Value="{StaticResource ValueYellowBrush}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="TextBlock.spec-ok">
+            <Setter Property="Text" Value="✓"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentGreenBrush}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="8,0,0,0"/>
+        </Style>
+        <Style Selector="TextBlock.spec-bad">
+            <Setter Property="Text" Value="✕"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentRedBrush}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="8,0,0,0"/>
+        </Style>
+        <Style Selector="TextBlock.stat">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+        <Style Selector="TextBlock.legend">
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="Line.legend">
+            <Setter Property="StartPoint" Value="0,0"/>
+            <Setter Property="EndPoint" Value="18,0"/>
+            <Setter Property="StrokeThickness" Value="2"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,6,0"/>
+        </Style>
+        <Style Selector="TextBlock.count">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer x:Name="DashboardScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <ScrollViewer.ContextMenu>
+            <ContextMenu>
+                <MenuItem Header="Reset dashboard layout" Click="ResetLayout_OnClick"/>
+            </ContextMenu>
+        </ScrollViewer.ContextMenu>
+        <Border Padding="10">
+            <controls:DashboardBoard x:Name="Board" Background="Transparent">
+                <!-- CPU -->
+                <Border x:Name="SlotTop0" controls:DashboardBoard.Left="0" controls:DashboardBoard.Top="0">
+                    <Border Classes="card" Tag="Cpu" Margin="0" Padding="12" VerticalAlignment="Top">
+                        <DockPanel LastChildFill="False">
+                            <Grid DockPanel.Dock="Top" Height="200">
+                                <DockPanel>
+                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
+                                        <TextBlock Text="CPU Usage" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AccentGreenBrush}"/>
+                                        <TextBlock Classes="spec-ok" IsVisible="{Binding CpuSpecOk}"/>
+                                        <TextBlock Classes="spec-bad" IsVisible="{Binding CpuSpecBad}"/>
+                                    </StackPanel>
+                                    <controls:ActivityGraphControl DockPanel.Dock="Bottom" Height="28" Margin="0,8,0,0" Unit="%" ShowGrid="False"
+                                                                   ValueLabel="{Binding Cpu.UsagePercent, StringFormat='CPU {0:0}%'}"
+                                                                   Values="{Binding Cpu.History}" Stroke="{DynamicResource AccentGreenBrush}">
+                                        <ToolTip.Tip>
+                                            <StackPanel>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Line Classes="legend" Stroke="{DynamicResource AccentGreenBrush}"/>
+                                                    <TextBlock Classes="legend" Text="{Binding Cpu.UsagePercent, StringFormat='CPU usage: {0:0}%'}"/>
+                                                </StackPanel>
+                                                <TextBlock Classes="legend" Margin="24,3,0,0" FontWeight="Normal">
+                                                    <Run Text="{Binding Cpu.SpeedText, Mode=OneWay, StringFormat='Speed: {0}'}"/>
+                                                    <Run Text="|"/>
+                                                    <Run Text="{Binding Cpu.ProcessCount, Mode=OneWay, StringFormat='Processes: {0}'}"/>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </ToolTip.Tip>
+                                    </controls:ActivityGraphControl>
+                                    <Grid Margin="0,8,0,0" ColumnDefinitions="Auto,*">
+                                        <controls:CircularProgressControl Value="{Binding Cpu.UsagePercent}"
+                                                                          ProgressBrush="{Binding Cpu.UsagePercent, Converter={StaticResource PercentToBrushConverter}}"
+                                                                          Width="90" Height="90"/>
+                                        <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock Classes="stat" Text="{Binding Cpu.UsagePercent, StringFormat='Usage: {0:0}%'}"/>
+                                            <TextBlock Classes="stat" Text="{Binding Cpu.CoresText, StringFormat='Cores: {0}'}"/>
+                                            <TextBlock Classes="stat" Text="{Binding Cpu.SpeedText, StringFormat='Speed: {0}'}"/>
+                                            <TextBlock Classes="stat" Text="{Binding Cpu.Temperature, StringFormat='Temp: {0}'}"/>
+                                            <TextBlock Classes="stat" Text="{Binding Cpu.ProcessCount, StringFormat='Procs: {0}'}"/>
+                                            <TextBlock Classes="stat" Text="{Binding Cpu.Model, StringFormat='Model: {0}'}" TextTrimming="CharacterEllipsis">
+                                                <ToolTip.Tip>
+                                                    <TextBlock Classes="legend" Text="{Binding Cpu.Model}"/>
+                                                </ToolTip.Tip>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </Grid>
+                                </DockPanel>
+                            </Grid>
+                            <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource DividerBrush}"/>
+                            <views:ProcessListCard DockPanel.Dock="Top" VerticalAlignment="Top" Title="Top 5 by CPU"
+                                                   SortBy="{x:Static enums:ProcessSortBy.Cpu}"
+                                                   AccentColor="{DynamicResource AccentGreenBrush}"
+                                                   DataContext="{Binding TopCpuCard}"/>
+                        </DockPanel>
+                    </Border>
+                </Border>
+
+                <!-- RAM -->
+                <Border x:Name="SlotTop1" controls:DashboardBoard.Left="0.25" controls:DashboardBoard.Top="0">
+                    <Border Classes="card" Tag="Ram" Margin="0" Padding="12" VerticalAlignment="Top">
+                        <DockPanel LastChildFill="False">
+                            <Grid DockPanel.Dock="Top" Height="200">
+                                <DockPanel>
+                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
+                                        <TextBlock Text="RAM Usage" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AccentBlueBrush}"/>
+                                        <TextBlock Classes="spec-ok" IsVisible="{Binding RamSpecOk}"/>
+                                        <TextBlock Classes="spec-bad" IsVisible="{Binding RamSpecBad}"/>
+                                    </StackPanel>
+                                    <controls:ActivityGraphControl DockPanel.Dock="Bottom" Height="28" Margin="0,8,0,0" Unit="GB"
+                                                                   Values="{Binding Ram.UsedHistory}" Maximum="{Binding Ram.TotalGb}"
+                                                                   Stroke="{DynamicResource AccentBlueBrush}">
+                                        <ToolTip.Tip>
+                                            <StackPanel>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Line Classes="legend" Stroke="{DynamicResource AccentBlueBrush}"/>
+                                                    <TextBlock Classes="legend">
+                                                        <Run Text="Memory usage: "/>
+                                                        <Run Text="{Binding Ram.UsedGb, Mode=OneWay, StringFormat='{}{0:0.0}'}"/>
+                                                        <Run Text="/"/>
+                                                        <Run Text="{Binding Ram.TotalGb, Mode=OneWay, StringFormat='{}{0:0.0} GB'}"/>
+                                                    </TextBlock>
+                                                </StackPanel>
+                                                <TextBlock Classes="legend" Margin="24,3,0,0" FontWeight="Normal"
+                                                           Text="{Binding Ram.UsagePercent, StringFormat='{}{0:0}% in use'}"/>
+                                            </StackPanel>
+                                        </ToolTip.Tip>
+                                    </controls:ActivityGraphControl>
+                                    <Grid Margin="0,8,0,0" ColumnDefinitions="Auto,*">
+                                        <controls:CircularProgressControl Value="{Binding Ram.UsagePercent}"
+                                                                          ProgressBrush="{Binding Ram.UsagePercent, Converter={StaticResource PercentToBrushConverter}}"
+                                                                          Width="90" Height="90"/>
+                                        <StackPanel Grid.Column="1" Margin="28,0,0,0">
+                                            <TextBlock Classes="stat" Text="{Binding Ram.UsagePercent, StringFormat='Usage: {0:0}%'}"/>
+                                            <TextBlock Classes="stat" Text="{Binding Ram.TotalGb, StringFormat='Total: {0:0.0} GB'}"/>
+                                            <TextBlock Classes="stat" Text="{Binding Ram.UsedGb, StringFormat='Used: {0:0.0} GB'}"/>
+                                            <TextBlock Classes="stat" Text="{Binding Ram.FreeGb, StringFormat='Free: {0:0.0} GB'}"/>
+                                            <TextBlock Classes="stat" Text="{Binding Ram.CachedGb, StringFormat='Cached: {0:0.0} GB'}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </DockPanel>
+                            </Grid>
+                            <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource DividerBrush}"/>
+                            <views:ProcessListCard DockPanel.Dock="Top" VerticalAlignment="Top" Title="Top 5 by RAM"
+                                                   SortBy="{x:Static enums:ProcessSortBy.Ram}"
+                                                   AccentColor="{DynamicResource AccentBlueBrush}"
+                                                   DataContext="{Binding TopRamCard}"/>
+                        </DockPanel>
+                    </Border>
+                </Border>
+
+                <!-- Disk -->
+                <Border x:Name="SlotTop2" controls:DashboardBoard.Left="0.5" controls:DashboardBoard.Top="0">
+                    <Border Classes="card" Tag="Disk" Margin="0" Padding="12" VerticalAlignment="Top">
+                        <DockPanel LastChildFill="False">
+                            <Grid DockPanel.Dock="Top" Height="200">
+                                <DockPanel>
+                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
+                                        <TextBlock Text="Disk Usage" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource ProcessBarDiskBrush}"/>
+                                        <TextBlock Classes="spec-ok" IsVisible="{Binding DiskSpecOk}"/>
+                                        <TextBlock Classes="spec-bad" IsVisible="{Binding DiskSpecBad}"/>
+                                    </StackPanel>
+                                    <controls:ActivityGraphControl DockPanel.Dock="Bottom" Height="28" Margin="0,8,0,0" Unit="%" ShowGrid="False"
+                                                                   ValueLabel="{Binding Disk.ActiveTimePercent, StringFormat='Active {0:0}%'}"
+                                                                   Values="{Binding Disk.ActiveHistory}"
+                                                                   Stroke="{DynamicResource ProcessBarDiskBrush}">
+                                        <ToolTip.Tip>
+                                            <StackPanel>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Line Classes="legend" Stroke="{DynamicResource ProcessBarDiskBrush}"/>
+                                                    <TextBlock Classes="legend" Text="{Binding Disk.ActiveTimePercent, StringFormat='Active time: {0:0}%'}"/>
+                                                </StackPanel>
+                                                <TextBlock Classes="legend" Margin="24,3,0,0" FontWeight="Normal">
+                                                    <Run Text="{Binding Disk.ReadSpeed, Mode=OneWay, StringFormat='Read: {0}'}"/>
+                                                    <Run Text="|"/>
+                                                    <Run Text="{Binding Disk.WriteSpeed, Mode=OneWay, StringFormat='Write: {0}'}"/>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </ToolTip.Tip>
+                                    </controls:ActivityGraphControl>
+                                    <Grid Margin="0,8,0,0" ColumnDefinitions="Auto,*">
+                                        <controls:CircularProgressControl Value="{Binding Disk.ActiveTimePercent}"
+                                                                          ProgressBrush="{Binding Disk.ActiveTimePercent, Converter={StaticResource PercentToBrushConverter}}"
+                                                                          Width="90" Height="90"/>
+                                        <StackPanel Grid.Column="1" Margin="28,0,0,0">
+                                            <TextBlock Classes="stat" Text="{Binding Disk.ActiveTimePercent, StringFormat='Active: {0:0}%'}"/>
+                                            <TextBlock Classes="stat" Text="{Binding Disk.ReadSpeed, StringFormat='Read: {0}'}"/>
+                                            <TextBlock Classes="stat" Text="{Binding Disk.WriteSpeed, StringFormat='Write: {0}'}"/>
+                                            <TextBlock Classes="stat" Text="{Binding Disk.ResponseTime, StringFormat='Response: {0}'}"/>
+                                            <TextBlock Classes="stat" Text="{Binding Disk.UsagePercent, StringFormat='Used: {0:0}%'}"/>
+                                            <TextBlock Classes="stat" Text="{Binding Disk.FreeGb, StringFormat='Free: {0:0.0} GB'}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </DockPanel>
+                            </Grid>
+                            <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource DividerBrush}"/>
+                            <views:ProcessListCard DockPanel.Dock="Top" VerticalAlignment="Top" Title="Top 5 by Disk"
+                                                   SortBy="{x:Static enums:ProcessSortBy.Disk}"
+                                                   AccentColor="{DynamicResource ProcessBarDiskBrush}"
+                                                   DataContext="{Binding TopDiskCard}"/>
+                        </DockPanel>
+                    </Border>
+                </Border>
+
+                <!-- Internet & Network -->
+                <Border x:Name="SlotTop3" controls:DashboardBoard.Left="0.75" controls:DashboardBoard.Top="0">
+                    <Border Classes="card" Tag="Network" Margin="0" Padding="12" VerticalAlignment="Top">
+                        <DockPanel LastChildFill="False">
+                            <Grid DockPanel.Dock="Top" Height="200">
+                                <DockPanel>
+                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
+                                        <TextBlock Text="Internet &amp; Network" FontSize="16" FontWeight="Bold"/>
+                                        <TextBlock Text="Speed" FontSize="11" VerticalAlignment="Center" Margin="12,0,0,0"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}" IsVisible="{Binding ShowInternetSpec}"/>
+                                        <TextBlock Classes="spec-ok" ToolTip.Tip="Internet speed" IsVisible="{Binding InternetSpecOk}"/>
+                                        <TextBlock Classes="spec-bad" ToolTip.Tip="Internet speed" IsVisible="{Binding InternetSpecBad}"/>
+                                        <TextBlock Text="Down" FontSize="11" VerticalAlignment="Center" Margin="10,0,0,0"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}" IsVisible="{Binding ShowDownloadSpec}"/>
+                                        <TextBlock Classes="spec-ok" ToolTip.Tip="Download speed" IsVisible="{Binding DownloadSpecOk}"/>
+                                        <TextBlock Classes="spec-bad" ToolTip.Tip="Download speed" IsVisible="{Binding DownloadSpecBad}"/>
+                                        <TextBlock Text="Up" FontSize="11" VerticalAlignment="Center" Margin="10,0,0,0"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}" IsVisible="{Binding ShowUploadSpec}"/>
+                                        <TextBlock Classes="spec-ok" ToolTip.Tip="Upload speed" IsVisible="{Binding UploadSpecOk}"/>
+                                        <TextBlock Classes="spec-bad" ToolTip.Tip="Upload speed" IsVisible="{Binding UploadSpecBad}"/>
+                                    </StackPanel>
+                                    <controls:ActivityGraphControl DockPanel.Dock="Bottom" Height="28" Margin="0,8,0,0" Unit="Kbps"
+                                                                   FillArea="False" ShowGrid="False"
+                                                                   Values="{Binding Network.UploadHistory}" SecondaryValues="{Binding Network.History}"
+                                                                   Stroke="{DynamicResource TextPrimaryBrush}">
+                                        <controls:ActivityGraphControl.ValueLabel>
+                                            <MultiBinding StringFormat="↑ {0}   ↓ {1}">
+                                                <Binding Path="Network.Upload"/>
+                                                <Binding Path="Network.Download"/>
+                                            </MultiBinding>
+                                        </controls:ActivityGraphControl.ValueLabel>
+                                        <ToolTip.Tip>
+                                            <StackPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                                                    <Line Classes="legend" Stroke="{DynamicResource TextPrimaryBrush}"/>
+                                                    <TextBlock Classes="legend">
+                                                        <Run Text="Send: "/>
+                                                        <Run Text="{Binding Network.Upload, Mode=OneWay}"/>
+                                                    </TextBlock>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Line Classes="legend" Stroke="{DynamicResource TextPrimaryBrush}" StrokeDashArray="2,1"/>
+                                                    <TextBlock Classes="legend">
+                                                        <Run Text="Receive: "/>
+                                                        <Run Text="{Binding Network.Download, Mode=OneWay}"/>
+                                                    </TextBlock>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </ToolTip.Tip>
+                                    </controls:ActivityGraphControl>
+                                    <Grid Margin="0,4,0,0" ColumnDefinitions="Auto,*">
+                                        <controls:GaugeControl Grid.Column="0" Width="168" Height="132"
+                                                               Value="{Binding Network.DownloadMbps}"
+                                                               Maximum="{Binding Network.GaugeMaximum}"
+                                                               Unit="Mbps"
+                                                               Subtitle="{Binding Network.ThroughputText}"
+                                                               NeedleBrush="{DynamicResource TextPrimaryBrush}"
+                                                               VerticalAlignment="Center"/>
+                                        <StackPanel Grid.Column="1" Margin="28,4,0,0" VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                                                <ToolTip.Tip>
+                                                    <TextBlock Classes="legend" Text="{Binding Network.ConnectionToolTip}"/>
+                                                </ToolTip.Tip>
+                                                <mi:MaterialIcon Kind="{Binding Network.ConnectionIcon, Converter={StaticResource GlyphToIcon}}"
+                                                                 Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,6,0"
+                                                                 Foreground="{DynamicResource AccentBlueBrush}"/>
+                                                <TextBlock FontSize="12" FontWeight="SemiBold" Text="{Binding Network.ConnectionText}"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                            </StackPanel>
+                                            <TextBlock FontSize="12" Margin="0,0,0,2">
+                                                <Run Text="↓ Download: " Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                                <Run Text="{Binding Network.Download, Mode=OneWay}" Foreground="{DynamicResource AccentGreenBrush}" FontWeight="SemiBold"/>
+                                            </TextBlock>
+                                            <TextBlock FontSize="12" Margin="0,0,0,2">
+                                                <Run Text="↑ Upload: " Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                                <Run Text="{Binding Network.Upload, Mode=OneWay}" Foreground="{DynamicResource AccentYellowBrush}" FontWeight="SemiBold"/>
+                                            </TextBlock>
+                                            <TextBlock FontSize="12" Margin="0,0,0,2" TextTrimming="CharacterEllipsis">
+                                                <ToolTip.Tip>
+                                                    <TextBlock Classes="legend" Text="{Binding Network.SpeedTestToolTip}"/>
+                                                </ToolTip.Tip>
+                                                <Run Text="Speed test: " Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                                <Run Text="{Binding Network.SpeedTestText, Mode=OneWay}" FontWeight="SemiBold"/>
+                                            </TextBlock>
+                                            <TextBlock FontSize="12" Margin="0,0,0,2" Cursor="Hand" ToolTip.Tip="Click to copy" Tag="PublicIp"
+                                                       PointerReleased="CopyNetworkValue_PointerReleased">
+                                                <Run Text="Public IP: " Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                                <Run Text="{Binding Network.PublicIp, Mode=OneWay}" Foreground="{StaticResource MacAddressBrush}" FontWeight="SemiBold"/>
+                                            </TextBlock>
+                                            <TextBlock FontSize="12" Margin="0,0,0,2" Cursor="Hand" ToolTip.Tip="Click to copy" Tag="LocalIp"
+                                                       PointerReleased="CopyNetworkValue_PointerReleased">
+                                                <Run Text="Local IP: " Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                                <Run Text="{Binding Network.IpAddress, Mode=OneWay}" Foreground="{StaticResource MacAddressBrush}" FontWeight="SemiBold"/>
+                                            </TextBlock>
+                                            <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12">
+                                                <Run Text="Ping:"/>
+                                                <Run Text="{Binding Network.Ping, Mode=OneWay}"/>
+                                                <Run Text=" | Loss:"/>
+                                                <Run Text="{Binding Network.PacketLoss, Mode=OneWay}"/>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </Grid>
+                                </DockPanel>
+                            </Grid>
+                            <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource DividerBrush}"/>
+                            <views:ProcessListCard DockPanel.Dock="Top" VerticalAlignment="Top" Title="Top 5 by Network"
+                                                   SortBy="{x:Static enums:ProcessSortBy.Network}"
+                                                   AccentColor="{DynamicResource TextPrimaryBrush}"
+                                                   DataContext="{Binding TopNetworkCard}"/>
+                        </DockPanel>
+                    </Border>
+                </Border>
+
+                <!-- Disk status -->
+                <Border x:Name="SlotBottom0" controls:DashboardBoard.Left="0" controls:DashboardBoard.WidthRatio="0.5" controls:DashboardBoard.Top="1">
+                    <Border Classes="card" Tag="DiskStatus" Margin="0">
+                        <DockPanel>
+                            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+                                <TextBlock Text="Disk Status" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource ProcessBarDiskBrush}"/>
+                                <TextBlock Classes="spec-ok" IsVisible="{Binding DiskSpecOk}"/>
+                                <TextBlock Classes="spec-bad" IsVisible="{Binding DiskSpecBad}"/>
+                            </StackPanel>
+                            <controls:AppDataGrid x:Name="DiskPartitions" ItemsSource="{Binding Disk.Partitions}"
+                                                  SelectedItem="{Binding Disk.SelectedPartition}" Cursor="Hand"
+                                                  HorizontalScrollBarVisibility="Auto"
+                                                  DoubleTapped="DiskPartitions_DoubleTapped"
+                                                  PointerExited="DiskPartitions_PointerExited">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Drive" Binding="{Binding Drive}" Width="55"/>
+                                    <DataGridTextColumn Header="Label" Binding="{Binding Label}" Width="80"/>
+                                    <DataGridTextColumn Header="FS" Binding="{Binding FileSystem}" Width="55"/>
+                                    <DataGridTextColumn Header="Total" Binding="{Binding Total}" Width="70"/>
+                                    <DataGridTextColumn Header="Used" Binding="{Binding Used}" Width="70"/>
+                                    <DataGridTextColumn Header="Free" Binding="{Binding Free}" Width="70"/>
+                                    <DataGridTemplateColumn Header="Usage" Width="120">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <ProgressBar Minimum="0" Maximum="100" Value="{Binding UsagePercent}" Margin="6,0"
+                                                             VerticalAlignment="Center"
+                                                             Foreground="{Binding UsagePercent, Converter={StaticResource PercentToBrushConverter}}"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTemplateColumn Header="Status" Width="*">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="6,0">
+                                                    <Ellipse Width="8" Height="8" Margin="0,0,6,0"
+                                                             Fill="{Binding Status, Converter={StaticResource HealthToBrushConverter}}"/>
+                                                    <TextBlock Text="{Binding Status}"/>
+                                                    <TextBlock Text="{Binding UsagePercent, StringFormat=' ({0:0}%)'}" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </controls:AppDataGrid>
+                        </DockPanel>
+                    </Border>
+                </Border>
+
+                <!-- Monitor points summary -->
+                <Border x:Name="SlotBottom1" controls:DashboardBoard.Left="0" controls:DashboardBoard.WidthRatio="0.5" controls:DashboardBoard.Top="2">
+                    <Border Classes="card" Tag="MonitorSummary" Margin="0">
+                        <StackPanel>
+                            <TextBlock Text="Monitor Points Summary" FontSize="14" FontWeight="Bold" Margin="0,0,0,12"/>
+                            <DockPanel LastChildFill="False">
+                                <Button DockPanel.Dock="Right" Classes="footer" Content="View All Monitor Points →"
+                                        Command="{Binding ViewAllMonitorPointsCommand}"/>
+                                <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,24,0" VerticalAlignment="Center">
+                                        <Ellipse Width="10" Height="10" Fill="{DynamicResource AccentRedBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding CriticalCount, StringFormat='Critical: {0}'}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,24,0" VerticalAlignment="Center">
+                                        <Ellipse Width="10" Height="10" Fill="{DynamicResource AccentYellowBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding WarningCount, StringFormat='Warning: {0}'}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,24,0" VerticalAlignment="Center">
+                                        <Ellipse Width="10" Height="10" Fill="{DynamicResource AccentGreenBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding HealthyCount, StringFormat='Healthy: {0}'}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Ellipse Width="10" Height="10" Fill="{DynamicResource AccentGrayBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding UnknownCount, StringFormat='Unknown: {0}'}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </WrapPanel>
+                            </DockPanel>
+                        </StackPanel>
+                    </Border>
+                </Border>
+
+                <!-- Hardware & OS -->
+                <Border x:Name="SlotBottom2" controls:DashboardBoard.Left="0.5" controls:DashboardBoard.WidthRatio="0.5" controls:DashboardBoard.Top="1">
+                    <Border Classes="card" Tag="HardwareOs" HorizontalAlignment="Stretch" Padding="10,15" Margin="0">
+                        <StackPanel Grid.IsSharedSizeScope="True">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                <TextBlock Text="Hardware &amp; OS" FontSize="16" FontWeight="SemiBold"/>
+                                <TextBlock Classes="spec-ok" ToolTip.Tip="Hardware and OS meet Device Specifications" IsVisible="{Binding HardwareOsSpecOk}"/>
+                                <TextBlock Classes="spec-bad" ToolTip.Tip="Hardware or OS is below Device Specifications" IsVisible="{Binding HardwareOsSpecBad}"/>
+                            </StackPanel>
+
+                            <Expander Classes="section" IsExpanded="{Binding HardwareOs.IsLevel1Expanded, Mode=TwoWay}">
+                                <Expander.Header>
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="Basic Hardware" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource AccentGreenBrush}"/>
+                                        <TextBlock Grid.Column="1" Classes="count" Text="{Binding HardwareOs.Level1Count, StringFormat='[{0}]'}"
+                                                   IsVisible="{Binding HardwareOs.Level1Count, Converter={StaticResource NotEqualsConverter}, ConverterParameter=0}"/>
+                                    </Grid>
+                                </Expander.Header>
+                                <ItemsControl ItemsSource="{Binding HardwareOs.Level1Rows}" ItemTemplate="{StaticResource InfoRowTemplate}"/>
+                            </Expander>
+
+                            <Border Height="1" Background="{DynamicResource DividerBrush}" Margin="0,8"/>
+
+                            <Expander Classes="section" IsExpanded="{Binding HardwareOs.IsLevel2Expanded, Mode=TwoWay}">
+                                <Expander.Header>
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="Extended Hardware" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource AccentYellowBrush}"/>
+                                        <TextBlock Grid.Column="1" Classes="count" Text="{Binding HardwareOs.Level2Count, StringFormat='[{0}]'}"
+                                                   IsVisible="{Binding HardwareOs.Level2Count, Converter={StaticResource NotEqualsConverter}, ConverterParameter=0}"/>
+                                    </Grid>
+                                </Expander.Header>
+                                <ItemsControl ItemsSource="{Binding HardwareOs.Level2Rows}" ItemTemplate="{StaticResource InfoRowTemplate}"/>
+                            </Expander>
+
+                            <Border Height="1" Background="{DynamicResource DividerBrush}" Margin="0,8"/>
+
+                            <Expander Classes="section" IsExpanded="{Binding HardwareOs.IsLevel5Expanded, Mode=TwoWay}">
+                                <Expander.Header>
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="Network" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource AccentBlueBrush}"/>
+                                        <TextBlock Grid.Column="1" Classes="count" Text="{Binding HardwareOs.Level5Count, StringFormat='[{0}]'}"
+                                                   IsVisible="{Binding HardwareOs.Level5Count, Converter={StaticResource NotEqualsConverter}, ConverterParameter=0}"/>
+                                    </Grid>
+                                </Expander.Header>
+                                <ItemsControl ItemsSource="{Binding HardwareOs.Level5Rows}" ItemTemplate="{StaticResource NetworkRowTemplate}"/>
+                            </Expander>
+
+                            <Border Height="1" Background="{DynamicResource DividerBrush}" Margin="0,8"/>
+
+                            <Expander Classes="section" IsExpanded="{Binding HardwareOs.IsLevel4Expanded, Mode=TwoWay}">
+                                <Expander.Header>
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="Detailed Info" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource ProcessBarNetworkBrush}"/>
+                                        <TextBlock Grid.Column="1" Classes="count" Text="{Binding HardwareOs.Level4Count, StringFormat='[{0}]'}"
+                                                   IsVisible="{Binding HardwareOs.Level4Count, Converter={StaticResource NotEqualsConverter}, ConverterParameter=0}"/>
+                                    </Grid>
+                                </Expander.Header>
+                                <ItemsControl ItemsSource="{Binding HardwareOs.Level4Rows}" ItemTemplate="{StaticResource InfoRowTemplate}"/>
+                            </Expander>
+
+                            <Border Height="1" Background="{DynamicResource DividerBrush}" Margin="0,8"/>
+
+                            <Expander Classes="section" IsExpanded="{Binding HardwareOs.IsLevel3Expanded, Mode=TwoWay}">
+                                <Expander.Header>
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="Live Sensors" FontSize="14" FontWeight="SemiBold"/>
+                                        <TextBlock Grid.Column="1" Classes="count" Text="{Binding HardwareOs.Level3Count, StringFormat='[{0}]'}"
+                                                   IsVisible="{Binding HardwareOs.Level3Count, Converter={StaticResource NotEqualsConverter}, ConverterParameter=0}"/>
+                                    </Grid>
+                                </Expander.Header>
+                                <ItemsControl ItemsSource="{Binding HardwareOs.Level3Rows}" ItemTemplate="{StaticResource InfoRowTemplate}"/>
+                            </Expander>
+                        </StackPanel>
+                    </Border>
+                </Border>
+            </controls:DashboardBoard>
+        </Border>
+    </ScrollViewer>
+</UserControl>

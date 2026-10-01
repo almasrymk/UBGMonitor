@@ -1,0 +1,606 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:MonitorAgent.Desktop.Controls"
+             xmlns:mi="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="MonitorAgent.Desktop.Views.SettingsView">
+    <UserControl.Resources>
+        <!-- Which service this app shows; used in the General section and in the "not answering" banner. -->
+        <DataTemplate x:Key="ConnectFields">
+            <StackPanel>
+                <Grid ColumnDefinitions="*,28,*">
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Classes="flabel" Text="This app connects to"/>
+                        <TextBox Classes="field wide" Text="{Binding ApiBaseUrl}"
+                                 ToolTip.Tip="For example 127.0.0.1:5050, 192.168.1.10:5050 or http://pc-name:5050"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Classes="flabel" Text="Access key of that service (if it has one)"/>
+                        <TextBox Classes="field wide" Text="{Binding ClientAccessKey}"/>
+                    </StackPanel>
+                </Grid>
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="Connect" Command="{Binding ConnectCommand}" Classes="footer" Margin="0" MinWidth="90"/>
+                    <TextBlock Classes="connmsg" Classes.ok="{Binding IsConnectionOk}" Text="{Binding ConnectionMessage}"
+                               VerticalAlignment="Center" TextWrapping="Wrap" Margin="12,0,0,0" MaxWidth="700"/>
+                </StackPanel>
+            </StackPanel>
+        </DataTemplate>
+        <DataTemplate x:Key="AlertItem">
+            <StackPanel Orientation="Horizontal">
+                <Ellipse Width="10" Height="10" Margin="0,0,8,0" VerticalAlignment="Center" Fill="{Binding Brush}"/>
+                <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
+            </StackPanel>
+        </DataTemplate>
+    </UserControl.Resources>
+    <UserControl.Styles>
+        <Style Selector="TextBlock.flabel">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+        </Style>
+        <Style Selector="TextBlock.head">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+        <Style Selector="TextBlock.connmsg">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.connmsg.ok">
+            <Setter Property="Foreground" Value="{DynamicResource AccentGreenBrush}"/>
+        </Style>
+        <Style Selector="TextBox.wide, ComboBox.wide">
+            <Setter Property="MaxWidth" Value="10000"/>
+        </Style>
+        <Style Selector="TextBox.spec, ComboBox.spec">
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="MaxWidth" Value="10000"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="ComboBox.cell">
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="Padding" Value="4,2"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="StackPanel.spec">
+            <Setter Property="Margin" Value="0,0,0,16"/>
+        </Style>
+
+        <!-- Settings side tabs. -->
+        <Style Selector="Button.stab">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Name="Bd" Background="Transparent" BorderBrush="Transparent" BorderThickness="3,0,0,0"
+                            CornerRadius="4" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter Content="{TemplateBinding Content}" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="Button.stab:pointerover">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+        <Style Selector="Button.stab.selected">
+            <Setter Property="Foreground" Value="{DynamicResource AccentGreenBrush}"/>
+        </Style>
+        <Style Selector="Button.stab.selected /template/ Border#Bd">
+            <Setter Property="Background" Value="{DynamicResource SelectedBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentGreenBrush}"/>
+        </Style>
+
+        <!-- On / Off switch. -->
+        <Style Selector="ToggleButton.onoff">
+            <Setter Property="Width" Value="48"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Margin" Value="0,0,0,14"/>
+            <Setter Property="Content" Value="Off"/>
+            <Setter Property="Background" Value="{DynamicResource ButtonBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Name="Track" Background="{TemplateBinding Background}" BorderBrush="{DynamicResource BorderColorBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="12">
+                        <Panel>
+                            <TextBlock Name="Label" Text="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}"
+                                       FontSize="9.5" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Right"
+                                       Margin="0,0,7,0" IsHitTestVisible="False"/>
+                            <Border Name="Knob" Width="17" Height="17" CornerRadius="8.5" Background="{TemplateBinding BorderBrush}"
+                                    HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0"
+                                    BoxShadow="0 1 4 0 #47000000" IsHitTestVisible="False"/>
+                        </Panel>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="ToggleButton.onoff:checked">
+            <Setter Property="Content" Value="On"/>
+            <Setter Property="Background" Value="{DynamicResource AccentGreenBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+        <Style Selector="ToggleButton.onoff:checked /template/ TextBlock#Label">
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="Margin" Value="7,0,0,0"/>
+        </Style>
+        <Style Selector="ToggleButton.onoff:checked /template/ Border#Knob">
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="Margin" Value="0,0,3,0"/>
+        </Style>
+        <Style Selector="ToggleButton.onoff:disabled /template/ Border#Track">
+            <Setter Property="Opacity" Value="0.55"/>
+        </Style>
+        <Style Selector="ToggleButton.onoff.theme">
+            <Setter Property="Width" Value="56"/>
+            <Setter Property="Content" Value="Dark"/>
+            <Setter Property="Background" Value="#1E1E1E"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#F3F3F3"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        <Style Selector="ToggleButton.onoff.theme:checked">
+            <Setter Property="Content" Value="Light"/>
+            <Setter Property="Background" Value="#F3F3F3"/>
+            <Setter Property="Foreground" Value="#1A1A1A"/>
+            <Setter Property="BorderBrush" Value="#1E1E1E"/>
+        </Style>
+
+        <!-- Delete row button. -->
+        <Style Selector="Button.bin">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Width" Value="28"/>
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Name="Bg" Background="Transparent" CornerRadius="5">
+                        <Path Name="Bin" Width="13" Height="15" Stretch="Uniform" Fill="{DynamicResource TextSecondaryBrush}"
+                              Data="M 5,0 L 9,0 L 9,1.5 L 14,1.5 L 14,3.5 L 0,3.5 L 0,1.5 L 5,1.5 Z M 1.2,4.5 L 12.8,4.5 L 12,16 L 2,16 Z M 4,6.5 L 4,14 L 5.5,14 L 5.5,6.5 Z M 6.25,6.5 L 6.25,14 L 7.75,14 L 7.75,6.5 Z M 8.5,6.5 L 8.5,14 L 10,14 L 10,6.5 Z"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="Button.bin:pointerover /template/ Border#Bg">
+            <Setter Property="Background" Value="{DynamicResource HoverBrush}"/>
+        </Style>
+        <Style Selector="Button.bin:pointerover /template/ Path#Bin">
+            <Setter Property="Fill" Value="{DynamicResource AccentRedBrush}"/>
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel DataContext="{Binding Settings}" Margin="8,4,16,12">
+        <Border DockPanel.Dock="Left" Width="188"
+                Background="{DynamicResource SurfaceDarkBrush}"
+                BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="0,0,1,0"
+                Margin="0,0,12,0" Padding="8">
+            <StackPanel>
+                <Button Classes="stab" Content="General"
+                        Classes.selected="{Binding SelectedSection, Converter={StaticResource EqualsConverter}, ConverterParameter=General}"
+                        Command="{Binding SelectSectionCommand}" CommandParameter="General"/>
+                <Button Classes="stab" Content="Monitor Points"
+                        Classes.selected="{Binding SelectedSection, Converter={StaticResource EqualsConverter}, ConverterParameter='Monitor Points'}"
+                        Command="{Binding SelectSectionCommand}" CommandParameter="Monitor Points"/>
+                <Button Classes="stab" Content="Device Specifications"
+                        Classes.selected="{Binding SelectedSection, Converter={StaticResource EqualsConverter}, ConverterParameter=Conditions}"
+                        Command="{Binding SelectSectionCommand}" CommandParameter="Conditions"/>
+            </StackPanel>
+        </Border>
+
+        <Border DockPanel.Dock="Bottom" IsVisible="{Binding IsLoaded}"
+                Background="{DynamicResource SurfaceDarkAltBrush}"
+                BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="0,1,0,0"
+                Padding="12,10">
+            <StackPanel Orientation="Horizontal">
+                <Button Content="Save" Command="{Binding SaveCommand}" Classes="footer" Margin="0,0,8,0" Padding="18,6"
+                        ToolTip.Tip="Save the changes in this tab" ToolTip.ShowOnDisabled="True"/>
+                <Button Content="Reset" Click="Reset_Click" Classes="footer" Margin="0" Padding="18,6"
+                        IsEnabled="{Binding HasChanges}" ToolTip.Tip="Undo the unsaved changes in this tab"
+                        ToolTip.ShowOnDisabled="True"/>
+                <Panel Width="22" Height="22" Margin="12,0,0,0" VerticalAlignment="Center" ToolTip.Tip="Saved"
+                       IsVisible="{Binding IsSavedBadgeVisible}">
+                    <Ellipse Fill="{DynamicResource AccentGreenBrush}"/>
+                    <Path Data="M 5,11.5 L 9.5,16 L 17,7" Stroke="White" StrokeThickness="2.4"
+                          StrokeLineCap="Round" StrokeJoin="Round"/>
+                </Panel>
+                <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <Border DockPanel.Dock="Top" Margin="12,8,12,0" Padding="12,10" CornerRadius="4"
+                Background="{DynamicResource SurfaceDarkAltBrush}"
+                BorderBrush="{DynamicResource AccentRedBrush}" BorderThickness="1"
+                IsVisible="{Binding !IsLoaded}">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <mi:MaterialIcon Kind="AlertOutline" Width="18" Height="18" Foreground="{DynamicResource AccentRedBrush}"
+                                     VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <TextBlock VerticalAlignment="Center" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}"
+                               Text="The Agent service is not answering. Settings are loaded from and saved by the service, so they will appear when it answers."/>
+                </StackPanel>
+                <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,10,0,8"
+                           Text="If the service is on another computer, or on another port, type its address and connect:"/>
+                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource ConnectFields}"/>
+            </StackPanel>
+        </Border>
+
+        <Panel IsVisible="{Binding IsLoaded}">
+            <!-- General -->
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          IsVisible="{Binding SelectedSection, Converter={StaticResource EqualsConverter}, ConverterParameter=General}">
+                <StackPanel Margin="12,8,12,12">
+                    <TextBlock FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,6">
+                        <Run Text="Settings ›" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <Run Text="General"/>
+                    </TextBlock>
+                    <TextBlock Text="Agent display and connection preferences." Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,18" TextWrapping="Wrap"/>
+
+                    <Grid ColumnDefinitions="*,28,*">
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Classes="flabel" Text="Device name"/>
+                            <TextBox Classes="field wide" Text="{Binding MachineName}"/>
+                            <TextBlock Classes="flabel" Text="Service (seconds)"/>
+                            <TextBox Classes="field wide" Text="{Binding RefreshInterval}"/>
+                            <TextBlock Classes="flabel" Text="Internet &amp; Network (seconds)"/>
+                            <TextBox Classes="field wide" Text="{Binding InternetIntervalSeconds}"/>
+                            <TextBlock Classes="flabel" Text="Internet speed test (seconds, 0 = off)"/>
+                            <TextBox Classes="field wide" Text="{Binding SpeedTestIntervalSeconds}"/>
+                            <TextBlock Classes="flabel" Text="CPU (seconds)"/>
+                            <TextBox Classes="field wide" Text="{Binding CpuIntervalSeconds}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Classes="flabel" Text="RAM (seconds)"/>
+                            <TextBox Classes="field wide" Text="{Binding RamIntervalSeconds}"/>
+                            <TextBlock Classes="flabel" Text="Disk (seconds)"/>
+                            <TextBox Classes="field wide" Text="{Binding DiskIntervalSeconds}"/>
+                            <TextBlock Classes="flabel" Text="Hardware &amp; OS (seconds)"/>
+                            <TextBox Classes="field wide" Text="{Binding HardwareOsIntervalSeconds}"/>
+                            <TextBlock Classes="flabel" Text="Keep data for"/>
+                            <ComboBox Classes="field wide" Margin="0,0,0,4" ItemsSource="{Binding RetentionOptions}"
+                                      SelectedValueBinding="{Binding Days}" DisplayMemberBinding="{Binding Label}"
+                                      SelectedValue="{Binding DataRetentionDays}"/>
+                            <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,14"
+                                       Text="Older logs, saved data and report history are deleted permanently."/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid Margin="0,4,0,0" ColumnDefinitions="*,28,*">
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Classes="flabel" Text="Theme"/>
+                            <ToggleButton Classes="onoff theme" IsChecked="{Binding IsLightTheme}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Classes="flabel" Text="Notifications"/>
+                            <ToggleButton Classes="onoff" IsChecked="{Binding NotificationsEnabled}"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <TextBlock Text="Service network access" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,22,0,2"/>
+                    <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,12"
+                               Text="Where the Agent service answers. To watch this computer from another computer, listen on all network cards or on one IP, and set an access key. Saved with the other General settings."/>
+                    <Grid ColumnDefinitions="*,28,*">
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Classes="flabel" Text="Service listens on"/>
+                            <ComboBox Classes="field wide" ItemsSource="{Binding ListenAddressOptions}"
+                                      SelectedValueBinding="{Binding Address}" DisplayMemberBinding="{Binding Label}"
+                                      SelectedValue="{Binding ServiceListenAddress}"/>
+                            <TextBlock Classes="flabel" Text="Service port"/>
+                            <TextBox Classes="field wide" Text="{Binding ServicePort}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Classes="flabel" Text="Access key for other computers"/>
+                            <TextBox Classes="field wide" Text="{Binding RemoteAccessKey}"/>
+                            <TextBlock Foreground="{DynamicResource AccentYellowBrush}" TextWrapping="Wrap" Margin="0,-8,0,14"
+                                       IsVisible="{Binding IsServiceOpenWithoutKey}"
+                                       Text="Without an access key, any computer on the network can read this computer's data and change its settings."/>
+                        </StackPanel>
+                    </Grid>
+
+                    <TextBlock Text="This app" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,10,0,2"/>
+                    <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,12"
+                               Text="The Agent service this app shows: the one on this computer (127.0.0.1) or one on another computer. Kept by this app only."/>
+                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource ConnectFields}"/>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Monitor points -->
+            <Grid Margin="12,8,4,0" RowDefinitions="Auto,*"
+                  IsVisible="{Binding SelectedSection, Converter={StaticResource EqualsConverter}, ConverterParameter='Monitor Points'}">
+                <StackPanel Grid.Row="0" Margin="0,0,12,12">
+                    <TextBlock FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,6">
+                        <Run Text="Settings ›" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <Run Text="Monitor Points"/>
+                    </TextBlock>
+                    <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,10"
+                               Text="Points are stored in the service appsettings.json. Edit a cell, then Save."/>
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Add" Command="{Binding AddMonitorPointCommand}" Classes="footer" Margin="0" Padding="18,6"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <controls:AppDataGrid Grid.Row="1" ItemsSource="{Binding MonitorPoints}" SelectedItem="{Binding SelectedMonitorPoint}"
+                                      IsReadOnly="False" Margin="0,0,12,8">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Id" Binding="{Binding MonitorPointId}" Width="72"/>
+                        <DataGridTextColumn Header="Name" Binding="{Binding DisplayName}" Width="2*" MinWidth="220"/>
+                        <DataGridTemplateColumn Header="Type" Width="180">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding TypeLabel}" VerticalAlignment="Center" Margin="6,0"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                            <DataGridTemplateColumn.CellEditingTemplate>
+                                <DataTemplate>
+                                    <ComboBox Classes="cell" ItemsSource="{Binding $parent[DataGrid].DataContext.MonitorPointTypes}"
+                                              SelectedValueBinding="{Binding Type}" DisplayMemberBinding="{Binding Label}"
+                                              SelectedValue="{Binding Type}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellEditingTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Device" Width="150">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Margin="6,0" IsVisible="{Binding IsDevice}">
+                                        <mi:MaterialIcon Kind="{Binding DeviceGlyph, Converter={StaticResource GlyphToIcon}}"
+                                                         Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding DeviceKindLabel}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                            <DataGridTemplateColumn.CellEditingTemplate>
+                                <DataTemplate>
+                                    <ComboBox Classes="cell" ItemsSource="{Binding $parent[DataGrid].DataContext.DeviceKinds}"
+                                              SelectedValueBinding="{Binding Kind}" SelectedValue="{Binding DeviceKind}"
+                                              IsVisible="{Binding IsDevice}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <mi:MaterialIcon Kind="{Binding Glyph, Converter={StaticResource GlyphToIcon}}"
+                                                                     Width="14" Height="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellEditingTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Application" Width="220">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Margin="6,0" IsVisible="{Binding IsApplication}">
+                                        <Image Width="20" Height="20" Margin="0,0,8,0" Stretch="Uniform" VerticalAlignment="Center"
+                                               Source="{Binding Icon, Converter={StaticResource IconToImageConverter}}"/>
+                                        <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                            <DataGridTemplateColumn.CellEditingTemplate>
+                                <DataTemplate>
+                                    <ComboBox Classes="cell" ItemsSource="{Binding $parent[DataGrid].DataContext.InstalledApplications}"
+                                              SelectedValueBinding="{Binding ExecutablePath}" SelectedValue="{Binding ApplicationPath}"
+                                              IsVisible="{Binding IsApplication}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Image Width="16" Height="16" Margin="0,0,6,0"
+                                                           Source="{Binding IconBase64, Converter={StaticResource IconToImageConverter}}"/>
+                                                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellEditingTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Database" Width="170">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Click="ConfigureDatabase_Click" Classes="footer" Margin="4,0" Padding="8,4"
+                                            HorizontalAlignment="Left" IsVisible="{Binding IsDatabase}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Image Width="18" Height="18" Margin="0,0,6,0" Stretch="Uniform" VerticalAlignment="Center"
+                                                   Source="{Binding DatabaseLogo, Converter={StaticResource IconToImageConverter}}"/>
+                                            <TextBlock Text="{Binding DatabaseSummary}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Address" Width="180">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Margin="6,0">
+                                        <Image Classes="logo" Source="{Binding Icon, Converter={StaticResource IconToImageConverter}}"/>
+                                        <TextBlock Text="{Binding Address}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                            <DataGridTemplateColumn.CellEditingTemplate>
+                                <DataTemplate>
+                                    <TextBox Text="{Binding Address}" BorderThickness="0" Background="Transparent"
+                                             VerticalContentAlignment="Center"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellEditingTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Enabled" Width="80" SortMemberPath="Enabled">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <CheckBox Classes="grid" ToolTip.Tip="Check this monitor point" IsChecked="{Binding Enabled}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Shortcut" Width="90" SortMemberPath="ShowInShortcut">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <CheckBox Classes="grid" ToolTip.Tip="Show this monitor point on the dashboard" IsChecked="{Binding ShowInShortcut}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Alert" Width="150">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <ComboBox Classes="cell" Margin="4,0" ItemsSource="{Binding $parent[DataGrid].DataContext.AlertOptions}"
+                                              SelectedValueBinding="{Binding Alert}" SelectedValue="{Binding Alert}"
+                                              ItemTemplate="{StaticResource AlertItem}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="Interval" Binding="{Binding IntervalSeconds}" Width="80"/>
+                        <DataGridTemplateColumn Header="" Width="44" CanUserResize="False" CanUserSort="False">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Classes="bin" ToolTip.Tip="Delete this monitor point"
+                                            Command="{Binding $parent[DataGrid].DataContext.RemoveMonitorPointCommand}"
+                                            CommandParameter="{Binding}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </controls:AppDataGrid>
+            </Grid>
+
+            <!-- Device specifications -->
+            <Grid Margin="12,8,4,0" RowDefinitions="Auto,*"
+                  IsVisible="{Binding SelectedSection, Converter={StaticResource EqualsConverter}, ConverterParameter=Conditions}">
+                <StackPanel Grid.Row="0" Margin="0,0,12,12">
+                    <TextBlock FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,6">
+                        <Run Text="Settings ›" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <Run Text="Device Specifications"/>
+                    </TextBlock>
+                    <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}"
+                               Text="The left column is the minimum. Warning (yellow) and Problem (red) are percents. Alert sets the notification level. Leave 0 to skip a check."/>
+                </StackPanel>
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <Grid Margin="0,0,12,12" ColumnDefinitions="2*,24,*,12,*,24,130" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Minimum" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Left" Margin="0,0,0,14"/>
+
+                        <StackPanel Grid.Row="2" Grid.Column="6" Classes="spec">
+                            <TextBlock Classes="head" Text="Alert"/>
+                            <TextBlock Classes="flabel" Text=" "/>
+                            <ComboBox Classes="field spec" ItemsSource="{Binding SpecAlertOptions}" SelectedValueBinding="{Binding Alert}"
+                                      SelectedValue="{Binding CpuAlert}" ItemTemplate="{StaticResource AlertItem}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Row="3" Grid.Column="6" Classes="spec" VerticalAlignment="Bottom">
+                            <ComboBox Classes="field spec" ItemsSource="{Binding SpecAlertOptions}" SelectedValueBinding="{Binding Alert}"
+                                      SelectedValue="{Binding RamAlert}" ItemTemplate="{StaticResource AlertItem}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Row="4" Grid.Column="6" Classes="spec" VerticalAlignment="Bottom">
+                            <ComboBox Classes="field spec" ItemsSource="{Binding SpecAlertOptions}" SelectedValueBinding="{Binding Alert}"
+                                      SelectedValue="{Binding DiskAlert}" ItemTemplate="{StaticResource AlertItem}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Row="5" Grid.Column="6" Classes="spec" VerticalAlignment="Bottom">
+                            <ComboBox Classes="field spec" ItemsSource="{Binding YesNoOptions}" SelectedValueBinding="{Binding Value}"
+                                      DisplayMemberBinding="{Binding Label}" SelectedValue="{Binding InternetNotify}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Row="6" Grid.Column="6" Classes="spec" VerticalAlignment="Bottom">
+                            <ComboBox Classes="field spec" ItemsSource="{Binding YesNoOptions}" SelectedValueBinding="{Binding Value}"
+                                      DisplayMemberBinding="{Binding Label}" SelectedValue="{Binding DownloadNotify}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Row="7" Grid.Column="6" Classes="spec" VerticalAlignment="Bottom">
+                            <ComboBox Classes="field spec" ItemsSource="{Binding YesNoOptions}" SelectedValueBinding="{Binding Value}"
+                                      DisplayMemberBinding="{Binding Label}" SelectedValue="{Binding UploadNotify}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Row="8" Grid.Column="6" Classes="spec" VerticalAlignment="Bottom">
+                            <ComboBox Classes="field spec" ItemsSource="{Binding YesNoOptions}" SelectedValueBinding="{Binding Value}"
+                                      DisplayMemberBinding="{Binding Label}" SelectedValue="{Binding OsNotify}"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="2" Grid.Column="0" Classes="spec">
+                            <TextBlock Classes="head" Text="CPU"/>
+                            <TextBlock Classes="flabel" Text="Cores"/>
+                            <TextBox Classes="field spec" Text="{Binding CpuMinCores}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Row="2" Grid.Column="2" Classes="spec">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <Ellipse Width="10" Height="10" Fill="{DynamicResource AccentYellowBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Warning" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <TextBlock Classes="flabel" Text="Percent"/>
+                            <TextBox Classes="field spec" Text="{Binding CpuWarningPercent}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Row="2" Grid.Column="4" Classes="spec">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <Ellipse Width="10" Height="10" Fill="{DynamicResource AccentRedBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Problem" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <TextBlock Classes="flabel" Text="Percent"/>
+                            <TextBox Classes="field spec" Text="{Binding CpuProblemPercent}"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="3" Grid.Column="0" Classes="spec">
+                            <TextBlock Classes="head" Text="RAM"/>
+                            <TextBlock Classes="flabel" Text="GB"/>
+                            <TextBox Classes="field spec" Text="{Binding RamMinGb}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Row="3" Grid.Column="2" Classes="spec">
+                            <TextBlock Classes="head" Text=" "/>
+                            <TextBlock Classes="flabel" Text="Percent"/>
+                            <TextBox Classes="field spec" Text="{Binding RamWarningPercent}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Row="3" Grid.Column="4" Classes="spec">
+                            <TextBlock Classes="head" Text=" "/>
+                            <TextBlock Classes="flabel" Text="Percent"/>
+                            <TextBox Classes="field spec" Text="{Binding RamProblemPercent}"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="4" Grid.Column="0" Classes="spec">
+                            <TextBlock Classes="head" Text="Disk"/>
+                            <TextBlock Classes="flabel" Text="GB"/>
+                            <TextBox Classes="field spec" Text="{Binding DiskMinimum}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Row="4" Grid.Column="2" Classes="spec">
+                            <TextBlock Classes="head" Text=" "/>
+                            <TextBlock Classes="flabel" Text="Remaining"/>
+                            <Grid ColumnDefinitions="*,6,104">
+                                <TextBox Grid.Column="0" Classes="field spec" Text="{Binding DiskRemainingWarning}"/>
+                                <ComboBox Grid.Column="2" Classes="field spec" ItemsSource="{Binding DiskUnitOptions}"
+                                          SelectedItem="{Binding DiskRemainingWarningUnit}"/>
+                            </Grid>
+                        </StackPanel>
+                        <StackPanel Grid.Row="4" Grid.Column="4" Classes="spec">
+                            <TextBlock Classes="head" Text=" "/>
+                            <TextBlock Classes="flabel" Text="Remaining"/>
+                            <Grid ColumnDefinitions="*,6,104">
+                                <TextBox Grid.Column="0" Classes="field spec" Text="{Binding DiskRemainingProblem}"/>
+                                <ComboBox Grid.Column="2" Classes="field spec" ItemsSource="{Binding DiskUnitOptions}"
+                                          SelectedItem="{Binding DiskRemainingProblemUnit}"/>
+                            </Grid>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="5" Grid.Column="0" Classes="spec">
+                            <TextBlock Classes="head" Text="Internet"/>
+                            <TextBlock Classes="flabel" Text="Minimum speed in Kbps"/>
+                            <TextBox Classes="field spec" Text="{Binding InternetMinKbps}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Row="6" Grid.Column="0" Classes="spec">
+                            <TextBlock Classes="head" Text="Download"/>
+                            <TextBlock Classes="flabel" Text="Minimum download speed in Kbps"/>
+                            <TextBox Classes="field spec" Text="{Binding DownloadMinKbps}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Row="7" Grid.Column="0" Classes="spec">
+                            <TextBlock Classes="head" Text="Upload"/>
+                            <TextBlock Classes="flabel" Text="Minimum upload speed in Kbps"/>
+                            <TextBox Classes="field spec" Text="{Binding UploadMinKbps}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Row="8" Grid.Column="0" Classes="spec">
+                            <TextBlock Classes="head" Text="Operating system"/>
+                            <ComboBox Classes="field spec" ItemsSource="{Binding OperatingSystemOptions}"
+                                      SelectedItem="{Binding RequiredOperatingSystem}"/>
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
+            </Grid>
+        </Panel>
+    </DockPanel>
+</UserControl>

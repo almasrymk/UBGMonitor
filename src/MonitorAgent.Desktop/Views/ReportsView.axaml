@@ -1,0 +1,268 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:MonitorAgent.Desktop.Controls"
+             xmlns:views="using:MonitorAgent.Desktop.Views"
+             x:Class="MonitorAgent.Desktop.Views.ReportsView">
+    <UserControl.Resources>
+        <DataTemplate x:Key="ChartCard">
+            <Border Margin="4" Padding="10,8" CornerRadius="6"
+                    Background="{DynamicResource SurfaceDarkAltBrush}"
+                    BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1">
+                <StackPanel>
+                    <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextPrimaryBrush}"/>
+                    <ItemsControl ItemsSource="{Binding Legend}" Margin="0,3,0,4" Focusable="False">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,12,0">
+                                    <Panel Width="16" Height="10" VerticalAlignment="Center" Margin="0,0,4,0">
+                                        <Rectangle Classes="legend" Classes.box="{Binding Box}" Fill="{Binding Brush}"
+                                                   IsVisible="{Binding !Dashed}"/>
+                                        <Line StartPoint="0,5" EndPoint="16,5" Stroke="{Binding Brush}" StrokeThickness="2"
+                                              StrokeDashArray="2,1.5" IsVisible="{Binding Dashed}"/>
+                                    </Panel>
+                                    <TextBlock Text="{Binding Name}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <controls:ReportChartControl Chart="{Binding Chart}"/>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+    <UserControl.Styles>
+        <Style Selector="ListBox.types ListBoxItem">
+            <Setter Property="Margin" Value="0,0,0,6"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Name="Bd" Background="Transparent" BorderBrush="Transparent"
+                            BorderThickness="3,0,0,0" CornerRadius="4" Padding="12,8">
+                        <ContentPresenter Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="ListBox.types ListBoxItem:pointerover /template/ Border#Bd">
+            <Setter Property="Background" Value="{DynamicResource HoverBrush}"/>
+        </Style>
+        <Style Selector="ListBox.types ListBoxItem:selected /template/ Border#Bd">
+            <Setter Property="Background" Value="{DynamicResource SelectedBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentGreenBrush}"/>
+        </Style>
+
+        <Style Selector="Rectangle.legend">
+            <Setter Property="Height" Value="3"/>
+        </Style>
+        <Style Selector="Rectangle.legend.box">
+            <Setter Property="Height" Value="10"/>
+            <Setter Property="Width" Value="10"/>
+            <Setter Property="RadiusX" Value="2"/>
+            <Setter Property="RadiusY" Value="2"/>
+        </Style>
+
+        <Style Selector="Border.metric">
+            <Setter Property="Width" Value="190"/>
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="Padding" Value="12,8,12,10"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceDarkAltBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderColorBrush}"/>
+            <Setter Property="BorderThickness" Value="1,3,1,1"/>
+        </Style>
+        <Style Selector="Border.metric.good">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentGreenBrush}"/>
+        </Style>
+        <Style Selector="Border.metric.warning">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentYellowBrush}"/>
+        </Style>
+        <Style Selector="Border.metric.bad">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentRedBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.mvalue">
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.mchange">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,3,0,0"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.mvalue.good, TextBlock.mchange.good">
+            <Setter Property="Foreground" Value="{DynamicResource AccentGreenBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.mvalue.warning, TextBlock.mchange.warning">
+            <Setter Property="Foreground" Value="{DynamicResource AccentYellowBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.mvalue.bad, TextBlock.mchange.bad">
+            <Setter Property="Foreground" Value="{DynamicResource AccentRedBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.label">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel DataContext="{Binding Reports}" Margin="8,4,16,12">
+        <Border DockPanel.Dock="Left" Width="230"
+                Background="{DynamicResource SurfaceDarkBrush}"
+                BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="0,0,1,0"
+                Margin="0,0,12,0" Padding="8">
+            <ListBox Classes="types" ItemsSource="{Binding Types}" SelectedItem="{Binding SelectedType}"
+                     Background="Transparent" BorderThickness="0"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel>
+                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="13"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            <TextBlock Text="{Binding Description}" TextWrapping="Wrap" FontSize="11" Margin="0,3,0,0"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Border>
+
+        <Border DockPanel.Dock="Top" Classes="card" Padding="12,10" Margin="0,0,0,10">
+            <WrapPanel VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" Margin="0,0,12,4" IsVisible="{Binding IsDetails}">
+                    <TextBlock Classes="label" Text="About" Margin="0,0,8,0"/>
+                    <ComboBox Classes="field" Width="230" Margin="0" VerticalAlignment="Center"
+                              ItemsSource="{Binding Subjects}" SelectedItem="{Binding SelectedSubject}"
+                              ToolTip.Tip="What the details report is about">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding Group}" FontSize="10" Margin="10,0,0,0"
+                                               VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                    <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"/>
+                                </DockPanel>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,12,4">
+                    <TextBlock Classes="label" Text="Period" Margin="0,0,8,0"/>
+                    <ComboBox Classes="field" Width="140" Margin="0" VerticalAlignment="Center"
+                              ItemsSource="{Binding Periods}" SelectedItem="{Binding SelectedPeriod}"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,12,4" IsVisible="{Binding IsCustomPeriod}">
+                    <TextBlock Classes="label" Text="From" Margin="0,0,6,0"/>
+                    <CalendarDatePicker SelectedDate="{Binding CustomFrom}" Width="130" VerticalAlignment="Center"/>
+                    <TextBlock Classes="label" Text="To" Margin="10,0,6,0"/>
+                    <CalendarDatePicker SelectedDate="{Binding CustomTo}" Width="130" VerticalAlignment="Center"/>
+                </StackPanel>
+                <Button Content="Generate" Command="{Binding GenerateCommand}" Classes="footer accent"
+                        Padding="18,6" Margin="0,0,8,4" ToolTip.Tip="Build the report for the chosen period"/>
+                <Button Content="Export HTML / PDF" Command="{Binding ExportHtmlCommand}" Classes="footer"
+                        Padding="14,6" Margin="0,0,8,4" ToolTip.ShowOnDisabled="True"
+                        ToolTip.Tip="Save the report as a web page and open it. Use Print / Save as PDF in the browser for a PDF."/>
+                <Button Content="Export CSV" Command="{Binding ExportCsvCommand}" Classes="footer"
+                        Padding="14,6" Margin="0,0,12,4" ToolTip.ShowOnDisabled="True"
+                        ToolTip.Tip="Save the report tables as a CSV file for Excel"/>
+                <TextBlock Classes="label" Text="{Binding StatusMessage}" TextWrapping="Wrap" Margin="0,0,0,4"/>
+            </WrapPanel>
+        </Border>
+
+        <Border Classes="card" Padding="0">
+            <Panel>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding HasReport}">
+                    <StackPanel Margin="18,14,18,20">
+                        <TextBlock Text="{Binding ReportTitle}" FontSize="22" FontWeight="Bold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <TextBlock Text="{Binding ReportDescription}" TextWrapping="Wrap" Margin="0,4,0,0"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBlock Text="{Binding ReportPeriod}" Margin="0,4,0,0" FontSize="12"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+
+                        <ItemsControl ItemsSource="{Binding Sections}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="0,22,0,0">
+                                        <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                        <TextBlock Text="{Binding Note}" TextWrapping="Wrap" Margin="0,4,0,0"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}" IsVisible="{Binding HasNote}"/>
+                                        <TextBlock Text="Nothing to show for this period." Margin="0,4,0,0" FontStyle="Italic"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}" IsVisible="{Binding IsEmpty}"/>
+
+                                        <ItemsControl ItemsSource="{Binding Metrics}" Margin="-4,8,0,0" IsVisible="{Binding HasMetrics}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Classes="metric"
+                                                            Classes.good="{Binding Status, Converter={StaticResource EqualsConverter}, ConverterParameter=Good}"
+                                                            Classes.warning="{Binding Status, Converter={StaticResource EqualsConverter}, ConverterParameter=Warning}"
+                                                            Classes.bad="{Binding Status, Converter={StaticResource EqualsConverter}, ConverterParameter=Bad}">
+                                                        <StackPanel>
+                                                            <TextBlock Text="{Binding Label}" FontSize="11" TextWrapping="Wrap"
+                                                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                                            <TextBlock Classes="mvalue" Text="{Binding Value}" Margin="0,4,0,0"
+                                                                       Classes.good="{Binding Status, Converter={StaticResource EqualsConverter}, ConverterParameter=Good}"
+                                                                       Classes.warning="{Binding Status, Converter={StaticResource EqualsConverter}, ConverterParameter=Warning}"
+                                                                       Classes.bad="{Binding Status, Converter={StaticResource EqualsConverter}, ConverterParameter=Bad}"/>
+                                                            <TextBlock Classes="mchange" Text="{Binding Change}"
+                                                                       IsVisible="{Binding Change, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                                                       Classes.good="{Binding ChangeStatus, Converter={StaticResource EqualsConverter}, ConverterParameter=Good}"
+                                                                       Classes.warning="{Binding ChangeStatus, Converter={StaticResource EqualsConverter}, ConverterParameter=Warning}"
+                                                                       Classes.bad="{Binding ChangeStatus, Converter={StaticResource EqualsConverter}, ConverterParameter=Bad}"/>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <ItemsControl ItemsSource="{Binding ChartRows}" Margin="-4,6,-4,0" Focusable="False"
+                                                      IsVisible="{Binding HasCharts}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <ItemsControl ItemsSource="{Binding}" Focusable="False"
+                                                                  ItemTemplate="{StaticResource ChartCard}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <UniformGrid Rows="1"/>
+                                                            </ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                    </ItemsControl>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <TextBlock Text="Double-click a row to open its detailed report." FontSize="11" Margin="0,10,0,0"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}" FontStyle="Italic"
+                                                   IsVisible="{Binding HasLinks}"/>
+                                        <controls:AppDataGrid Margin="0,4,0,0" MaxHeight="420"
+                                                              ItemsSource="{Binding Rows}"
+                                                              views:ReportTable.Columns="{Binding Columns}"
+                                                              DoubleTapped="Table_DoubleTapped"
+                                                              IsVisible="{Binding HasTable}"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <TextBlock Text="{Binding StatusMessage}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           TextWrapping="Wrap" Margin="24" FontSize="14"
+                           Foreground="{DynamicResource TextSecondaryBrush}" IsVisible="{Binding !HasReport}"/>
+            </Panel>
+        </Border>
+    </DockPanel>
+</UserControl>

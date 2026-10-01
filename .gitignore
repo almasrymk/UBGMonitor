@@ -11,3 +11,6 @@ TestResults/
 *.db
 *.db-shm
 *.db-wal
+
+# Linux / macOS packages built by scripts\publish-unix.ps1
+artifacts/

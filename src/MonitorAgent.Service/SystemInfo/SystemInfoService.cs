@@ -1,0 +1,440 @@
+using System.Diagnostics;
+using MonitorAgent.Service.Platform;
+using MonitorAgent.Shared.Models;
+
+namespace MonitorAgent.Service.SystemInfo;
+
+public interface ISystemInfoService
+{
+    Task<SystemSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default);
+
+    Task<CpuInfo> GetCpuAsync(CancellationToken cancellationToken = default);
+
+    Task<RamInfo> GetRamAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<DiskPartition>> GetPartitionsAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<PhysicalDisk>> GetPhysicalDisksAsync(CancellationToken cancellationToken = default);
+
+    Task<NetworkInfo> GetNetworkAsync(CancellationToken cancellationToken = default);
+
+    Task<HardwareInfo> GetHardwareAsync(CancellationToken cancellationToken = default);
+
+    Task<OsInfo> GetOsAsync(CancellationToken cancellationToken = default);
+
+    Task<SensorsInfo> GetSensorsAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ProcessInfo>> GetTopProcessesAsync(int count, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ProcessTopDto>> GetTopProcessesSortedAsync(int count, string sortBy, CancellationToken cancellationToken = default);
+}
+
+public sealed class SystemInfoService : ISystemInfoService
+{
+    private readonly ILogger<SystemInfoService> _logger;
+    private readonly ISystemProbe _probe;
+    private readonly IHardwareService _hardware;
+    private readonly ISensorsService _sensors;
+    private readonly INetworkService _network;
+    private readonly object _networkLock = new();
+    private Dictionary<int, ulong> _lastNetworkBytes = [];
+    private long _lastNetworkTimestamp;
+    private ProcessorDetails? _processor;
+
+    public SystemInfoService(
+        ILogger<SystemInfoService> logger,
+        ISystemProbe probe,
+        IHardwareService hardware,
+        ISensorsService sensors,
+        INetworkService network)
+    {
+        _logger = logger;
+        _probe = probe;
+        _hardware = hardware;
+        _sensors = sensors;
+        _network = network;
+    }
+
+    public Task<SystemSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default)
+    {
+        return Task.Run(async () =>
+        {
+            var cpuTask = GetCpuAsync(cancellationToken);
+            var ramTask = GetRamAsync(cancellationToken);
+            var partitionsTask = GetPartitionsAsync(cancellationToken);
+            var disksTask = GetPhysicalDisksAsync(cancellationToken);
+            var networkTask = GetNetworkAsync(cancellationToken);
+            var hardwareTask = GetHardwareAsync(cancellationToken);
+            var osTask = GetOsAsync(cancellationToken);
+            var processesTask = GetTopProcessesAsync(10, cancellationToken);
+
+            await Task.WhenAll(cpuTask, ramTask, partitionsTask, disksTask, networkTask, hardwareTask, osTask, processesTask);
+
+            return new SystemSnapshot
+            {
+                CapturedAtUtc = DateTime.UtcNow,
+                Cpu = await cpuTask,
+                Ram = await ramTask,
+                Partitions = [.. await partitionsTask],
+                PhysicalDisks = [.. await disksTask],
+                Network = await networkTask,
+                Hardware = await hardwareTask,
+                Os = await osTask,
+                TopProcesses = [.. await processesTask]
+            };
+        }, cancellationToken);
+    }
+
+    public Task<CpuInfo> GetCpuAsync(CancellationToken cancellationToken = default)
+        => Task.Run(GetCpuInternal, cancellationToken);
+
+    public Task<RamInfo> GetRamAsync(CancellationToken cancellationToken = default)
+        => Task.Run(GetRamInternal, cancellationToken);
+
+    public Task<IReadOnlyList<DiskPartition>> GetPartitionsAsync(CancellationToken cancellationToken = default)
+        => Task.Run<IReadOnlyList<DiskPartition>>(GetPartitionsInternal, cancellationToken);
+
+    public Task<IReadOnlyList<PhysicalDisk>> GetPhysicalDisksAsync(CancellationToken cancellationToken = default)
+        => Task.Run<IReadOnlyList<PhysicalDisk>>(GetPhysicalDisksInternal, cancellationToken);
+
+    public Task<NetworkInfo> GetNetworkAsync(CancellationToken cancellationToken = default)
+        => _network.GetNetworkAsync(cancellationToken);
+
+    public Task<HardwareInfo> GetHardwareAsync(CancellationToken cancellationToken = default)
+        => _hardware.GetHardwareAsync(cancellationToken);
+
+    public Task<OsInfo> GetOsAsync(CancellationToken cancellationToken = default)
+        => _hardware.GetOsAsync(cancellationToken);
+
+    public Task<SensorsInfo> GetSensorsAsync(CancellationToken cancellationToken = default)
+        => _sensors.GetSensorsAsync(cancellationToken);
+
+    public Task<IReadOnlyList<ProcessInfo>> GetTopProcessesAsync(int count, CancellationToken cancellationToken = default)
+        => Task.Run<IReadOnlyList<ProcessInfo>>(() => GetTopProcessesInternal(count), cancellationToken);
+
+    public Task<IReadOnlyList<ProcessTopDto>> GetTopProcessesSortedAsync(int count, string sortBy, CancellationToken cancellationToken = default)
+        => Task.Run<IReadOnlyList<ProcessTopDto>>(() => GetTopProcessesSortedInternal(count, sortBy), cancellationToken);
+
+    private CpuInfo GetCpuInternal()
+    {
+        try
+        {
+            var (model, maxClock, physicalCores, logicalCores) = _processor ??= _probe.ReadProcessor();
+            var currentClock = _probe.ReadCurrentClockMhz();
+            var (usage, perCore) = _probe.ReadCpuUsage(logicalCores);
+            var processes = Process.GetProcesses();
+            var threadCount = processes.Sum(p =>
+            {
+                try { return p.Threads.Count; }
+                catch { return 0; }
+            });
+
+            return new CpuInfo
+            {
+                Model = model.Trim(),
+                PhysicalCores = physicalCores,
+                LogicalCores = logicalCores,
+                UsagePercent = Math.Round(usage, 1),
+                CurrentSpeedGhz = Math.Round(currentClock / 1000d, 2),
+                MaxSpeedGhz = Math.Round(maxClock / 1000d, 2),
+                TemperatureC = _probe.ReadCpuTemperature(),
+                ProcessCount = processes.Length,
+                ThreadCount = threadCount,
+                PerCoreUsage = perCore
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to collect CPU info");
+            return new CpuInfo { LogicalCores = Environment.ProcessorCount };
+        }
+    }
+
+    private RamInfo GetRamInternal()
+    {
+        try
+        {
+            return _probe.ReadMemory();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to collect RAM info");
+            return new RamInfo();
+        }
+    }
+
+    private List<DiskPartition> GetPartitionsInternal()
+    {
+        try
+        {
+            return _probe.LocalDrives()
+                .Select(d =>
+                {
+                    var total = BytesToGb(d.TotalSize);
+                    var free = BytesToGb(d.TotalFreeSpace);
+                    var used = Math.Max(0, total - free);
+                    return new DiskPartition
+                    {
+                        DriveLetter = d.Name,
+                        Label = d.VolumeLabel,
+                        FileSystem = d.DriveFormat,
+                        TotalGB = Round(total),
+                        UsedGB = Round(used),
+                        FreeGB = Round(free),
+                        UsagePercent = total <= 0 ? 0 : Math.Round(used / total * 100, 1)
+                    };
+                })
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to collect partition info");
+            return [];
+        }
+    }
+
+    private List<PhysicalDisk> GetPhysicalDisksInternal()
+    {
+        try
+        {
+            return _probe.ReadPhysicalDisks();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to collect physical disk info");
+            return [];
+        }
+    }
+
+    private List<ProcessInfo> GetTopProcessesInternal(int count)
+    {
+        try
+        {
+            return Process.GetProcesses()
+                .Select(p =>
+                {
+                    try
+                    {
+                        return new ProcessInfo
+                        {
+                            Name = p.ProcessName,
+                            Pid = p.Id,
+                            CpuPercent = 0,
+                            RamMB = Math.Round(p.WorkingSet64 / 1024d / 1024d, 1)
+                        };
+                    }
+                    catch
+                    {
+                        return null;
+                    }
+                })
+                .Where(p => p is not null)
+                .Cast<ProcessInfo>()
+                .OrderByDescending(p => p.RamMB)
+                .Take(Math.Max(1, count))
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to collect process info");
+            return [];
+        }
+    }
+
+    private List<ProcessTopDto> GetTopProcessesSortedInternal(int count, string sortBy)
+    {
+        var take = Math.Max(1, count);
+        var key = sortBy.ToLowerInvariant();
+        try
+        {
+            return key switch
+            {
+                "cpu" => CollectByCpu(take),
+                "network" => CollectByNetwork(take),
+                "disk" => CollectByDisk(take),
+                _ => CollectByRam(take)
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to collect sorted process info for {SortBy}", sortBy);
+            return [];
+        }
+    }
+
+    private List<ProcessTopDto> CollectByRam(int take)
+    {
+        return SnapshotProcesses()
+            .OrderByDescending(row => row.RamMb)
+            .Take(take)
+            .Select(row => new ProcessTopDto
+            {
+                Name = row.Name,
+                Pid = row.Pid,
+                Value = row.RamMb,
+                Unit = "MB"
+            })
+            .ToList();
+    }
+
+    private List<ProcessTopDto> CollectByCpu(int take)
+    {
+        var first = CaptureCpuTimes();
+        Thread.Sleep(200);
+        var cores = Math.Max(1, Environment.ProcessorCount);
+        var rows = new List<(string Name, int Pid, double Cpu, double RamMb)>(first.Count);
+        foreach (var (process, cpu0, ram) in first)
+        {
+            try
+            {
+                var deltaMs = (process.TotalProcessorTime - cpu0).TotalMilliseconds;
+                var cpuPercent = Math.Clamp(deltaMs / (200d * cores) * 100d, 0, 100);
+                rows.Add((process.ProcessName, process.Id, Math.Round(cpuPercent, 1), ram));
+            }
+            catch
+            {
+                // Process may have exited during sampling.
+            }
+            finally
+            {
+                process.Dispose();
+            }
+        }
+
+        return rows
+            .OrderByDescending(row => row.Cpu)
+            .ThenByDescending(row => row.RamMb)
+            .Take(take)
+            .Select(row => new ProcessTopDto
+            {
+                Name = row.Name,
+                Pid = row.Pid,
+                Value = row.Cpu,
+                Unit = "%"
+            })
+            .ToList();
+    }
+
+    private List<ProcessTopDto> CollectByNetwork(int take)
+    {
+        Dictionary<int, ulong> current = [];
+        try
+        {
+            current = _probe.ReadProcessNetworkBytes(TimeSpan.FromMilliseconds(1200));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Failed to sample process network usage");
+        }
+
+        var rates = new Dictionary<int, double>();
+        lock (_networkLock)
+        {
+            var now = Stopwatch.GetTimestamp();
+            if (_lastNetworkTimestamp > 0)
+            {
+                var elapsedSec = (now - _lastNetworkTimestamp) / (double)Stopwatch.Frequency;
+                if (elapsedSec > 0.05)
+                {
+                    foreach (var (pid, bytes) in current)
+                    {
+                        var previous = _lastNetworkBytes.GetValueOrDefault(pid);
+                        var delta = bytes > previous ? bytes - previous : 0;
+                        rates[pid] = Math.Round(delta / elapsedSec / 1024d, 1);
+                    }
+                }
+            }
+
+            _lastNetworkBytes = current;
+            _lastNetworkTimestamp = now;
+        }
+
+        return SnapshotProcesses()
+            .Select(row => (row.Name, row.Pid, row.RamMb, Rate: rates.GetValueOrDefault(row.Pid)))
+            .OrderByDescending(row => row.Rate)
+            .ThenByDescending(row => row.RamMb)
+            .Take(take)
+            .Select(row => new ProcessTopDto
+            {
+                Name = row.Name,
+                Pid = row.Pid,
+                Value = row.Rate,
+                Unit = "KB/s"
+            })
+            .ToList();
+    }
+
+    private List<ProcessTopDto> CollectByDisk(int take)
+    {
+        const int sampleMs = 500;
+        var first = _probe.ReadProcessDiskBytes();
+        Thread.Sleep(sampleMs);
+        var second = _probe.ReadProcessDiskBytes();
+        var rates = new Dictionary<int, double>(second.Count);
+        foreach (var (pid, bytes) in second)
+        {
+            if (first.TryGetValue(pid, out var previous) && bytes > previous)
+            {
+                rates[pid] = Math.Round((bytes - previous) / (sampleMs / 1000d) / 1024d, 1);
+            }
+        }
+
+        return SnapshotProcesses()
+            .Select(row => (row.Name, row.Pid, row.RamMb, Rate: rates.GetValueOrDefault(row.Pid)))
+            .OrderByDescending(row => row.Rate)
+            .ThenByDescending(row => row.RamMb)
+            .Take(take)
+            .Select(row => new ProcessTopDto
+            {
+                Name = row.Name,
+                Pid = row.Pid,
+                Value = row.Rate,
+                Unit = "KB/s"
+            })
+            .ToList();
+    }
+
+    private static List<(Process Process, TimeSpan Cpu, double RamMb)> CaptureCpuTimes()
+    {
+        var samples = new List<(Process Process, TimeSpan Cpu, double RamMb)>();
+        foreach (var process in Process.GetProcesses())
+        {
+            try
+            {
+                samples.Add((process, process.TotalProcessorTime, Math.Round(process.WorkingSet64 / 1024d / 1024d, 1)));
+            }
+            catch
+            {
+                process.Dispose();
+            }
+        }
+
+        return samples;
+    }
+
+    private static List<(string Name, int Pid, double RamMb)> SnapshotProcesses()
+    {
+        var rows = new List<(string Name, int Pid, double RamMb)>();
+        foreach (var process in Process.GetProcesses())
+        {
+            try
+            {
+                rows.Add((process.ProcessName, process.Id, Math.Round(process.WorkingSet64 / 1024d / 1024d, 1)));
+            }
+            catch
+            {
+                // Ignore processes that cannot be inspected.
+            }
+            finally
+            {
+                process.Dispose();
+            }
+        }
+
+        return rows;
+    }
+
+    private static double BytesToGb(long bytes) => Measure.BytesToGb(bytes);
+
+    private static double Round(double value) => Measure.Round(value);
+}

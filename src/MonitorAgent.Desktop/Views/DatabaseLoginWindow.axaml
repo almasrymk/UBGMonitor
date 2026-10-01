@@ -1,0 +1,82 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="MonitorAgent.Desktop.Views.DatabaseLoginWindow"
+        Title="Database connection"
+        Icon="avares://MonitorAgent/Assets/monitoragent.ico"
+        Width="460"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        ShowInTaskbar="False"
+        Background="{DynamicResource BackgroundDarkBrush}"
+        Foreground="{DynamicResource TextPrimaryBrush}">
+    <Window.Styles>
+        <Style Selector="TextBlock.flabel">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+        </Style>
+        <Style Selector="TextBlock.note">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+        <Style Selector="TextBox.field, ComboBox.field">
+            <Setter Property="MaxWidth" Value="10000"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+    </Window.Styles>
+    <Border Padding="20" Background="{DynamicResource SurfaceDarkBrush}">
+        <StackPanel>
+            <TextBlock Text="Database connection" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,14"/>
+
+            <TextBlock Classes="flabel" Text="Database type"/>
+            <ComboBox x:Name="EngineBox" Classes="field" SelectionChanged="EngineBox_SelectionChanged">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <Image Width="18" Height="18" Margin="0,0,8,0" Stretch="Uniform" VerticalAlignment="Center"
+                                   Source="{Binding Logo, Converter={StaticResource IconToImageConverter}}"/>
+                            <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+
+            <TextBlock Classes="flabel" Text="Server"/>
+            <TextBox x:Name="ServerBox" Classes="field"/>
+
+            <TextBlock Classes="flabel" Text="Port"/>
+            <TextBox x:Name="PortBox" Classes="field"/>
+
+            <TextBlock Classes="flabel" Text="Database"/>
+            <TextBox x:Name="DatabaseBox" Classes="field"/>
+
+            <CheckBox x:Name="IntegratedBox" Classes="field" Content="Windows authentication"
+                      IsCheckedChanged="IntegratedBox_Changed"/>
+
+            <TextBlock x:Name="UserLabel" Classes="flabel" Text="Username"/>
+            <TextBox x:Name="UserBox" Classes="field"/>
+
+            <TextBlock x:Name="PasswordLabel" Classes="flabel" Text="Password"/>
+            <TextBox x:Name="PasswordInput" Classes="field" PasswordChar="●" Margin="0,0,0,8"/>
+            <TextBlock x:Name="PasswordNote" Classes="note"
+                       Text="The password is encrypted and is written to the file only when you click Save."/>
+
+            <TextBlock Classes="note"
+                       Text="With an IP or computer name as the server, SQL Server must accept TCP/IP connections (SQL Server Configuration Manager › Protocols › TCP/IP = Enabled, then restart SQL Server) and the firewall must allow its port."/>
+
+            <TextBlock x:Name="ErrorText" Foreground="{DynamicResource AccentRedBrush}" TextWrapping="Wrap" Margin="0,0,0,12"/>
+
+            <DockPanel LastChildFill="False">
+                <Button x:Name="TestButton" DockPanel.Dock="Left" Classes="footer" Margin="0" Content="Test connection" Padding="12,6"
+                        Click="Test_Click"
+                        ToolTip.Tip="The Agent service tries to connect, from its own computer, the same way the monitor point will."/>
+                <Button DockPanel.Dock="Right" Classes="footer" Margin="0" Content="Cancel" Width="90" Padding="8,6"
+                        Click="Cancel_Click" IsCancel="True"/>
+                <Button DockPanel.Dock="Right" Classes="footer accent" Content="OK" Width="90" Margin="0,0,8,0" Padding="8,6"
+                        Click="Ok_Click" IsDefault="True"/>
+            </DockPanel>
+        </StackPanel>
+    </Border>
+</Window>

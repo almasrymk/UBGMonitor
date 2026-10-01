@@ -3,6 +3,10 @@
 ###############################################################################
 * text=auto
 
+# Linux scripts and systemd units must keep LF line endings, even when checked out on Windows.
+*.sh       text eol=lf
+*.service  text eol=lf
+
 ###############################################################################
 # Set default behavior for command prompt diff.
 #

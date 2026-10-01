@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.ubg.monitoragent</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/monitoragent/MonitorAgent.Service</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/usr/local/monitoragent</string>
+    <key>RunAtLoad</key>
+    <true/>
+    <!-- Restart after a crash or an error exit, like the Windows recovery actions and systemd Restart=on-failure. -->
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+    <key>ThrottleInterval</key>
+    <integer>5</integer>
+    <key>StandardOutPath</key>
+    <string>/Library/Logs/MonitorAgent/console.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Library/Logs/MonitorAgent/console.log</string>
+</dict>
+</plist>

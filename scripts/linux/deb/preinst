@@ -1,0 +1,14 @@
+#!/bin/sh
+set -e
+
+# The app saves its settings into the "Setting" section of appsettings.json; the new package replaces the file.
+if [ -f /opt/monitoragent/appsettings.json ]; then
+    mkdir -p /var/lib/monitoragent
+    cp /opt/monitoragent/appsettings.json /var/lib/monitoragent/appsettings.previous.json
+fi
+
+if [ "$1" = "upgrade" ] && systemctl is-active --quiet monitoragent 2>/dev/null; then
+    systemctl stop monitoragent
+fi
+
+exit 0

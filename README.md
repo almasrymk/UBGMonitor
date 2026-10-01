@@ -1,6 +1,6 @@
-# UBG Monitor — Client Monitoring Agent
+# MonitorAgent — Client Monitoring Agent
 
-منظومة مراقبة مركزية (`UBGMonitor`) تشمل Windows Service لجمع بيانات الجهاز، Local API على `localhost`، ولوحة WPF.
+منظومة مراقبة مركزية (`MonitorAgent`) تشمل Windows Service لجمع بيانات الجهاز، Local API على `localhost`، ولوحة WPF.
 
 ## المسار
 
@@ -10,10 +10,10 @@
 
 | المشروع | الدور |
 |---|---|
-| `ClientAgent.Service` | Worker Service + Monitoring + Local API |
-| `ClientAgent.UI` | لوحة WPF |
-| `ClientAgent.Shared` | Models / DTOs / API routes |
-| `ClientAgent.Tests` | اختبارات xUnit |
+| `MonitorAgent.Service` | Worker Service + Monitoring + Local API |
+| `MonitorAgent.UI` | لوحة WPF |
+| `MonitorAgent.Shared` | Models / DTOs / API routes |
+| `MonitorAgent.Tests` | اختبارات xUnit |
 
 ## المتطلبات
 
@@ -25,15 +25,15 @@
 من مجلد الحل:
 
 ```powershell
-dotnet restore UBGMonitor.sln
-dotnet build UBGMonitor.sln
-dotnet test UBGMonitor.sln
+dotnet restore MonitorAgent.sln
+dotnet build MonitorAgent.sln
+dotnet test MonitorAgent.sln
 ```
 
 تشغيل الخدمة:
 
 ```powershell
-dotnet run --project src/ClientAgent.Service
+dotnet run --project src/MonitorAgent.Service
 ```
 
 اختبار Local API (مرتبط بـ `127.0.0.1` فقط):
@@ -45,7 +45,7 @@ curl http://127.0.0.1:5050/api/status
 تشغيل الواجهة:
 
 ```powershell
-dotnet run --project src/ClientAgent.UI
+dotnet run --project src/MonitorAgent.UI
 ```
 
 ## تثبيت Windows Service
@@ -53,18 +53,18 @@ dotnet run --project src/ClientAgent.UI
 نفّذ PowerShell **كمسؤول** بعد نشر الخدمة:
 
 ```powershell
-dotnet publish src/ClientAgent.Service -c Release -o C:\ProgramData\ClientAgent\publish
+dotnet publish src/MonitorAgent.Service -c Release -o C:\ProgramData\MonitorAgent\publish
 
-sc.exe create ClientAgentService binPath= "C:\ProgramData\ClientAgent\publish\ClientAgent.Service.exe" start= auto
-sc.exe description ClientAgentService "UBG Monitor client agent"
-sc.exe start ClientAgentService
+sc.exe create MonitorAgent binPath= "C:\ProgramData\MonitorAgent\publish\MonitorAgent.Service.exe" start= auto
+sc.exe description MonitorAgent "MonitorAgent background service"
+sc.exe start MonitorAgent
 ```
 
 إيقاف وإزالة:
 
 ```powershell
-sc.exe stop ClientAgentService
-sc.exe delete ClientAgentService
+sc.exe stop MonitorAgent
+sc.exe delete MonitorAgent
 ```
 
 ## المعمارية
@@ -75,14 +75,14 @@ sc.exe delete ClientAgentService
 
 ## الإعدادات
 
-`src/ClientAgent.Service/appsettings.json`
+`src/MonitorAgent.Service/appsettings.json`
 
 - `Agent` — معرف الوكيل والإصدار
 - `Routing` — عناوين Madkhal و Central
 - `LocalApi:Port` — الافتراضي 5050
 - `Monitoring` — فترات الفحص
 
-السجلات الافتراضية: `C:\ProgramData\ClientAgent\logs\`
+السجلات الافتراضية: `C:\ProgramData\MonitorAgent\logs\`
 
 ## Endpoints المحلية
 

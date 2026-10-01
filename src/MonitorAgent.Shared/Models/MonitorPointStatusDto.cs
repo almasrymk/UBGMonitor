@@ -1,0 +1,47 @@
+namespace MonitorAgent.Shared.Models;
+
+public sealed class MonitorPointStatusDto
+{
+    public string MonitorPointId { get; init; } = string.Empty;
+
+    public string DisplayName { get; init; } = string.Empty;
+
+    public MonitorPointType Type { get; init; }
+
+    public GarageDeviceKind? DeviceKind { get; init; }
+
+    public string Glyph { get; init; } = "\uE968";
+
+    public string Address { get; init; } = string.Empty;
+
+    public string? Icon { get; init; }
+
+    public string Location { get; init; } = string.Empty;
+
+    public string Model { get; init; } = string.Empty;
+
+    public bool Enabled { get; init; } = true;
+
+    public bool ShowInShortcut { get; init; }
+
+    public int IntervalSeconds { get; init; }
+
+    public MonitorPointAlert Alert { get; init; } = MonitorPointAlert.Problem;
+
+    public bool? IsUp { get; init; }
+
+    public string Status { get; init; } = "Unknown";
+
+    public DateTime? LastCheckedUtc { get; init; }
+
+    public string? Message { get; init; }
+
+    /// <summary>How long the last successful check took to get an answer.</summary>
+    public double? ResponseMs { get; init; }
+
+    /// <summary>When the current status started (UTC).</summary>
+    public DateTime? StatusSinceUtc { get; init; }
+
+    /// <summary>What is checked: the address, or the database engine, server and name.</summary>
+    public string Target { get; init; } = string.Empty;
+}

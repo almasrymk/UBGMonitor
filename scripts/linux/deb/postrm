@@ -1,0 +1,28 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    remove|purge)
+        rm -f /usr/bin/monitoragent
+        systemctl daemon-reload >/dev/null 2>&1 || true
+
+        # Close the API port the agent opened in the firewall.
+        port_file=/var/lib/monitoragent/firewall-port
+        if [ -f "$port_file" ]; then
+            port="$(cat "$port_file")"
+            if command -v ufw >/dev/null 2>&1; then
+                ufw delete allow "$port/tcp" >/dev/null 2>&1 || true
+            fi
+            if command -v firewall-cmd >/dev/null 2>&1; then
+                firewall-cmd --permanent --remove-port="$port/tcp" >/dev/null 2>&1 && firewall-cmd --reload >/dev/null 2>&1 || true
+            fi
+            rm -f "$port_file"
+        fi
+
+        if [ "$1" = "purge" ]; then
+            rm -rf /var/lib/monitoragent /var/log/monitoragent
+        fi
+        ;;
+esac
+
+exit 0

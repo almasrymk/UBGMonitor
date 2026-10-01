@@ -1,0 +1,77 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:views="using:MonitorAgent.Desktop.Views"
+             x:Class="MonitorAgent.Desktop.Views.ProcessListCard"
+             x:Name="Root"
+             VerticalAlignment="Top">
+    <UserControl.Styles>
+        <Style Selector="ListBox.procs ListBoxItem">
+            <Setter Property="Padding" Value="4"/>
+            <Setter Property="Margin" Value="0,0,0,2"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Name="Bd" Background="Transparent" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                                          HorizontalContentAlignment="Stretch"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="ListBox.procs ListBoxItem:pointerover /template/ Border#Bd">
+            <Setter Property="Background" Value="{DynamicResource SelectedBrush}"/>
+        </Style>
+        <Style Selector="ListBox.procs ListBoxItem:selected /template/ Border#Bd">
+            <Setter Property="Background" Value="{DynamicResource SelectedAccentBrush}"/>
+        </Style>
+    </UserControl.Styles>
+    <Grid VerticalAlignment="Top">
+        <DockPanel LastChildFill="False">
+            <TextBlock DockPanel.Dock="Top" Text="{Binding #Root.Title}" FontSize="14" FontWeight="Bold"
+                       Foreground="{Binding #Root.AccentColor}" Margin="0,8,0,8"/>
+            <ListBox x:Name="Processes" Classes="procs" DockPanel.Dock="Top" VerticalAlignment="Top"
+                     ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}"
+                     BorderThickness="0" Padding="0" Cursor="Hand"
+                     ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     DoubleTapped="Processes_DoubleTapped"
+                     PointerExited="Processes_PointerExited">
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel/>
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid ColumnDefinitions="18,*,44,52,56">
+                            <Image Grid.Column="0" Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,2,0"
+                                   VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="12" TextTrimming="CharacterEllipsis"
+                                       VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Grid.Column="2" Text="{Binding Pid}" FontSize="11"
+                                       Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="3" Text="{Binding DisplayValue}" FontSize="11" VerticalAlignment="Center"
+                                       HorizontalAlignment="Right" Margin="0,0,6,0"/>
+                            <ProgressBar Grid.Column="4" Minimum="0" Maximum="100" Value="{Binding Percent}"
+                                         Height="6" MinHeight="6" VerticalAlignment="Center">
+                                <ProgressBar.Foreground>
+                                    <MultiBinding Converter="{StaticResource ProcessBarBrushConverter}">
+                                        <Binding Path="Percent"/>
+                                        <Binding Path="SortBy" RelativeSource="{RelativeSource AncestorType=views:ProcessListCard}"/>
+                                    </MultiBinding>
+                                </ProgressBar.Foreground>
+                            </ProgressBar>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </DockPanel>
+        <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12"
+                   TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
+                   Margin="8" IsVisible="{Binding HasError}"/>
+        <TextBlock Text="Loading..." Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12"
+                   HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding IsLoading}"/>
+    </Grid>
+</UserControl>

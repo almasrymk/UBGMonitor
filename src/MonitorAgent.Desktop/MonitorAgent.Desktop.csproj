@@ -1,0 +1,58 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- MonitorAgent for Linux and macOS (also runs on Windows). The view models, models and service client are
+       shared with the WPF app in MonitorAgent.UI; this project only has the Avalonia views and platform classes. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>MonitorAgent</AssemblyName>
+    <RootNamespace>MonitorAgent.Desktop</RootNamespace>
+    <Product>MonitorAgent</Product>
+    <ApplicationIcon>..\MonitorAgent.UI\Assets\monitoragent.ico</ApplicationIcon>
+    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Using Include="System.Net.Http" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.13" />
+    <PackageReference Include="Material.Icons.Avalonia" Version="2.3.1" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MonitorAgent.Shared\MonitorAgent.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\MonitorAgent.UI\ViewModels\**\*.cs" Link="Shared\ViewModels\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\MonitorAgent.UI\Models\**\*.cs" Link="Shared\Models\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\MonitorAgent.UI\Enums\**\*.cs" Link="Shared\Enums\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\MonitorAgent.UI\Converters\DiskStatusHelper.cs" Link="Shared\Converters\DiskStatusHelper.cs" />
+    <Compile Include="..\MonitorAgent.UI\Services\AgentApiClient.cs" Link="Shared\Services\AgentApiClient.cs" />
+    <Compile Include="..\MonitorAgent.UI\Services\AppSettingsStore.cs" Link="Shared\Services\AppSettingsStore.cs" />
+    <Compile Include="..\MonitorAgent.UI\Services\DeviceIcons.cs" Link="Shared\Services\DeviceIcons.cs" />
+    <Compile Include="..\MonitorAgent.UI\Services\ProcessQueryNotSupportedException.cs" Link="Shared\Services\ProcessQueryNotSupportedException.cs" />
+    <Compile Include="..\MonitorAgent.UI\Services\TopProcessesQueryResult.cs" Link="Shared\Services\TopProcessesQueryResult.cs" />
+    <Compile Include="..\MonitorAgent.UI\Services\SiteLogoCache.cs" Link="Shared\Services\SiteLogoCache.cs" />
+    <Compile Include="..\MonitorAgent.UI\Services\ShellOpen.cs" Link="Shared\Services\ShellOpen.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="..\MonitorAgent.UI\Assets\monitoragent.png" Link="Assets\monitoragent.png" />
+    <AvaloniaResource Include="..\MonitorAgent.UI\Assets\monitoragent.ico" Link="Assets\monitoragent.ico" />
+    <AvaloniaResource Include="..\MonitorAgent.UI\Assets\Databases\*.png" Link="Assets\Databases\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

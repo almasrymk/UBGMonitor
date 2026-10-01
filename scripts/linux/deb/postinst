@@ -1,0 +1,37 @@
+#!/bin/sh
+set -e
+
+if [ "$1" = "configure" ]; then
+    settings=/opt/monitoragent/appsettings.json
+    saved=/var/lib/monitoragent/appsettings.previous.json
+    if [ -f "$saved" ]; then
+        if command -v python3 >/dev/null 2>&1; then
+            python3 - "$saved" "$settings" <<'EOF' || cp "$saved" "$settings"
+import json, sys
+old = json.load(open(sys.argv[1], encoding="utf-8-sig"))
+new = json.load(open(sys.argv[2], encoding="utf-8-sig"))
+if "Setting" in old:
+    new["Setting"] = old["Setting"]
+    with open(sys.argv[2], "w", encoding="utf-8") as f:
+        json.dump(new, f, indent=2)
+EOF
+        else
+            cp "$saved" "$settings"
+        fi
+        rm -f "$saved"
+    fi
+
+    # The settings hold the protected database passwords and the access key.
+    chmod 600 "$settings"
+    ln -sf /opt/monitoragent-desktop/MonitorAgent /usr/bin/monitoragent
+
+    systemctl daemon-reload
+    systemctl enable monitoragent >/dev/null 2>&1 || true
+    systemctl restart monitoragent || true
+
+    if command -v update-desktop-database >/dev/null 2>&1; then
+        update-desktop-database -q /usr/share/applications || true
+    fi
+fi
+
+exit 0

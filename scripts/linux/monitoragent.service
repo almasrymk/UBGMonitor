@@ -1,0 +1,19 @@
+[Unit]
+Description=MonitorAgent
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=notify
+ExecStart=/opt/monitoragent/MonitorAgent.Service
+WorkingDirectory=/opt/monitoragent
+# Root reads the hardware details (dmidecode, smartctl, other users' processes) and changes the firewall.
+User=root
+Restart=on-failure
+RestartSec=5
+StateDirectory=monitoragent
+LogsDirectory=monitoragent
+Environment=DOTNET_CLI_TELEMETRY_OPTOUT=1
+
+[Install]
+WantedBy=multi-user.target
