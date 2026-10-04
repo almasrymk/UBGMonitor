@@ -205,6 +205,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             {
                 _serviceConnected = true;
                 ApplySavedRuntimeSettings();
+                if (SelectedTab == ReportsTab && !Reports.HasReport && !Reports.IsLoading)
+                {
+                    Reports.GenerateCommand.Execute(null);
+                }
             }
 
             if (!Settings.IsLoaded && await Settings.LoadFromServiceAsync())
@@ -388,6 +392,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             Reports.GenerateCommand.Execute(null);
         }
+        else if (newValue == ReportsTab)
+        {
+            Reports.RefreshSubjects();
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanGoBack))]
@@ -453,6 +461,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         ServiceRunning = false;
         if (!_serviceConnected)
         {
+            // Reports are asked for on their own, so one can arrive while the rest of the app already shows the service as gone.
+            if (Reports.HasReport)
+            {
+                Reports.Unload();
+            }
+
             return;
         }
 
@@ -501,6 +515,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         HasCurrentIssues = false;
         ClearSpecMarks();
         Settings.Unload();
+        Reports.Unload();
     }
 
     private void ClearSpecMarks()

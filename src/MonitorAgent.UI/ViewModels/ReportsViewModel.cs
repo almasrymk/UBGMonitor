@@ -52,7 +52,8 @@ public sealed partial class ReportsViewModel : ObservableObject
     partial void OnSelectedTypeChanged(ReportTypeInfo value)
     {
         IsDetails = value.Id == ReportTypes.Details;
-        if (IsDetails && Subjects.Count == 0)
+        // Monitor points and disks can be added or renamed while the app is open, so the list is asked for again.
+        if (IsDetails && !_suspendRegenerate)
         {
             _ = LoadSubjectsAndGenerateAsync();
             return;
@@ -95,10 +96,7 @@ public sealed partial class ReportsViewModel : ObservableObject
         try
         {
             SelectedType = ReportTypes.All.First(type => type.Id == ReportTypes.Details);
-            if (Subjects.All(s => s.Id != subject))
-            {
-                await LoadSubjectsAsync();
-            }
+            await LoadSubjectsAsync();
 
             var match = Subjects.FirstOrDefault(s => string.Equals(s.Id, subject, StringComparison.OrdinalIgnoreCase));
             if (match is null)
@@ -115,6 +113,47 @@ public sealed partial class ReportsViewModel : ObservableObject
         }
 
         await GenerateAsync();
+    }
+
+    /// <summary>Empties the screen when the service stops: what it showed came from the service, and any report being built is dropped.</summary>
+    public void Unload()
+    {
+        _request++;
+        _suspendRegenerate = true;
+        try
+        {
+            Subjects.Clear();
+            SelectedSubject = null;
+        }
+        finally
+        {
+            _suspendRegenerate = false;
+        }
+
+        IsLoading = false;
+        ClearReport();
+        StatusMessage = "The Agent service is not running. Reports come back when it is.";
+    }
+
+    private void ClearReport()
+    {
+        _report = null;
+        Sections.Clear();
+        HasReport = false;
+        ReportTitle = string.Empty;
+        ReportDescription = string.Empty;
+        ReportPeriod = string.Empty;
+        ExportHtmlCommand.NotifyCanExecuteChanged();
+        ExportCsvCommand.NotifyCanExecuteChanged();
+    }
+
+    /// <summary>Called when the Reports tab is shown: the details list picks up monitor points added since it was loaded.</summary>
+    public void RefreshSubjects()
+    {
+        if (IsDetails)
+        {
+            _ = LoadSubjectsAsync();
+        }
     }
 
     private async Task LoadSubjectsAndGenerateAsync()
@@ -186,6 +225,8 @@ public sealed partial class ReportsViewModel : ObservableObject
         IsLoading = false;
         if (report is null)
         {
+            // The report on screen is for another choice or an older period, so it would be mistaken for this one.
+            ClearReport();
             StatusMessage = "The report could not be built. Make sure the Agent service is running.";
             return;
         }
