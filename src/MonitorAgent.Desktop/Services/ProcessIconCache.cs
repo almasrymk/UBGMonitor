@@ -8,7 +8,7 @@ using MonitorAgent.Desktop.Services;
 namespace MonitorAgent.UI.Services;
 
 /// <summary>
-/// The icon of a process's program, as the WPF app shows it. Linux and macOS executables carry no icon of their
+/// The icon of a process's program. Linux and macOS executables carry no icon of their
 /// own, so there (and for processes Windows will not open) the row shows the same small gray square.
 /// </summary>
 internal static class ProcessIconCache
@@ -35,6 +35,17 @@ internal static class ProcessIconCache
         icon ??= Fallback.Value;
         ByPid[pid] = icon;
         return icon;
+    }
+
+    /// <summary>The icon of an executable on this computer; null when there is none (or the system's executables carry none).</summary>
+    public static Bitmap? ForPath(string? path)
+    {
+        if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            return null;
+        }
+
+        return ByPath.GetOrAdd(path, LoadFromPath);
     }
 
     private static string? TryGetPath(int pid, string name)
@@ -73,7 +84,7 @@ internal static class ProcessIconCache
         return null;
     }
 
-    /// <summary>The associated icon scaled to 16×16, like the WPF app.</summary>
+    /// <summary>The associated icon scaled to 16×16.</summary>
     private static Bitmap? LoadFromPath(string path)
         => OperatingSystem.IsWindows() ? WindowsIcons.Associated(path, Size) : null;
 

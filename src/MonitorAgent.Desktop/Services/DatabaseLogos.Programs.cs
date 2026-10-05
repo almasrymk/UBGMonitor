@@ -32,6 +32,9 @@ public static partial class DatabaseLogos
         ]
     };
 
+    /// <summary>The best installed management program for the engine, or null.</summary>
+    public static string? FindProgram(DatabaseEngine engine) => InstalledPrograms(engine).FirstOrDefault();
+
     /// <summary>Installed management programs for the engine, best match first.</summary>
     private static IEnumerable<string> InstalledPrograms(DatabaseEngine engine)
         => Programs[engine].SelectMany(pattern => Expand(Environment.ExpandEnvironmentVariables(pattern)));

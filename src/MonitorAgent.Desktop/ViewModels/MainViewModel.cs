@@ -23,6 +23,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private DateTime _nextDiskUtc = DateTime.MinValue;
     private DateTime _nextHardwareUtc = DateTime.MinValue;
     private DateTime _nextLicenseUtc = DateTime.MinValue;
+    private DateTime _nextApplicationsUtc = DateTime.MinValue;
     private string _operatingSystem = string.Empty;
     private double _peakDownloadMbps;
     private double _peakUploadMbps;
@@ -75,6 +76,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public ReportsViewModel Reports { get; }
 
+    public ApplicationsViewModel Applications { get; }
+
     public LicenseViewModel License { get; }
 
     public CpuViewModel Cpu { get; } = new();
@@ -101,6 +104,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _client = client;
         Settings = new SettingsViewModel(client);
         Reports = new ReportsViewModel(client) { ShowRequested = () => SelectedTab = ReportsTab };
+        Applications = new ApplicationsViewModel(client);
         License = new LicenseViewModel(client);
         License.RequiredChanged += OnLicenseRequiredChanged;
         TopCpuCard = new ProcessListCardViewModel(_client, "Top 5 by CPU", ProcessSortBy.Cpu, UiTheme.Resource("AccentGreenBrush", "#4CAF50"));
@@ -189,6 +193,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             Replace(DashboardMonitorPoints, []);
             HasMonitorPoints = false;
             UpdatePointSummary([]);
+            Applications.Unload();
             return;
         }
 
@@ -283,6 +288,17 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             if (await _client.GetNotificationsAsync() is { } notifications)
             {
                 ApplyNotifications(notifications);
+            }
+
+            if (SelectedTab == ApplicationsTab && now >= _nextApplicationsUtc)
+            {
+                _nextApplicationsUtc = now.AddSeconds(AtLeastOne(Applications.SelectedSection switch
+                {
+                    ApplicationsViewModel.ProgramsSection => Settings.ProgramsIntervalSeconds,
+                    ApplicationsViewModel.UsersSection => Settings.UsersIntervalSeconds,
+                    _ => Settings.ServicesIntervalSeconds
+                }));
+                _ = Applications.RefreshAsync();
             }
 
             Network.SpeedTestEnabled = Settings.SpeedTestIntervalSeconds > 0;
@@ -398,6 +414,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     private const string SettingsTab = "Settings";
     private const string ReportsTab = "Reports";
+    private const string ApplicationsTab = "Applications";
     private const string AboutTab = "About";
 
     [RelayCommand]
@@ -456,6 +473,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         else if (newValue == AboutTab)
         {
             License.LoadCommand.Execute(null);
+        }
+        else if (newValue == ApplicationsTab)
+        {
+            // Shown on the next tick, once the service and the license have been checked.
+            _nextApplicationsUtc = DateTime.MinValue;
         }
     }
 
@@ -577,6 +599,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         ClearSpecMarks();
         Settings.Unload();
         Reports.Unload();
+        Applications.Unload();
     }
 
     private void ClearSpecMarks()
@@ -600,6 +623,29 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
 
         ApplyMonitorPointSelection(point.MonitorPointId);
+    }
+
+    [RelayCommand]
+    private void OpenMonitorPoint(DashboardMonitorPointViewModel? point)
+    {
+        if (point is null)
+        {
+            return;
+        }
+
+        var model = Settings.MonitorPoints.FirstOrDefault(p => p.MonitorPointId == point.MonitorPointId)?.ToModel()
+            ?? new MonitorPoint
+            {
+                MonitorPointId = point.MonitorPointId,
+                DisplayName = point.DisplayName,
+                Type = point.Type,
+                Address = point.Address
+            };
+        var message = MonitorPointLauncher.Open(model);
+        if (message is not null)
+        {
+            UiPlatform.ShowMessage(point.DisplayName, message);
+        }
     }
 
     private void ApplyMonitorPointSelection(string? id)

@@ -29,6 +29,10 @@ public sealed record IncidentRow(
 
 public sealed record SettingsChangeRow(DateTime Utc, string Change);
 
+/// <param name="Area">"Programs", "Users" or "Services".</param>
+/// <param name="Severity">"Critical", "Warning" or "Info".</param>
+public sealed record ApplicationChangeRow(DateTime Utc, string Area, string Severity, string Change);
+
 /// <summary>
 /// The history behind the reports, in Data\reports.db: a reading every minute, every problem from start to end,
 /// every speed test and every settings change. <see cref="DataCleaner"/> removes rows older than the "Keep data for" setting.
@@ -65,6 +69,8 @@ public sealed class ReportStore
                 severity TEXT, title TEXT, message TEXT, started INTEGER NOT NULL, ended INTEGER, ended_by TEXT);
             CREATE INDEX IF NOT EXISTS ix_incidents_open ON incidents(issue_id, ended);
             CREATE TABLE IF NOT EXISTS settings_changes (ts INTEGER NOT NULL, change TEXT);
+            CREATE TABLE IF NOT EXISTS app_changes (ts INTEGER NOT NULL, area TEXT, severity TEXT, change TEXT);
+            CREATE INDEX IF NOT EXISTS ix_app_changes_ts ON app_changes(ts);
             """);
         Write(connection =>
         {
@@ -140,6 +146,19 @@ public sealed class ReportStore
             transaction.Commit();
         });
 
+    public void AddApplicationChanges(IEnumerable<ApplicationChangeRow> changes) =>
+        Write(connection =>
+        {
+            using var transaction = connection.BeginTransaction();
+            foreach (var change in changes)
+            {
+                Run(connection, "INSERT INTO app_changes VALUES ($ts, $area, $severity, $change)",
+                    ("$ts", ToUnix(change.Utc)), ("$area", change.Area), ("$severity", change.Severity), ("$change", change.Change));
+            }
+
+            transaction.Commit();
+        });
+
     /// <summary>Starts a problem, or updates the one already open for the same issue (keeping its worst severity).</summary>
     public void OpenIncident(AgentIssueDto issue, string source, DateTime utc) =>
         Write(connection =>
@@ -170,7 +189,7 @@ public sealed class ReportStore
         Write(connection =>
         {
             var ts = ToUnix(utc);
-            foreach (var table in new[] { "samples", "disk_samples", "point_samples", "process_samples", "speed_tests", "settings_changes" })
+            foreach (var table in new[] { "samples", "disk_samples", "point_samples", "process_samples", "speed_tests", "settings_changes", "app_changes" })
             {
                 removed += Run(connection, $"DELETE FROM {table} WHERE ts < $ts", ("$ts", ts));
             }
@@ -227,6 +246,10 @@ public sealed class ReportStore
     public List<SettingsChangeRow> GetSettingsChanges(DateTime fromUtc, DateTime toUtc) =>
         Read("SELECT ts, change FROM settings_changes WHERE ts >= $from AND ts < $to ORDER BY ts", fromUtc, toUtc,
             r => new SettingsChangeRow(FromUnix(r.GetInt64(0)), r.GetString(1)));
+
+    public List<ApplicationChangeRow> GetApplicationChanges(DateTime fromUtc, DateTime toUtc) =>
+        Read("SELECT ts, area, severity, change FROM app_changes WHERE ts >= $from AND ts < $to ORDER BY ts", fromUtc, toUtc,
+            r => new ApplicationChangeRow(FromUnix(r.GetInt64(0)), r.GetString(1), r.GetString(2), r.GetString(3)));
 
     private static void AddColumnIfMissing(SqliteConnection connection, string table, string column)
     {

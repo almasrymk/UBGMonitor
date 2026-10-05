@@ -360,6 +360,15 @@ public sealed class LocalApiHost : BackgroundService
             return Results.Ok(items);
         });
 
+        app.MapGet(ApiRoutes.Programs, async (CancellationToken ct) =>
+            Results.Ok(await _rootProvider.GetRequiredService<IApplicationsService>().GetProgramsAsync(ct)));
+
+        app.MapGet(ApiRoutes.Users, async (CancellationToken ct) =>
+            Results.Ok(await _rootProvider.GetRequiredService<IApplicationsService>().GetUsersAsync(ct)));
+
+        app.MapGet(ApiRoutes.Services, async (CancellationToken ct) =>
+            Results.Ok(await _rootProvider.GetRequiredService<IApplicationsService>().GetServicesAsync(ct)));
+
         app.MapGet(ApiRoutes.MonitorPoints, async (CancellationToken ct) =>
             Results.Ok(await MonitorPointStatusBuilder.BuildAsync(_rootProvider, ct)));
 

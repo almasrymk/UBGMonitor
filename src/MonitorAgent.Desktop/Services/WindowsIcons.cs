@@ -7,7 +7,7 @@ using Avalonia.Platform;
 
 namespace MonitorAgent.Desktop.Services;
 
-/// <summary>Program icons read from Windows, as the WPF app gets them through System.Drawing.Icon.</summary>
+/// <summary>Program icons read from Windows through System.Drawing.Icon.</summary>
 [SupportedOSPlatform("windows")]
 internal static class WindowsIcons
 {

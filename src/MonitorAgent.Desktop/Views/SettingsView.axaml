@@ -255,6 +255,10 @@
                             <TextBox Classes="field wide" Text="{Binding SpeedTestIntervalSeconds}"/>
                             <TextBlock Classes="flabel" Text="CPU (seconds)"/>
                             <TextBox Classes="field wide" Text="{Binding CpuIntervalSeconds}"/>
+                            <TextBlock Classes="flabel" Text="Applications › Programs (seconds)"/>
+                            <TextBox Classes="field wide" Text="{Binding ProgramsIntervalSeconds}"/>
+                            <TextBlock Classes="flabel" Text="Applications › Users (seconds)"/>
+                            <TextBox Classes="field wide" Text="{Binding UsersIntervalSeconds}"/>
                         </StackPanel>
                         <StackPanel Grid.Column="2">
                             <TextBlock Classes="flabel" Text="RAM (seconds)"/>
@@ -263,6 +267,8 @@
                             <TextBox Classes="field wide" Text="{Binding DiskIntervalSeconds}"/>
                             <TextBlock Classes="flabel" Text="Hardware &amp; OS (seconds)"/>
                             <TextBox Classes="field wide" Text="{Binding HardwareOsIntervalSeconds}"/>
+                            <TextBlock Classes="flabel" Text="Applications › Services (seconds)"/>
+                            <TextBox Classes="field wide" Text="{Binding ServicesIntervalSeconds}"/>
                             <TextBlock Classes="flabel" Text="Keep data for"/>
                             <ComboBox Classes="field wide" Margin="0,0,0,4" ItemsSource="{Binding RetentionOptions}"
                                       SelectedValueBinding="{Binding Days}" DisplayMemberBinding="{Binding Label}"

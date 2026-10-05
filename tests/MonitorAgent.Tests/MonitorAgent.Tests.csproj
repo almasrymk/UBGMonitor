@@ -22,7 +22,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\MonitorAgent.Service\MonitorAgent.Service.csproj" />
     <ProjectReference Include="..\..\src\MonitorAgent.Shared\MonitorAgent.Shared.csproj" />
-    <ProjectReference Include="..\..\src\MonitorAgent.UI\MonitorAgent.UI.csproj" />
+    <ProjectReference Include="..\..\src\MonitorAgent.Desktop\MonitorAgent.Desktop.csproj" />
   </ItemGroup>
 
 </Project>

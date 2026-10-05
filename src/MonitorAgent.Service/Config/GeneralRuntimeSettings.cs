@@ -18,6 +18,13 @@ public sealed class GeneralRuntimeSettings
 
     public int HardwareOsIntervalSeconds { get; set; } = 30;
 
+    /// <summary>How often installed programs, users and services are read, for the Applications screen and to detect their changes.</summary>
+    public int ProgramsIntervalSeconds { get; set; } = 5;
+
+    public int UsersIntervalSeconds { get; set; } = 5;
+
+    public int ServicesIntervalSeconds { get; set; } = 5;
+
     /// <summary>Seconds between the end of one automatic speed test and the start of the next; 0 disables them.</summary>
     public int SpeedTestIntervalSeconds { get; set; } = 1800;
 

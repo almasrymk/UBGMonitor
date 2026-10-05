@@ -36,6 +36,13 @@ public sealed class GeneralSettings
 
     public int HardwareOsIntervalSeconds { get; set; } = 30;
 
+    /// <summary>The Applications screen and the service's change watch read installed programs, users and services this often.</summary>
+    public int ProgramsIntervalSeconds { get; set; } = 5;
+
+    public int UsersIntervalSeconds { get; set; } = 5;
+
+    public int ServicesIntervalSeconds { get; set; } = 5;
+
     public string ApiBaseUrl { get; set; } = "http://127.0.0.1:5050";
 
     public string Theme { get; set; } = "Dark";

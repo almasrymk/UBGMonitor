@@ -13,13 +13,15 @@ public sealed class InstalledAppInfo
 
 /// <summary>
 /// Applications on this computer for the monitor point "Application" list: the launcher entries
-/// (.desktop files) on Linux, the .app bundles on macOS.
+/// (.desktop files) on Linux, the .app bundles on macOS, the registered programs on Windows.
 /// </summary>
-public static class InstalledProgramCatalog
+public static partial class InstalledProgramCatalog
 {
     private const long MaxIconBytes = 512 * 1024;
 
     private static IReadOnlyList<InstalledAppInfo> _apps = [];
+
+    private static StringComparer PathComparer => OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
 
     public static IReadOnlyList<InstalledAppInfo> Apps => _apps;
 
@@ -30,13 +32,17 @@ public static class InstalledProgramCatalog
             return null;
         }
 
-        return _apps.FirstOrDefault(app => string.Equals(app.ExecutablePath, path, StringComparison.Ordinal));
+        return _apps.FirstOrDefault(app => PathComparer.Equals(app.ExecutablePath, path));
     }
 
     public static IReadOnlyList<InstalledAppInfo> Load()
     {
-        var found = new Dictionary<string, InstalledAppInfo>(StringComparer.Ordinal);
-        if (OperatingSystem.IsMacOS())
+        var found = new Dictionary<string, InstalledAppInfo>(PathComparer);
+        if (OperatingSystem.IsWindows())
+        {
+            ReadWindowsPrograms(found);
+        }
+        else if (OperatingSystem.IsMacOS())
         {
             ReadMacApps(found);
         }

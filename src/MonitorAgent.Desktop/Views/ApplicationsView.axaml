@@ -1,0 +1,215 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:MonitorAgent.Desktop.Controls"
+             x:Class="MonitorAgent.Desktop.Views.ApplicationsView">
+    <UserControl.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.cell">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel DataContext="{Binding Applications}" Margin="8,4,16,12">
+        <Border DockPanel.Dock="Left" Width="230"
+                Background="{DynamicResource SurfaceDarkBrush}"
+                BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="0,0,1,0"
+                Margin="0,0,12,0" Padding="8">
+            <StackPanel>
+                <RadioButton Classes="side" GroupName="AppsSection"
+                             IsChecked="{Binding SelectedSection, Converter={StaticResource EqualsConverter}, ConverterParameter=Programs}">
+                    <StackPanel>
+                        <TextBlock Text="Programs" FontWeight="SemiBold" FontSize="13"/>
+                        <TextBlock Text="{Binding ProgramsSummary}" TextWrapping="Wrap" FontSize="11" Margin="0,3,0,0"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    </StackPanel>
+                </RadioButton>
+                <RadioButton Classes="side" GroupName="AppsSection"
+                             IsChecked="{Binding SelectedSection, Converter={StaticResource EqualsConverter}, ConverterParameter=Users}">
+                    <StackPanel>
+                        <TextBlock Text="Users" FontWeight="SemiBold" FontSize="13"/>
+                        <TextBlock Text="{Binding UsersSummary}" TextWrapping="Wrap" FontSize="11" Margin="0,3,0,0"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    </StackPanel>
+                </RadioButton>
+                <RadioButton Classes="side" GroupName="AppsSection"
+                             IsChecked="{Binding SelectedSection, Converter={StaticResource EqualsConverter}, ConverterParameter=Services}">
+                    <StackPanel>
+                        <TextBlock Text="Services" FontWeight="SemiBold" FontSize="13"/>
+                        <TextBlock Text="{Binding ServicesSummary}" TextWrapping="Wrap" FontSize="11" Margin="0,3,0,0"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    </StackPanel>
+                </RadioButton>
+            </StackPanel>
+        </Border>
+
+        <Border DockPanel.Dock="Top" Classes="card" Padding="12,10" Margin="0,0,0,10">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="Refresh" Command="{Binding RefreshCommand}" Classes="footer"
+                        Padding="14,6" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                <WrapPanel VerticalAlignment="Center">
+                    <TextBox Width="260" Margin="0,0,12,0" Padding="8,6" VerticalAlignment="Center"
+                             Text="{Binding SearchText}" Watermark="Search by name..."/>
+                    <CheckBox Content="Running only" IsChecked="{Binding OnlyRunning}" IsVisible="{Binding IsPrograms}"
+                              Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                    <CheckBox Content="Signed in only" IsChecked="{Binding OnlySignedIn}" IsVisible="{Binding IsUsers}"
+                              Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                    <CheckBox Content="Problems only" IsChecked="{Binding OnlyProblems}" IsVisible="{Binding IsServices}"
+                              Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                    <TextBlock Classes="label" Text="{Binding StatusMessage}" TextWrapping="Wrap"/>
+                </WrapPanel>
+            </DockPanel>
+        </Border>
+
+        <Border Classes="card" Padding="8">
+            <Panel>
+                <controls:AppDataGrid ItemsSource="{Binding Programs}" IsVisible="{Binding IsPrograms}"
+                                      HorizontalScrollBarVisibility="Auto" IsReadOnly="True">
+                    <DataGrid.Columns>
+                        <DataGridTemplateColumn Width="40">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Panel Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <controls:GlyphIcon Glyph="&#xECAA;" Size="14" HorizontalAlignment="Center"
+                                                            Foreground="{DynamicResource TextSecondaryBrush}"
+                                                            IsVisible="{Binding Icon, Converter={x:Static ObjectConverters.IsNull}}"/>
+                                        <Image Width="16" Height="16" Stretch="Uniform" Source="{Binding Icon}"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Panel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Name" Width="*" MinWidth="200" SortMemberPath="Name">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Classes="cell" Text="{Binding Name}" ToolTip.Tip="{Binding Location}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Status" Width="110" SortMemberPath="IsRunning">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Ellipse Width="8" Height="8" Margin="0,0,6,0"
+                                                 Fill="{Binding Health, Converter={StaticResource HealthToBrushConverter}}"/>
+                                        <TextBlock Classes="cell" Text="{Binding Status}"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="CPU" Binding="{Binding CpuText}" SortMemberPath="Cpu" Width="75"/>
+                        <DataGridTextColumn Header="RAM" Binding="{Binding RamText}" SortMemberPath="Ram" Width="90"/>
+                        <DataGridTextColumn Header="Network" Binding="{Binding NetworkText}" SortMemberPath="Network" Width="95"/>
+                        <DataGridTextColumn Header="Disk" Binding="{Binding DiskText}" SortMemberPath="Disk" Width="95"/>
+                        <DataGridTextColumn Header="Publisher" Binding="{Binding Publisher}" Width="160"/>
+                        <DataGridTextColumn Header="Version" Binding="{Binding Version}" Width="110"/>
+                        <DataGridTextColumn Header="Installed" Binding="{Binding Installed}" SortMemberPath="InstallDate" Width="90"/>
+                        <DataGridTextColumn Header="Size" Binding="{Binding Size}" SortMemberPath="SizeMB" Width="80"/>
+                    </DataGrid.Columns>
+                </controls:AppDataGrid>
+
+                <controls:AppDataGrid ItemsSource="{Binding Users}" IsVisible="{Binding IsUsers}"
+                                      HorizontalScrollBarVisibility="Auto" IsReadOnly="True">
+                    <DataGrid.Columns>
+                        <DataGridTemplateColumn Width="40">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Grid Width="22" Height="22" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <Ellipse Fill="{Binding Health, Converter={StaticResource HealthToBrushConverter}}" Opacity="0.25"/>
+                                        <controls:GlyphIcon Glyph="&#xE77B;" Size="12" HorizontalAlignment="Center"
+                                                            Foreground="{Binding Health, Converter={StaticResource HealthToBrushConverter}}"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="User" Width="*" MinWidth="150" SortMemberPath="UserName">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel VerticalAlignment="Center" ToolTip.Tip="{Binding Description}">
+                                        <TextBlock Classes="cell" Text="{Binding UserName}" FontWeight="SemiBold"/>
+                                        <TextBlock Classes="cell" Text="{Binding FullName}" FontSize="11"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Status" Width="150" SortMemberPath="Status">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Classes="cell" Text="{Binding Status}" FontWeight="SemiBold"
+                                               Foreground="{Binding Health, Converter={StaticResource HealthToBrushConverter}}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="Session" Binding="{Binding Session}" Width="110"/>
+                        <DataGridTextColumn Header="From" Binding="{Binding From}" Width="110"/>
+                        <DataGridTextColumn Header="Signed in" Binding="{Binding SignedIn}" Width="125"/>
+                        <DataGridTextColumn Header="Idle" Binding="{Binding Idle}" SortMemberPath="IdleSeconds" Width="75"/>
+                        <DataGridTextColumn Header="Last sign-in" Binding="{Binding LastLogon}" SortMemberPath="LastLogonUtc" Width="125"/>
+                        <DataGridTextColumn Header="Sign-ins" Binding="{Binding Logons}" Width="70"/>
+                        <DataGridTextColumn Header="Role" Binding="{Binding Role}" Width="105"/>
+                        <DataGridTextColumn Header="Account" Binding="{Binding Account}" Width="120"/>
+                        <DataGridTemplateColumn Header="Enabled" Width="70" SortMemberPath="Enabled">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Path Classes="yesno" Classes.yes="{Binding Enabled}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="Password set" Binding="{Binding PasswordSet}" Width="125"/>
+                        <DataGridTextColumn Header="Profile" Binding="{Binding Profile}" Width="180"/>
+                    </DataGrid.Columns>
+                </controls:AppDataGrid>
+
+                <controls:AppDataGrid ItemsSource="{Binding Services}" IsVisible="{Binding IsServices}"
+                                      HorizontalScrollBarVisibility="Auto" IsReadOnly="True">
+                    <DataGrid.Columns>
+                        <DataGridTemplateColumn Header="Service" Width="*" MinWidth="220" SortMemberPath="DisplayName">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel VerticalAlignment="Center" ToolTip.Tip="{Binding Description}">
+                                        <TextBlock Classes="cell" Text="{Binding DisplayName}" FontWeight="SemiBold"/>
+                                        <TextBlock Classes="cell" Text="{Binding Name}" FontSize="11"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="State" Width="110" SortMemberPath="State">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Ellipse Width="8" Height="8" Margin="0,0,6,0"
+                                                 Fill="{Binding Health, Converter={StaticResource HealthToBrushConverter}}"/>
+                                        <TextBlock Classes="cell" Text="{Binding State}" FontWeight="SemiBold"
+                                                   Foreground="{Binding Health, Converter={StaticResource HealthToBrushConverter}}"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Problem" Width="260" SortMemberPath="Problem">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Classes="cell" Text="{Binding Problem}" ToolTip.Tip="{Binding Problem}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="Start type" Binding="{Binding StartMode}" Width="140"/>
+                        <DataGridTextColumn Header="Account" Binding="{Binding Account}" Width="150"/>
+                        <DataGridTextColumn Header="PID" Binding="{Binding ProcessId}" Width="65"/>
+                        <DataGridTemplateColumn Header="Path" Width="260" SortMemberPath="Path">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Classes="cell" Text="{Binding Path}" ToolTip.Tip="{Binding Path}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </controls:AppDataGrid>
+            </Panel>
+        </Border>
+    </DockPanel>
+</UserControl>

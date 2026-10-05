@@ -1,6 +1,6 @@
 # MonitorAgent — Client Monitoring Agent
 
-منظومة مراقبة مركزية (`MonitorAgent`) تشمل Windows Service لجمع بيانات الجهاز، Local API على `localhost`، ولوحة WPF.
+منظومة مراقبة مركزية (`MonitorAgent`) تشمل Windows Service لجمع بيانات الجهاز، Local API على `localhost`، وتطبيق سطح مكتب (Avalonia) يعمل على Windows وLinux وmacOS.
 
 ## المسار
 
@@ -11,7 +11,7 @@
 | المشروع | الدور |
 |---|---|
 | `MonitorAgent.Service` | Worker Service + Monitoring + Local API |
-| `MonitorAgent.UI` | لوحة WPF |
+| `MonitorAgent.Desktop` | تطبيق سطح المكتب (Avalonia) لـ Windows وLinux وmacOS |
 | `MonitorAgent.Shared` | Models / DTOs / API routes |
 | `MonitorAgent.Tests` | اختبارات xUnit |
 
@@ -45,7 +45,7 @@ curl http://127.0.0.1:5050/api/status
 تشغيل الواجهة:
 
 ```powershell
-dotnet run --project src/MonitorAgent.UI
+dotnet run --project src/MonitorAgent.Desktop
 ```
 
 ## تثبيت Windows Service

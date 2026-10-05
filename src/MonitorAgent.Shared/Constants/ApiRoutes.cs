@@ -15,6 +15,9 @@ public static class ApiRoutes
     public const string Os = "/api/os";
     public const string Sensors = "/api/sensors";
     public const string ProcessesTop = "/api/processes/top";
+    public const string Programs = "/api/apps/programs";
+    public const string Users = "/api/apps/users";
+    public const string Services = "/api/apps/services";
     public const string MonitorPoints = "/api/monitorpoints";
     public const string Issues = "/api/issues";
     public const string Notifications = "/api/notifications";

@@ -225,6 +225,15 @@ public sealed class AgentApiClient
     public Task<NetworkInfo?> GetNetworkAsync(CancellationToken ct = default)
         => GetAsync<NetworkInfo>(ApiRoutes.Network, "network", ct);
 
+    public Task<List<InstalledProgramDto>?> GetProgramsAsync(CancellationToken ct = default)
+        => GetAsync<List<InstalledProgramDto>>(ApiRoutes.Programs, "programs", ct);
+
+    public Task<List<UserAccountDto>?> GetUsersAsync(CancellationToken ct = default)
+        => GetAsync<List<UserAccountDto>>(ApiRoutes.Users, "users", ct);
+
+    public Task<List<SystemServiceDto>?> GetServicesAsync(CancellationToken ct = default)
+        => GetAsync<List<SystemServiceDto>>(ApiRoutes.Services, "services", ct);
+
     public Task<List<ProcessInfo>?> GetTopProcessesAsync(int count = 5, CancellationToken ct = default)
         => GetAsync<List<ProcessInfo>>($"{ApiRoutes.ProcessesTop}?count={count}", "processes", ct);
 

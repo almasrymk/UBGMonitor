@@ -67,6 +67,8 @@ try
     builder.Services.AddSingleton<INetworkService>(sp => sp.GetRequiredService<NetworkService>());
     builder.Services.AddHostedService(sp => sp.GetRequiredService<NetworkService>());
     builder.Services.AddSingleton<ISystemInfoService, SystemInfoService>();
+    builder.Services.AddSingleton<ProcessUsageSampler>();
+    builder.Services.AddSingleton<IApplicationsService, ApplicationsService>();
     builder.Services.AddSingleton<DiskActivityService>();
     builder.Services.AddSingleton<IDiskActivityService>(sp => sp.GetRequiredService<DiskActivityService>());
     builder.Services.AddHostedService(sp => sp.GetRequiredService<DiskActivityService>());
@@ -101,6 +103,7 @@ try
     builder.Services.AddHostedService<WebsiteMonitor>();
     builder.Services.AddHostedService<DatabaseMonitor>();
     builder.Services.AddHostedService<MadkhalMonitor>();
+    builder.Services.AddHostedService<ApplicationsWatcher>();
     builder.Services.AddHostedService<ConfigPuller>();
     builder.Services.AddHostedService<LocalApiHost>();
 

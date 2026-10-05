@@ -244,6 +244,15 @@ public partial class MainWindow : Window
         }
     }
 
+    private void MonitorPointChip_DoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (sender is Control { DataContext: DashboardMonitorPointViewModel point } && DataContext is MainViewModel viewModel)
+        {
+            e.Handled = true;
+            viewModel.OpenMonitorPointCommand.Execute(point);
+        }
+    }
+
     private void MonitorPointsScrollLeft(object? sender, RoutedEventArgs e)
         => MonitorPointsSlider.Offset = MonitorPointsSlider.Offset.WithX(Math.Max(0, MonitorPointsSlider.Offset.X - 112));
 

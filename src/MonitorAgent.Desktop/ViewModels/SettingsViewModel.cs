@@ -26,6 +26,9 @@ public sealed partial class SettingsViewModel : ObservableObject
     private const int DefaultNetworkInterval = 3;
     private const int DefaultDiskInterval = 15;
     private const int DefaultHardwareOsInterval = 30;
+    private const int DefaultProgramsInterval = 5;
+    private const int DefaultUsersInterval = 5;
+    private const int DefaultServicesInterval = 5;
     private const string DefaultApiBaseUrl = "http://127.0.0.1:5050";
     private const string DefaultTheme = "Dark";
     private const bool DefaultNotificationsEnabled = true;
@@ -49,6 +52,9 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private int _networkIntervalSeconds = DefaultNetworkInterval;
     [ObservableProperty] private int _diskIntervalSeconds = DefaultDiskInterval;
     [ObservableProperty] private int _hardwareOsIntervalSeconds = DefaultHardwareOsInterval;
+    [ObservableProperty] private int _programsIntervalSeconds = DefaultProgramsInterval;
+    [ObservableProperty] private int _usersIntervalSeconds = DefaultUsersInterval;
+    [ObservableProperty] private int _servicesIntervalSeconds = DefaultServicesInterval;
     [ObservableProperty] private string _apiBaseUrl = DefaultApiBaseUrl;
     [ObservableProperty] private string _clientAccessKey = string.Empty;
     [ObservableProperty] private string _connectionMessage = string.Empty;
@@ -828,6 +834,9 @@ public sealed partial class SettingsViewModel : ObservableObject
         NetworkIntervalSeconds = InternetIntervalSeconds;
         DiskIntervalSeconds = AtLeastOne(general.DiskIntervalSeconds, DefaultDiskInterval);
         HardwareOsIntervalSeconds = AtLeastOne(general.HardwareOsIntervalSeconds, DefaultHardwareOsInterval);
+        ProgramsIntervalSeconds = AtLeastOne(general.ProgramsIntervalSeconds, DefaultProgramsInterval);
+        UsersIntervalSeconds = AtLeastOne(general.UsersIntervalSeconds, DefaultUsersInterval);
+        ServicesIntervalSeconds = AtLeastOne(general.ServicesIntervalSeconds, DefaultServicesInterval);
         Theme = general.Theme is "Dark" or "Light" ? general.Theme : DefaultTheme;
         NotificationsEnabled = general.NotificationsEnabled;
         DataRetentionDays = RetentionDays(general.DataRetentionDays);
@@ -908,6 +917,9 @@ public sealed partial class SettingsViewModel : ObservableObject
             NetworkIntervalSeconds = AtLeastOne(InternetIntervalSeconds, DefaultInternetInterval),
             DiskIntervalSeconds = AtLeastOne(DiskIntervalSeconds, DefaultDiskInterval),
             HardwareOsIntervalSeconds = AtLeastOne(HardwareOsIntervalSeconds, DefaultHardwareOsInterval),
+            ProgramsIntervalSeconds = AtLeastOne(ProgramsIntervalSeconds, DefaultProgramsInterval),
+            UsersIntervalSeconds = AtLeastOne(UsersIntervalSeconds, DefaultUsersInterval),
+            ServicesIntervalSeconds = AtLeastOne(ServicesIntervalSeconds, DefaultServicesInterval),
             Theme = Theme is "Dark" or "Light" ? Theme : DefaultTheme,
             NotificationsEnabled = NotificationsEnabled,
             DataRetentionDays = RetentionDays(DataRetentionDays),
@@ -928,6 +940,9 @@ public sealed partial class SettingsViewModel : ObservableObject
             NetworkIntervalSeconds = AtLeastOne(general?.NetworkIntervalSeconds ?? 0, DefaultNetworkInterval),
             DiskIntervalSeconds = AtLeastOne(general?.DiskIntervalSeconds ?? 0, DefaultDiskInterval),
             HardwareOsIntervalSeconds = AtLeastOne(general?.HardwareOsIntervalSeconds ?? 0, DefaultHardwareOsInterval),
+            ProgramsIntervalSeconds = AtLeastOne(general?.ProgramsIntervalSeconds ?? 0, DefaultProgramsInterval),
+            UsersIntervalSeconds = AtLeastOne(general?.UsersIntervalSeconds ?? 0, DefaultUsersInterval),
+            ServicesIntervalSeconds = AtLeastOne(general?.ServicesIntervalSeconds ?? 0, DefaultServicesInterval),
             Theme = general?.Theme ?? DefaultTheme,
             NotificationsEnabled = general?.NotificationsEnabled ?? DefaultNotificationsEnabled,
             DataRetentionDays = RetentionDays(general?.DataRetentionDays ?? 0),

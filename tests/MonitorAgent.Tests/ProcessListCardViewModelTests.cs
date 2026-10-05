@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http;
 using System.Text;
-using System.Windows.Media;
 using MonitorAgent.UI.Enums;
 using MonitorAgent.UI.Services;
 using MonitorAgent.UI.ViewModels;
@@ -101,7 +100,7 @@ public sealed class ProcessListCardViewModelTests
     {
         var http = new HttpClient(handler) { BaseAddress = new Uri("http://127.0.0.1:5050") };
         var client = new AgentApiClient(http);
-        return new ProcessListCardViewModel(client, "Top 5", sortBy, Brushes.Gray, autoStart);
+        return new ProcessListCardViewModel(client, "Top 5", sortBy, "#808080", autoStart);
     }
 
     private sealed class StubHandler : HttpMessageHandler

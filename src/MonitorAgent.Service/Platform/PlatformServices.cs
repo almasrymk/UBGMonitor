@@ -31,6 +31,7 @@ public static class PlatformServices
             services.AddSingleton<ISensorReader, NoSensorReader>();
             services.AddSingleton<IDiskActivityReader, NoDiskActivityReader>();
             services.AddSingleton<IFirewall, NoFirewall>();
+            services.AddSingleton<IHostInventory, BasicHostInventory>();
         }
 
         return services;
@@ -46,6 +47,7 @@ public static class PlatformServices
         services.AddSingleton<ISensorReader, HardwareMonitorReader>();
         services.AddSingleton<IDiskActivityReader, WindowsDiskActivityReader>();
         services.AddSingleton<IFirewall, WindowsFirewall>();
+        services.AddSingleton<IHostInventory, WindowsHostInventory>();
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -56,6 +58,7 @@ public static class PlatformServices
         services.AddSingleton<ISensorReader, LinuxSensorReader>();
         services.AddSingleton<IDiskActivityReader, LinuxDiskActivityReader>();
         services.AddSingleton<IFirewall, LinuxFirewall>();
+        services.AddSingleton<IHostInventory, LinuxHostInventory>();
     }
 
     [SupportedOSPlatform("macos")]
@@ -67,5 +70,6 @@ public static class PlatformServices
         services.AddSingleton<ISensorReader, MacSensorReader>();
         services.AddSingleton<IDiskActivityReader, MacDiskActivityReader>();
         services.AddSingleton<IFirewall, MacFirewall>();
+        services.AddSingleton<IHostInventory, MacHostInventory>();
     }
 }

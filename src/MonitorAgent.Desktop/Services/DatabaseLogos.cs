@@ -7,7 +7,7 @@ namespace MonitorAgent.UI.Services;
 
 /// <summary>
 /// On Windows the icon of the engine's management program installed on this device (SSMS, pgAdmin, MySQL
-/// Workbench), as the WPF app shows; otherwise, or when none is installed, a bundled logo. Returned as base64 so
+/// Workbench); otherwise, or when none is installed, a bundled logo. Returned as base64 so
 /// it flows through the same Icon binding as applications.
 /// </summary>
 public static partial class DatabaseLogos

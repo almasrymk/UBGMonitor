@@ -17,6 +17,7 @@ public static class ReportTypes
     public const string Compliance = "compliance";
     public const string Internet = "internet";
     public const string Settings = "settings";
+    public const string Applications = "applications";
     public const string Inventory = "inventory";
 
     public static IReadOnlyList<ReportTypeInfo> All { get; } =
@@ -29,6 +30,7 @@ public static class ReportTypes
         new(Compliance, "Specifications Compliance", "Whether this device meets the Device Specifications in Settings."),
         new(Internet, "Internet Quality", "Speed tests, ping, packet loss, Wi-Fi signal, data usage and disconnections."),
         new(Settings, "Settings Changes", "Every change saved in Settings, and when."),
+        new(Applications, "Applications Changes", "Programs installed, removed or updated, users added or signing in and out, and services that stopped, failed or recovered."),
         new(Inventory, "Device Inventory", "The full hardware, operating system, network and monitor points list of this device.")
     ];
 

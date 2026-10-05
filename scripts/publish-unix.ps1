@@ -31,7 +31,7 @@ function Copy-Text([string]$Source, [string]$Target, [hashtable]$Values = @{}) {
     [IO.File]::WriteAllText($Target, $text.Replace("`r`n", "`n"), (New-Object System.Text.UTF8Encoding($false)))
 }
 
-$icon = "$root\src\MonitorAgent.UI\Assets\monitoragent.png"
+$icon = "$root\src\MonitorAgent.Desktop\Assets\monitoragent.png"
 
 foreach ($rid in $Runtimes) {
     $name = "monitoragent-$rid"

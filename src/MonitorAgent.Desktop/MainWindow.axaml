@@ -165,6 +165,9 @@
                 <Button Classes="nav" Content="Monitor Points" Tag="&#xE707;" 
                              Command="{Binding SelectTabCommand}" CommandParameter="Monitor Points"
                              Classes.selected="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter='Monitor Points'}"/>
+                <Button Classes="nav" Content="Applications" Tag="&#xE71D;"
+                             Command="{Binding SelectTabCommand}" CommandParameter="Applications"
+                             Classes.selected="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter='Applications'}"/>
                 <Button Classes="nav" Content="Reports" Tag="&#xE9D2;" 
                              Command="{Binding SelectTabCommand}" CommandParameter="Reports"
                              Classes.selected="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter='Reports'}"/>
@@ -256,7 +259,9 @@
                                             <DataTemplate>
                                                 <Button Classes="chip" Classes.selected="{Binding IsSelected}"
                                                         Command="{Binding $parent[Window].DataContext.SelectMonitorPointCommand}"
-                                                        CommandParameter="{Binding}">
+                                                        CommandParameter="{Binding}"
+                                                        DoubleTapped="MonitorPointChip_DoubleTapped"
+                                                        ToolTip.Tip="Double-click to open">
                                                     <StackPanel>
                                                         <Grid Width="52" Height="52" HorizontalAlignment="Center">
                                                             <Ellipse Width="52" Height="52" Opacity="0.22"
@@ -329,6 +334,8 @@
                     IsVisible="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter=Monitor Points}"/>
                 <views:SettingsView
                     IsVisible="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter=Settings}"/>
+                <views:ApplicationsView
+                    IsVisible="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter=Applications}"/>
                 <views:ReportsView
                     IsVisible="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter=Reports}"/>
                 <views:AboutView

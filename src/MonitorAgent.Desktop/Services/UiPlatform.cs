@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Layout;
+using Avalonia.Media;
 using Avalonia.Platform.Storage;
 
 namespace MonitorAgent.UI.Services;
@@ -20,6 +22,39 @@ public static class UiPlatform
 
         _ = clipboard.SetTextAsync(text);
         return true;
+    }
+
+    public static void ShowMessage(string title, string text)
+    {
+        var ok = new Button { Content = "OK", MinWidth = 80, HorizontalAlignment = HorizontalAlignment.Right };
+        var dialog = new Window
+        {
+            Title = title,
+            Width = 420,
+            SizeToContent = SizeToContent.Height,
+            CanResize = false,
+            ShowInTaskbar = false,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Content = new StackPanel
+            {
+                Margin = new Thickness(20),
+                Spacing = 16,
+                Children =
+                {
+                    new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap },
+                    ok
+                }
+            }
+        };
+        ok.Click += (_, _) => dialog.Close();
+        if (Main is Window owner)
+        {
+            _ = dialog.ShowDialog(owner);
+        }
+        else
+        {
+            dialog.Show();
+        }
     }
 
     public static async Task<string?> PickSaveFileAsync(string fileTypeName, string extension, string suggestedName)

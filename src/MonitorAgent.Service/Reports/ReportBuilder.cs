@@ -83,6 +83,7 @@ public sealed partial class ReportBuilder
             ReportTypes.Compliance => await ComplianceAsync(period, cancellationToken),
             ReportTypes.Internet => Internet(period),
             ReportTypes.Settings => SettingsChanges(period),
+            ReportTypes.Applications => ApplicationChangesReport(period),
             ReportTypes.Inventory => await InventoryAsync(cancellationToken),
             _ => []
         };
@@ -136,7 +137,8 @@ public sealed partial class ReportBuilder
                      ("Device Health", Health(period), 1),
                      ("Specifications Compliance", await ComplianceAsync(period, cancellationToken), 0),
                      ("Internet Quality", Internet(period), 1),
-                     ("Settings Changes", SettingsChanges(period), 0)
+                     ("Settings Changes", SettingsChanges(period), 0),
+                     ("Applications Changes", ApplicationChangesReport(period), 0)
                  })
         {
             if (built.FirstOrDefault() is { } overview)
@@ -422,6 +424,44 @@ public sealed partial class ReportBuilder
         ];
     }
 
+    private List<ReportSection> ApplicationChangesReport(Period period)
+    {
+        var changes = _store.GetApplicationChanges(period.FromUtc, period.ToUtc);
+        return
+        [
+            new ReportSection
+            {
+                Title = "Overview",
+                Metrics =
+                [
+                    new("Changes", changes.Count.ToString()),
+                    new("Programs", changes.Count(c => c.Area == "Programs").ToString()),
+                    new("Users", changes.Count(c => c.Area == "Users").ToString()),
+                    new("Services", changes.Count(c => c.Area == "Services").ToString()),
+                    new("Problems", changes.Count(c => c.Severity is "Critical" or "Warning").ToString()),
+                    new("Last change", changes.Count == 0 ? "-" : Fmt.Local(changes[^1].Utc))
+                ]
+            },
+            new ReportSection
+            {
+                Title = "At a glance",
+                Charts = new[]
+                {
+                    Charts.Pie("Changes by area", changes.GroupBy(c => c.Area).Select(g => (g.Key, (double)g.Count()))),
+                    Charts.ByHour("Changes by hour of the day", "changes", 0, true, null, ("Changes", changes.Select(c => (c.Utc, 1d)), v => v.Sum())),
+                    Charts.ByDay("Changes per day", "changes", 0, period, false, ("Changes", changes.Select(c => (c.Utc, 1d)), v => v.Sum()))
+                }.OfType<ReportChart>().ToList()
+            },
+            new ReportSection
+            {
+                Title = "All changes",
+                Columns = ["Time", "Area", "Severity", "Change"],
+                Rows = changes.OrderByDescending(c => c.Utc)
+                    .Select(c => new List<string> { Fmt.Local(c.Utc), c.Area, c.Severity, c.Change }).ToList()
+            }
+        ];
+    }
+
     private static string SettingsArea(string change)
     {
         if (change.StartsWith("Monitor point", StringComparison.OrdinalIgnoreCase))
@@ -688,6 +728,7 @@ public sealed partial class ReportBuilder
         _ when id.StartsWith("database", StringComparison.Ordinal) => "Database",
         _ when id.StartsWith("device:", StringComparison.Ordinal) => "Device",
         _ when id.StartsWith("application:", StringComparison.Ordinal) => "Application",
+        _ when id.StartsWith(ApplicationChanges.ServiceIssuePrefix, StringComparison.Ordinal) => "Service",
         "madkhal" => "Madkhal server",
         _ => "Other"
     };
