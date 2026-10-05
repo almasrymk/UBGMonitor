@@ -173,14 +173,22 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public bool ShowNotifications => Settings.NotificationsEnabled && HasCurrentIssues;
 
-    /// <summary>The license screen covers the results; Settings and About stay usable.</summary>
-    public bool ShowLicenseOverlay => License.IsRequired && SelectedTab is not (SettingsTab or AboutTab);
+    /// <summary>The license screen covers every tab except About.</summary>
+    public bool ShowLicenseOverlay => License.IsRequired && SelectedTab != AboutTab;
+
+    /// <summary>Whether the status bar shows results (internet, RAM); without a license it shows only the service itself.</summary>
+    public bool ShowStatusResults => !License.IsRequired;
 
     private void OnLicenseRequiredChanged()
     {
         OnPropertyChanged(nameof(ShowLicenseOverlay));
+        OnPropertyChanged(nameof(ShowStatusResults));
         if (License.IsRequired)
         {
+            Replace(MonitorPoints, []);
+            Replace(DashboardMonitorPoints, []);
+            HasMonitorPoints = false;
+            UpdatePointSummary([]);
             return;
         }
 
@@ -229,15 +237,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             {
                 _serviceConnected = true;
                 ApplySavedRuntimeSettings();
+                await License.CheckNowCommand.ExecuteAsync(null);
+                _nextLicenseUtc = DateTime.UtcNow.AddSeconds(5);
                 if (SelectedTab == ReportsTab && !Reports.HasReport && !Reports.IsLoading)
                 {
                     Reports.GenerateCommand.Execute(null);
                 }
-            }
-
-            if (!Settings.IsLoaded && await Settings.LoadFromServiceAsync())
-            {
-                ApplySavedRuntimeSettings();
             }
 
             if (DateTime.UtcNow >= _nextLicenseUtc)
@@ -255,6 +260,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 }
 
                 return;
+            }
+
+            if (!Settings.IsLoaded && await Settings.LoadFromServiceAsync())
+            {
+                ApplySavedRuntimeSettings();
             }
 
             if (await _client.GetDiskActivityAsync() is { } diskActivity)

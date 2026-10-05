@@ -28,7 +28,9 @@ public sealed class LicenseService : BackgroundService, ILicenseState
 {
     private const string IssueKey = LicenseCodes.IssueId;
     private static readonly TimeSpan ClockTolerance = TimeSpan.FromMinutes(10);
-    private static readonly TimeSpan MinCheckInterval = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan MinCheckInterval = TimeSpan.FromMinutes(1);
+    /// <summary>A license suspended or revoked on the site is noticed within this time, whatever the plan's heartbeat interval.</summary>
+    private static readonly TimeSpan MaxCheckInterval = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan FirstRetry = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan MaxRetry = TimeSpan.FromHours(1);
     private static readonly TimeSpan KeyRefreshInterval = TimeSpan.FromMinutes(10);
@@ -75,7 +77,7 @@ public sealed class LicenseService : BackgroundService, ILicenseState
         _time = time;
         _logger = logger;
         _deviceId = DeviceFingerprint.Get(_options.ProductCode);
-        _checkInterval = TimeSpan.FromHours(Math.Max(1, _options.DefaultCheckHours));
+        _checkInterval = MaxCheckInterval;
         _stored = store.Load();
         _keys = SigningKeySet.Parse(_stored.SigningKeysJson);
         VerifyStoredToken();
@@ -256,8 +258,8 @@ public sealed class LicenseService : BackgroundService, ILicenseState
         _lastCheckFailed = false;
         _lastCheckMessage = null;
         _failures = 0;
-        var seconds = reply.NextCheckAfterSeconds is > 0 ? reply.NextCheckAfterSeconds.Value : _options.DefaultCheckHours * 3600;
-        _checkInterval = TimeSpan.FromSeconds(Math.Max(MinCheckInterval.TotalSeconds, seconds));
+        var seconds = reply.NextCheckAfterSeconds is > 0 ? reply.NextCheckAfterSeconds.Value : MaxCheckInterval.TotalSeconds;
+        _checkInterval = TimeSpan.FromSeconds(Math.Clamp(seconds, MinCheckInterval.TotalSeconds, MaxCheckInterval.TotalSeconds));
         _nextCheckUtc = now + Jitter(_checkInterval);
         _store.Save(_stored);
         Publish();

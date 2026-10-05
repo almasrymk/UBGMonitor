@@ -25,9 +25,6 @@ public sealed class LicensingOptions
     /// <summary>Kept below the app's 20-second request timeout, so an activation answer reaches the app.</summary>
     public int TimeoutSeconds { get; init; } = 15;
 
-    /// <summary>How often to check in when the server does not say (nextCheckAfterSeconds).</summary>
-    public int DefaultCheckHours { get; init; } = 6;
-
     /// <summary>How long the service keeps working without reaching the server, when the signed token does not say.</summary>
     public int OfflineGraceDays { get; init; } = 7;
 

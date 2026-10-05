@@ -150,6 +150,24 @@ public sealed class LicensingTests : IDisposable
     }
 
     [Fact]
+    public async Task Checks_AtLeastEveryFiveMinutes_SoASuspendedLicenseIsNoticedQuickly()
+    {
+        _gateway.Next = Accepted();
+        var service = CreateService();
+
+        var result = await service.ActivateAsync("ABCD-EFGH-IJKL-MNOP-QRST", CancellationToken.None);
+
+        Assert.InRange(result.Status.NextCheckUtc!.Value, T0.AddMinutes(4), T0.AddMinutes(6));
+
+        _gateway.Next = new LicenseReply(LicenseReplyKind.Rejected, "suspended", "LIC_LICENSE_SUSPENDED");
+        var status = await service.RefreshAsync(CancellationToken.None);
+
+        Assert.Equal(LicenseState.Suspended, status.State);
+        Assert.False(service.IsLicensed);
+        Assert.InRange(status.NextCheckUtc!.Value, T0.AddMinutes(4), T0.AddMinutes(6));
+    }
+
+    [Fact]
     public async Task Offline_KeepsWorkingUntilTheGracePeriodEnds()
     {
         _gateway.Next = Accepted();

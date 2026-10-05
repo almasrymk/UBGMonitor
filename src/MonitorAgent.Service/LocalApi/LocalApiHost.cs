@@ -228,14 +228,12 @@ public sealed class LocalApiHost : BackgroundService
     }
 
     /// <summary>
-    /// What the app may use while the service has no valid license: activating it, its own settings and whether the service runs.
+    /// What the app may use while the service has no valid license: activating it and whether the service runs.
     /// Issues and notifications answer with the license notice only. Everything is still measured and saved meanwhile.
     /// </summary>
     private static bool OpenWithoutLicense(PathString path)
         => path.StartsWithSegments(ApiRoutes.License)
            || path.StartsWithSegments(ApiRoutes.Status)
-           || path.StartsWithSegments(ApiRoutes.Settings)
-           || path.StartsWithSegments(ApiRoutes.DatabaseTest)
            || path.StartsWithSegments(ApiRoutes.Issues)
            || path.StartsWithSegments(ApiRoutes.Notifications);
 

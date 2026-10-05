@@ -1,4 +1,4 @@
-﻿<Window x:Class="MonitorAgent.UI.MainWindow"
+<Window x:Class="MonitorAgent.UI.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="clr-namespace:MonitorAgent.UI.Views"
@@ -301,7 +301,8 @@
                                        Text="{Binding AgentVersion}"/>
                         </StackPanel>
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0" VerticalAlignment="Center"
+                                Visibility="{Binding ShowStatusResults, Converter={StaticResource BoolToVis}}">
                         <Grid Width="24" Height="24" Margin="0,0,8,0">
                             <Ellipse>
                                 <Ellipse.Style>
@@ -340,7 +341,8 @@
                             <TextBlock FontSize="11" FontWeight="SemiBold"
                                        Text="{Binding Uptime, StringFormat=Uptime: {0}}"/>
                             <TextBlock FontSize="11" FontWeight="SemiBold" Margin="12,0,0,0"
-                                       Text="{Binding RamTotalText}"/>
+                                       Text="{Binding RamTotalText}"
+                                       Visibility="{Binding ShowStatusResults, Converter={StaticResource BoolToVis}}"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -382,8 +384,6 @@
                                     <DataTemplate>
                                         <Button Command="{Binding DataContext.SelectMonitorPointCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                 CommandParameter="{Binding}"
-                                                MouseDoubleClick="MonitorPointChip_MouseDoubleClick"
-                                                ToolTip="Double-click to open"
                                                 Cursor="Hand"
                                                 Width="104"
                                                 Margin="0,0,8,0"
