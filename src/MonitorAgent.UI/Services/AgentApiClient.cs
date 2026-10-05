@@ -366,6 +366,54 @@ public sealed class AgentApiClient
     public Task<List<ReportSubject>?> GetReportSubjectsAsync(CancellationToken ct = default)
         => GetAsync<List<ReportSubject>>(ApiRoutes.ReportSubjects, "report-subjects", ct);
 
+    public Task<LicenseStatusDto?> GetLicenseAsync(CancellationToken ct = default)
+        => GetAsync<LicenseStatusDto>(ApiRoutes.License, "license", ct);
+
+    public Task<LicenseActionResultDto> ActivateLicenseAsync(string productKey, CancellationToken ct = default)
+        => PostLicenseAsync(ApiRoutes.LicenseActivate, new LicenseActivateRequest(productKey), ct);
+
+    public Task<LicenseActionResultDto> DeactivateLicenseAsync(CancellationToken ct = default)
+        => PostLicenseAsync(ApiRoutes.LicenseDeactivate, null, ct);
+
+    public async Task<LicenseStatusDto?> RefreshLicenseAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            using var response = await _http.PostAsync(ApiRoutes.LicenseRefresh, null, ct);
+            return response.IsSuccessStatusCode
+                ? await response.Content.ReadFromJsonAsync<LicenseStatusDto>(JsonOptions, ct)
+                : null;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            Debug.WriteLine($"[AgentApiClient] license refresh failed: {ex.Message}");
+            return null;
+        }
+    }
+
+    private async Task<LicenseActionResultDto> PostLicenseAsync(string route, object? body, CancellationToken ct)
+    {
+        try
+        {
+            using var response = body is null
+                ? await _http.PostAsync(route, null, ct)
+                : await _http.PostAsJsonAsync(route, body, ct);
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                return new LicenseActionResultDto(false, "The Agent service is too old for licensing; reinstall it.", new LicenseStatusDto());
+            }
+
+            return response.IsSuccessStatusCode
+                ? await response.Content.ReadFromJsonAsync<LicenseActionResultDto>(JsonOptions, ct)
+                    ?? new LicenseActionResultDto(false, "No answer.", new LicenseStatusDto())
+                : new LicenseActionResultDto(false, $"The Agent service answered with HTTP {(int)response.StatusCode}.", new LicenseStatusDto());
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            return new LicenseActionResultDto(false, "The Agent service is not answering.", new LicenseStatusDto());
+        }
+    }
+
     private async Task<T?> GetAsync<T>(string route, string name, CancellationToken ct)
         where T : class
     {

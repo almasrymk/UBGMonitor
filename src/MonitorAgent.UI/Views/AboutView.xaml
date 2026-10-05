@@ -71,6 +71,32 @@
                     </StackPanel>
                 </StackPanel>
 
+                <TextBlock Text="License" Style="{StaticResource SectionTitle}"/>
+                <Border Style="{StaticResource FeatureCard}" DataContext="{Binding License}">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Style="{StaticResource FeatureDot}" Fill="{Binding Health, Converter={StaticResource HealthToBrushConverter}}"/>
+                            <TextBlock Style="{StaticResource FeatureTitle}" Text="{Binding StateText}"/>
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource FeatureText}" Text="{Binding Message}"/>
+                        <TextBlock Style="{StaticResource Bullet}" Margin="0,2,0,0" Text="{Binding Details}"/>
+                        <DockPanel Margin="0,12,0,0" Visibility="{Binding CanEnterKey, Converter={StaticResource BoolToVis}}">
+                            <Button DockPanel.Dock="Right" Content="Activate" Command="{Binding ActivateCommand}"
+                                    Style="{StaticResource FooterButton}" Margin="8,0,0,0" Padding="18,6"/>
+                            <TextBox Text="{Binding ProductKey, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}"
+                                     ToolTip="Product key: XXXX-XXXX-XXXX-XXXX-XXXX"/>
+                        </DockPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                            <Button Content="Check now" Command="{Binding CheckNowCommand}" Style="{StaticResource FooterButton}" Margin="0,0,8,0" Padding="18,6"/>
+                            <Button Content="Release this computer" Command="{Binding ReleaseCommand}" Style="{StaticResource FooterButton}" Padding="18,6"
+                                    Visibility="{Binding CanRelease, Converter={StaticResource BoolToVis}}"/>
+                        </StackPanel>
+                        <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" Text="{Binding ResultMessage}"
+                                   Foreground="{Binding ResultHealth, Converter={StaticResource HealthToBrushConverter}}"
+                                   Visibility="{Binding HasResult, Converter={StaticResource BoolToVis}}"/>
+                    </StackPanel>
+                </Border>
+
                 <!-- What is it -->
                 <TextBlock Text="What is MonitorAgent?" Style="{StaticResource SectionTitle}"/>
                 <Border Style="{StaticResource FeatureCard}">

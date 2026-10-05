@@ -29,4 +29,9 @@ public static class ApiRoutes
 
     public const string Reports = "/api/reports";
     public const string ReportSubjects = "/api/reports/subjects";
+
+    public const string License = "/api/license";
+    public const string LicenseActivate = "/api/license/activate";
+    public const string LicenseDeactivate = "/api/license/deactivate";
+    public const string LicenseRefresh = "/api/license/refresh";
 }

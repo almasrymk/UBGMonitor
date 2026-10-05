@@ -1,0 +1,90 @@
+using System.Text.Json;
+using MonitorAgent.Service.Platform;
+using MonitorAgent.Shared.Models;
+using MonitorAgent.Shared.Security;
+
+namespace MonitorAgent.Service.Licensing;
+
+/// <summary>What the service remembers about its license between restarts.</summary>
+public sealed record StoredLicense
+{
+    /// <summary>Encrypted with <see cref="SecretProtector"/>; read it with <see cref="LicenseStore.ProductKey"/>.</summary>
+    public string? ProtectedProductKey { get; init; }
+
+    public string? KeyPrefix { get; init; }
+
+    /// <summary>The last signed token from the server; its signature is checked every time it is used.</summary>
+    public string? Token { get; init; }
+
+    public string? SigningKeysJson { get; init; }
+
+    public DateTime? LastOnlineUtc { get; init; }
+
+    /// <summary>The latest time this computer's clock showed, to notice the clock being moved back.</summary>
+    public DateTime? LastSeenUtc { get; init; }
+
+    /// <summary>The last refusal from the server, kept so it still shows after a restart without internet.</summary>
+    public LicenseState? RejectedState { get; init; }
+
+    public string? RejectedCode { get; init; }
+
+    public string? RejectedMessage { get; init; }
+}
+
+public interface ILicenseStore
+{
+    StoredLicense Load();
+
+    void Save(StoredLicense license);
+}
+
+public sealed class LicenseStore : ILicenseStore
+{
+    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+    private readonly string _path;
+    private readonly ILogger<LicenseStore> _logger;
+
+    public LicenseStore(ILogger<LicenseStore> logger)
+        : this(Path.Combine(AgentPaths.StateFolder, "license.json"), logger)
+    {
+    }
+
+    public LicenseStore(string path, ILogger<LicenseStore> logger)
+    {
+        _path = path;
+        _logger = logger;
+    }
+
+    public static string? ProductKey(StoredLicense license)
+        => SecretProtector.Unprotect(license.ProtectedProductKey) is { Length: > 0 } key ? key : null;
+
+    public StoredLicense Load()
+    {
+        try
+        {
+            return File.Exists(_path)
+                ? JsonSerializer.Deserialize<StoredLicense>(File.ReadAllText(_path), JsonOptions) ?? new StoredLicense()
+                : new StoredLicense();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        {
+            _logger.LogWarning("[License] Could not read {Path}: {Message}", _path, ex.Message);
+            return new StoredLicense();
+        }
+    }
+
+    public void Save(StoredLicense license)
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
+            var temp = _path + ".tmp";
+            File.WriteAllText(temp, JsonSerializer.Serialize(license, JsonOptions));
+            File.Move(temp, _path, overwrite: true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogError("[License] Could not save {Path}: {Message}", _path, ex.Message);
+        }
+    }
+}

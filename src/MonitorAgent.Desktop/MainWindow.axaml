@@ -255,7 +255,9 @@
                                             <DataTemplate>
                                                 <Button Classes="chip" Classes.selected="{Binding IsSelected}"
                                                         Command="{Binding $parent[Window].DataContext.SelectMonitorPointCommand}"
-                                                        CommandParameter="{Binding}">
+                                                        CommandParameter="{Binding}"
+                                                        DoubleTapped="MonitorPointChip_DoubleTapped"
+                                                        ToolTip.Tip="Double-click to open">
                                                     <StackPanel>
                                                         <Grid Width="52" Height="52" HorizontalAlignment="Center">
                                                             <Ellipse Width="52" Height="52" Opacity="0.22"
@@ -332,6 +334,37 @@
                     IsVisible="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter=Reports}"/>
                 <views:AboutView
                     IsVisible="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter=About}"/>
+
+                <Border ZIndex="10" Background="{DynamicResource SurfaceDarkBrush}" IsVisible="{Binding ShowLicenseOverlay}">
+                    <Border Classes="card" DataContext="{Binding License}" MaxWidth="600" Margin="20" Padding="28,24"
+                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="12" Height="12" Margin="0,0,10,0" VerticalAlignment="Center"
+                                         Fill="{Binding Health, Converter={StaticResource HealthToBrushConverter}}"/>
+                                <TextBlock Text="{Binding RequiredTitle}" FontSize="20" FontWeight="Bold"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            </StackPanel>
+                            <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" Text="{Binding Message}"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}"
+                                       Text="MonitorAgent keeps monitoring and saving everything in the background. The results and reports appear here as soon as the license is active; nothing is lost."/>
+                            <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" FontSize="11" Text="{Binding Details}"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       IsVisible="{Binding Details, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                            <DockPanel Margin="0,16,0,0" IsVisible="{Binding CanEnterKey}">
+                                <Button DockPanel.Dock="Right" Classes="footer accent" Content="Activate" Command="{Binding ActivateCommand}"
+                                        Margin="8,0,0,0" Padding="18,6"/>
+                                <TextBox Classes="field" Text="{Binding ProductKey}" Watermark="Product key: XXXX-XXXX-XXXX-XXXX-XXXX"/>
+                            </DockPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                <Button Classes="footer" Content="Check now" Command="{Binding CheckNowCommand}" Padding="18,6"/>
+                            </StackPanel>
+                            <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" Text="{Binding ResultMessage}" IsVisible="{Binding HasResult}"
+                                       Foreground="{Binding ResultHealth, Converter={StaticResource HealthToBrushConverter}}"/>
+                        </StackPanel>
+                    </Border>
+                </Border>
             </Grid>
         </Grid>
 

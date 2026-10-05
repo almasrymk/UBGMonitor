@@ -1,5 +1,6 @@
 using MonitorAgent.Service.Connectivity;
 using MonitorAgent.Service.Config;
+using MonitorAgent.Service.Licensing;
 using MonitorAgent.Service.Monitoring;
 using MonitorAgent.Service.Options;
 using MonitorAgent.Service.Platform;
@@ -108,6 +109,23 @@ public sealed class LocalApiHost : BackgroundService
 
             await next();
         });
+        app.Use(async (context, next) =>
+        {
+            var license = _rootProvider.GetRequiredService<ILicenseState>();
+            if (!license.IsLicensed && !OpenWithoutLicense(context.Request.Path))
+            {
+                var status = license.GetStatus();
+                await Results.Problem(
+                    detail: status.Message,
+                    statusCode: StatusCodes.Status403Forbidden,
+                    title: "License required",
+                    extensions: new Dictionary<string, object?> { ["code"] = LicenseCodes.Required, ["state"] = status.State.ToString() })
+                    .ExecuteAsync(context);
+                return;
+            }
+
+            await next();
+        });
         MapEndpoints(app);
 
         try
@@ -208,6 +226,30 @@ public sealed class LocalApiHost : BackgroundService
         await base.StopAsync(cancellationToken);
         await StopAppAsync();
     }
+
+    /// <summary>
+    /// What the app may use while the service has no valid license: activating it, its own settings and whether the service runs.
+    /// Issues and notifications answer with the license notice only. Everything is still measured and saved meanwhile.
+    /// </summary>
+    private static bool OpenWithoutLicense(PathString path)
+        => path.StartsWithSegments(ApiRoutes.License)
+           || path.StartsWithSegments(ApiRoutes.Status)
+           || path.StartsWithSegments(ApiRoutes.Settings)
+           || path.StartsWithSegments(ApiRoutes.DatabaseTest)
+           || path.StartsWithSegments(ApiRoutes.Issues)
+           || path.StartsWithSegments(ApiRoutes.Notifications);
+
+    private bool IsLicensed() => _rootProvider.GetRequiredService<ILicenseState>().IsLicensed;
+
+    private AgentIssueDto LicenseNotice()
+        => _rootProvider.GetRequiredService<IMonitorHealthStore>().GetIssues().FirstOrDefault(i => i.Id == LicenseCodes.IssueId)
+           ?? new AgentIssueDto
+           {
+               Id = LicenseCodes.IssueId,
+               Severity = "Critical",
+               Title = "License required",
+               Message = _rootProvider.GetRequiredService<ILicenseState>().GetStatus().Message
+           };
 
     private void MapEndpoints(WebApplication app)
     {
@@ -324,10 +366,14 @@ public sealed class LocalApiHost : BackgroundService
             Results.Ok(await MonitorPointStatusBuilder.BuildAsync(_rootProvider, ct)));
 
         app.MapGet(ApiRoutes.Issues, () =>
-            Results.Ok(_rootProvider.GetRequiredService<IMonitorHealthStore>().GetIssues()));
+        {
+            var issues = _rootProvider.GetRequiredService<IMonitorHealthStore>().GetIssues();
+            return Results.Ok(IsLicensed() ? issues : issues.Where(i => i.Id == LicenseCodes.IssueId).ToList());
+        });
 
-        app.MapGet(ApiRoutes.Notifications, () =>
-            Results.Ok(_rootProvider.GetRequiredService<INotificationStore>().GetNotifications()));
+        app.MapGet(ApiRoutes.Notifications, () => IsLicensed()
+            ? Results.Ok(_rootProvider.GetRequiredService<INotificationStore>().GetNotifications())
+            : Results.Ok(new[] { LicenseNotice() }));
 
         app.MapGet(ApiRoutes.Internet, () =>
             Results.Ok(_rootProvider.GetRequiredService<IInternetStatus>().GetState()));
@@ -367,6 +413,17 @@ public sealed class LocalApiHost : BackgroundService
             internet.StartSpeedTest();
             return Results.Accepted(ApiRoutes.Internet, internet.GetState());
         });
+
+        app.MapGet(ApiRoutes.License, () => Results.Ok(_rootProvider.GetRequiredService<ILicenseState>().GetStatus()));
+
+        app.MapPost(ApiRoutes.LicenseActivate, async (LicenseActivateRequest request, CancellationToken ct) =>
+            Results.Ok(await _rootProvider.GetRequiredService<ILicenseState>().ActivateAsync(request.ProductKey, ct)));
+
+        app.MapPost(ApiRoutes.LicenseDeactivate, async (CancellationToken ct) =>
+            Results.Ok(await _rootProvider.GetRequiredService<ILicenseState>().DeactivateAsync(ct)));
+
+        app.MapPost(ApiRoutes.LicenseRefresh, async (CancellationToken ct) =>
+            Results.Ok(await _rootProvider.GetRequiredService<ILicenseState>().RefreshAsync(ct)));
     }
 
     /// <summary>Saves the settings changes to the Data file and shows them as a green notification for a few seconds.</summary>

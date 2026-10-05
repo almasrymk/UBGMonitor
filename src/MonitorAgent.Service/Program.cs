@@ -1,5 +1,6 @@
 using MonitorAgent.Service.Config;
 using MonitorAgent.Service.Connectivity;
+using MonitorAgent.Service.Licensing;
 using MonitorAgent.Service.LocalApi;
 using MonitorAgent.Service.Monitoring;
 using MonitorAgent.Service.Options;
@@ -49,8 +50,16 @@ try
     builder.Services.Configure<RoutingOptions>(builder.Configuration.GetSection(RoutingOptions.SectionName));
     builder.Services.Configure<LocalApiOptions>(builder.Configuration.GetSection(LocalApiOptions.SectionName));
     builder.Services.Configure<MonitoringOptions>(builder.Configuration.GetSection(MonitoringOptions.SectionName));
+    builder.Services.AddSingleton(Microsoft.Extensions.Options.Options.Create(LicensingOptions.FromConfiguration(builder.Configuration)));
 
     builder.Services.AddSingleton<IAgentIdentity, AgentIdentity>();
+    builder.Services.AddSingleton(TimeProvider.System);
+    builder.Services.AddHttpClient(LicensePlatformClient.HttpClientName);
+    builder.Services.AddSingleton<ILicenseStore, LicenseStore>();
+    builder.Services.AddSingleton<ILicensePlatformClient, LicensePlatformClient>();
+    builder.Services.AddSingleton<LicenseService>();
+    builder.Services.AddSingleton<ILicenseState>(sp => sp.GetRequiredService<LicenseService>());
+    builder.Services.AddHostedService(sp => sp.GetRequiredService<LicenseService>());
     builder.Services.AddPlatformServices();
     builder.Services.AddSingleton<IHardwareService, HardwareService>();
     builder.Services.AddSingleton<ISensorsService, SensorsService>();

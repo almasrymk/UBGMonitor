@@ -382,6 +382,8 @@
                                     <DataTemplate>
                                         <Button Command="{Binding DataContext.SelectMonitorPointCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                 CommandParameter="{Binding}"
+                                                MouseDoubleClick="MonitorPointChip_MouseDoubleClick"
+                                                ToolTip="Double-click to open"
                                                 Cursor="Hand"
                                                 Width="104"
                                                 Margin="0,0,8,0"
@@ -594,6 +596,39 @@
                     </Style>
                 </views:AboutView.Style>
             </views:AboutView>
+
+            <Border Panel.ZIndex="10" Background="{DynamicResource SurfaceDarkBrush}"
+                    Visibility="{Binding ShowLicenseOverlay, Converter={StaticResource BoolToVis}}">
+                <Border Style="{StaticResource CardBorder}" DataContext="{Binding License}" MaxWidth="600" Margin="20" Padding="28,24"
+                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="12" Height="12" Margin="0,0,10,0" VerticalAlignment="Center"
+                                     Fill="{Binding Health, Converter={StaticResource HealthToBrushConverter}}"/>
+                            <TextBlock Text="{Binding RequiredTitle}" FontSize="20" FontWeight="Bold"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        </StackPanel>
+                        <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" Text="{Binding Message}"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Text="MonitorAgent keeps monitoring and saving everything in the background. The results and reports appear here as soon as the license is active; nothing is lost."/>
+                        <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" FontSize="11" Text="{Binding Details}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <DockPanel Margin="0,16,0,0" Visibility="{Binding CanEnterKey, Converter={StaticResource BoolToVis}}">
+                            <Button DockPanel.Dock="Right" Content="Activate" Command="{Binding ActivateCommand}"
+                                    Style="{StaticResource FooterButton}" Margin="8,0,0,0" Padding="18,6"/>
+                            <TextBox Text="{Binding ProductKey, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}"
+                                     ToolTip="Product key: XXXX-XXXX-XXXX-XXXX-XXXX"/>
+                        </DockPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                            <Button Content="Check now" Command="{Binding CheckNowCommand}" Style="{StaticResource FooterButton}" Padding="18,6"/>
+                        </StackPanel>
+                        <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" Text="{Binding ResultMessage}"
+                                   Foreground="{Binding ResultHealth, Converter={StaticResource HealthToBrushConverter}}"
+                                   Visibility="{Binding HasResult, Converter={StaticResource BoolToVis}}"/>
+                    </StackPanel>
+                </Border>
+            </Border>
         </Grid>
         </Grid>
 

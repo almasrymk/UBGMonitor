@@ -48,7 +48,13 @@ public sealed class DeviceMonitor : BackgroundService, IMonitoringModule
     public async Task RunCycleAsync(CancellationToken cancellationToken)
     {
         var config = await _configCache.GetConfigAsync(cancellationToken);
-        var devices = config.MonitorPoints.Where(p => p.Enabled && p.Type == MonitorPointType.Device);
+        var devices = config.MonitorPoints.Where(p => p.Enabled && p.Type == MonitorPointType.Device).ToList();
+        var active = new HashSet<string>(devices.Select(d => d.MonitorPointId), StringComparer.OrdinalIgnoreCase);
+        foreach (var id in _lastUp.Keys.Where(id => !active.Contains(id)).ToList())
+        {
+            _health.ClearIssue($"device:{id}");
+            _lastUp.Remove(id);
+        }
 
         foreach (var device in devices)
         {

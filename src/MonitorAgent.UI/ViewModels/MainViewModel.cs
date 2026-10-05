@@ -22,6 +22,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private DateTime _nextNetworkUtc = DateTime.MinValue;
     private DateTime _nextDiskUtc = DateTime.MinValue;
     private DateTime _nextHardwareUtc = DateTime.MinValue;
+    private DateTime _nextLicenseUtc = DateTime.MinValue;
     private string _operatingSystem = string.Empty;
     private double _peakDownloadMbps;
     private double _peakUploadMbps;
@@ -74,6 +75,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public ReportsViewModel Reports { get; }
 
+    public LicenseViewModel License { get; }
+
     public CpuViewModel Cpu { get; } = new();
     public RamViewModel Ram { get; } = new();
     public DiskViewModel Disk { get; } = new();
@@ -98,6 +101,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _client = client;
         Settings = new SettingsViewModel(client);
         Reports = new ReportsViewModel(client) { ShowRequested = () => SelectedTab = ReportsTab };
+        License = new LicenseViewModel(client);
+        License.RequiredChanged += OnLicenseRequiredChanged;
         TopCpuCard = new ProcessListCardViewModel(_client, "Top 5 by CPU", ProcessSortBy.Cpu, UiTheme.Resource("AccentGreenBrush", "#4CAF50"));
         TopRamCard = new ProcessListCardViewModel(_client, "Top 5 by RAM", ProcessSortBy.Ram, UiTheme.Resource("ProcessBarRamBrush", "#2196F3"));
         TopNetworkCard = new ProcessListCardViewModel(_client, "Top 5 by Network", ProcessSortBy.Network, UiTheme.FromHex("#FFFFFF"));
@@ -168,6 +173,25 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public bool ShowNotifications => Settings.NotificationsEnabled && HasCurrentIssues;
 
+    /// <summary>The license screen covers the results; Settings and About stay usable.</summary>
+    public bool ShowLicenseOverlay => License.IsRequired && SelectedTab is not (SettingsTab or AboutTab);
+
+    private void OnLicenseRequiredChanged()
+    {
+        OnPropertyChanged(nameof(ShowLicenseOverlay));
+        if (License.IsRequired)
+        {
+            return;
+        }
+
+        // The service kept measuring while there was no license, so everything is loaded again, history included.
+        ApplySavedRuntimeSettings();
+        if (SelectedTab == ReportsTab && !Reports.IsLoading)
+        {
+            Reports.GenerateCommand.Execute(null);
+        }
+    }
+
     private void ApplySavedRuntimeSettings()
     {
         _client.SetBaseAddress(Settings.ApiBaseUrl, Settings.ClientAccessKey);
@@ -214,6 +238,23 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             if (!Settings.IsLoaded && await Settings.LoadFromServiceAsync())
             {
                 ApplySavedRuntimeSettings();
+            }
+
+            if (DateTime.UtcNow >= _nextLicenseUtc)
+            {
+                _nextLicenseUtc = DateTime.UtcNow.AddSeconds(License.IsRequired ? 5 : 15);
+                await License.LoadAsync();
+            }
+
+            if (License.IsRequired)
+            {
+                ApplyServiceStatus(status);
+                if (await _client.GetNotificationsAsync() is { } notice)
+                {
+                    ApplyNotifications(notice);
+                }
+
+                return;
             }
 
             if (await _client.GetDiskActivityAsync() is { } diskActivity)
@@ -316,6 +357,18 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     private async Task RefreshServiceAsync(AgentStatusDto status)
     {
+        ApplyServiceStatus(status);
+        var points = MergeMonitorPoints(Settings.SavedMonitorPoints, await _client.GetMonitorPointsAsync() ?? []);
+        var shortcutPoints = OrderDashboardPoints(points).ToList();
+        HasMonitorPoints = shortcutPoints.Count > 0;
+        Replace(MonitorPoints, points);
+        Replace(DashboardMonitorPoints, shortcutPoints.Select(DashboardMonitorPointViewModel.From));
+        ApplyMonitorPointSelection(SelectedMonitorPointId);
+        UpdatePointSummary(points);
+    }
+
+    private void ApplyServiceStatus(AgentStatusDto status)
+    {
         WindowTitle = $"MonitorAgent — {(string.IsNullOrWhiteSpace(Settings.MachineName) ? status.AgentId : Settings.MachineName)}";
         AgentStatus = status.Status;
         ServiceRunning = string.Equals(status.Status, "Running", StringComparison.OrdinalIgnoreCase);
@@ -327,14 +380,6 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         AgentVersion = $"Agent v{status.Version}";
         ConfigVersionText = $"Config v{status.ConfigVersion}";
         LastSyncText = $"Last Sync: {FormatSync(status.LastSyncUtc)}";
-
-        var points = MergeMonitorPoints(Settings.SavedMonitorPoints, await _client.GetMonitorPointsAsync() ?? []);
-        var shortcutPoints = OrderDashboardPoints(points).ToList();
-        HasMonitorPoints = shortcutPoints.Count > 0;
-        Replace(MonitorPoints, points);
-        Replace(DashboardMonitorPoints, shortcutPoints.Select(DashboardMonitorPointViewModel.From));
-        ApplyMonitorPointSelection(SelectedMonitorPointId);
-        UpdatePointSummary(points);
     }
 
     private static int AtLeastOne(int value) => value < 1 ? 1 : value;
@@ -343,6 +388,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     private const string SettingsTab = "Settings";
     private const string ReportsTab = "Reports";
+    private const string AboutTab = "About";
 
     [RelayCommand]
     private async Task SelectTab(string tab)
@@ -386,6 +432,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
         OnPropertyChanged(nameof(CanGoBack));
         OnPropertyChanged(nameof(BackToolTip));
+        OnPropertyChanged(nameof(ShowLicenseOverlay));
         GoBackCommand.NotifyCanExecuteChanged();
 
         if (newValue == ReportsTab && !Reports.HasReport && !Reports.IsLoading)
@@ -395,6 +442,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         else if (newValue == ReportsTab)
         {
             Reports.RefreshSubjects();
+        }
+        else if (newValue == AboutTab)
+        {
+            License.LoadCommand.Execute(null);
         }
     }
 
