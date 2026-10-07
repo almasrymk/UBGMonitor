@@ -15,10 +15,11 @@ public sealed partial class ApplicationsViewModel : ObservableObject
     public const string ServicesSection = "Services";
 
     private readonly AgentApiClient _client;
+    /// <summary>The sections with a request on its way; touched on the UI thread only.</summary>
+    private readonly HashSet<string> _loading = [];
     private IReadOnlyList<InstalledProgramDto> _programs = [];
     private IReadOnlyList<UserAccountDto> _users = [];
     private IReadOnlyList<SystemServiceDto> _services = [];
-    private int _loading;
     private int _generation;
 
     [ObservableProperty] private string _selectedSection = ProgramsSection;
@@ -48,12 +49,14 @@ public sealed partial class ApplicationsViewModel : ObservableObject
 
     public bool IsServices => SelectedSection == ServicesSection;
 
+    public static readonly IReadOnlyList<string> Sections = [ProgramsSection, UsersSection, ServicesSection];
+
     partial void OnSelectedSectionChanged(string value)
     {
         OnPropertyChanged(nameof(IsPrograms));
         OnPropertyChanged(nameof(IsUsers));
         OnPropertyChanged(nameof(IsServices));
-        RefreshCommand.Execute(null);
+        _ = RefreshSectionAsync(value);
     }
 
     partial void OnSearchTextChanged(string value) => ApplyFilters();
@@ -64,11 +67,14 @@ public sealed partial class ApplicationsViewModel : ObservableObject
 
     partial void OnOnlyProblemsChanged(bool value) => ApplyFilters();
 
-    /// <summary>Asks the service for the section on screen; a request still on its way is not repeated.</summary>
+    /// <summary>Asks the service for all three sections, so the counts under each name are current, not only the list on screen.</summary>
     [RelayCommand]
-    public async Task RefreshAsync()
+    public Task RefreshAsync() => Task.WhenAll(Sections.Select(RefreshSectionAsync));
+
+    /// <summary>Asks the service for one section; a request still on its way is not repeated.</summary>
+    public async Task RefreshSectionAsync(string section)
     {
-        if (Interlocked.Exchange(ref _loading, 1) == 1)
+        if (!_loading.Add(section))
         {
             return;
         }
@@ -76,7 +82,7 @@ public sealed partial class ApplicationsViewModel : ObservableObject
         var generation = _generation;
         try
         {
-            switch (SelectedSection)
+            switch (section)
             {
                 case ProgramsSection:
                     var programs = await _client.GetProgramsAsync();
@@ -91,14 +97,14 @@ public sealed partial class ApplicationsViewModel : ObservableObject
                 case UsersSection:
                     Apply(generation, await _client.GetUsersAsync(), list => _users = list);
                     break;
-                default:
+                case ServicesSection:
                     Apply(generation, await _client.GetServicesAsync(), list => _services = list);
                     break;
             }
         }
         finally
         {
-            Interlocked.Exchange(ref _loading, 0);
+            _loading.Remove(section);
         }
     }
 

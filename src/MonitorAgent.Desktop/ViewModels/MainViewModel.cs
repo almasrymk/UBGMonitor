@@ -23,7 +23,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private DateTime _nextDiskUtc = DateTime.MinValue;
     private DateTime _nextHardwareUtc = DateTime.MinValue;
     private DateTime _nextLicenseUtc = DateTime.MinValue;
-    private DateTime _nextApplicationsUtc = DateTime.MinValue;
+    /// <summary>When each Applications section (programs, users, services) is read again; each has its own interval in General settings.</summary>
+    private readonly Dictionary<string, DateTime> _nextApplicationsUtc = ApplicationsViewModel.Sections.ToDictionary(s => s, _ => DateTime.MinValue);
     private string _operatingSystem = string.Empty;
     private double _peakDownloadMbps;
     private double _peakUploadMbps;
@@ -217,8 +218,17 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _nextNetworkUtc = DateTime.MinValue;
         _nextDiskUtc = DateTime.MinValue;
         _nextHardwareUtc = DateTime.MinValue;
+        ResetApplicationsSchedule();
         UiTheme.Apply(Settings.Theme);
         OnPropertyChanged(nameof(ShowNotifications));
+    }
+
+    private void ResetApplicationsSchedule()
+    {
+        foreach (var section in ApplicationsViewModel.Sections)
+        {
+            _nextApplicationsUtc[section] = DateTime.MinValue;
+        }
     }
 
     private async Task RefreshDueAsync()
@@ -290,15 +300,24 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 ApplyNotifications(notifications);
             }
 
-            if (SelectedTab == ApplicationsTab && now >= _nextApplicationsUtc)
+            if (SelectedTab == ApplicationsTab)
             {
-                _nextApplicationsUtc = now.AddSeconds(AtLeastOne(Applications.SelectedSection switch
+                // All three sections are kept current, so the counts under each name are right before the section is opened.
+                foreach (var section in ApplicationsViewModel.Sections)
                 {
-                    ApplicationsViewModel.ProgramsSection => Settings.ProgramsIntervalSeconds,
-                    ApplicationsViewModel.UsersSection => Settings.UsersIntervalSeconds,
-                    _ => Settings.ServicesIntervalSeconds
-                }));
-                _ = Applications.RefreshAsync();
+                    if (now < _nextApplicationsUtc[section])
+                    {
+                        continue;
+                    }
+
+                    _nextApplicationsUtc[section] = now.AddSeconds(AtLeastOne(section switch
+                    {
+                        ApplicationsViewModel.ProgramsSection => Settings.ProgramsIntervalSeconds,
+                        ApplicationsViewModel.UsersSection => Settings.UsersIntervalSeconds,
+                        _ => Settings.ServicesIntervalSeconds
+                    }));
+                    _ = Applications.RefreshSectionAsync(section);
+                }
             }
 
             Network.SpeedTestEnabled = Settings.SpeedTestIntervalSeconds > 0;
@@ -477,7 +496,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         else if (newValue == ApplicationsTab)
         {
             // Shown on the next tick, once the service and the license have been checked.
-            _nextApplicationsUtc = DateTime.MinValue;
+            ResetApplicationsSchedule();
         }
     }
 

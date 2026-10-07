@@ -169,9 +169,10 @@ public static class ApplicationChanges
             : null;
     }
 
+    /// <summary>"Display name (name)", unless the display name already carries the name (as Google's updater services do).</summary>
     public static string ServiceLabel(SystemServiceDto service) =>
-        string.IsNullOrWhiteSpace(service.DisplayName) || string.Equals(service.DisplayName, service.Name, StringComparison.OrdinalIgnoreCase)
-            ? service.Name
+        string.IsNullOrWhiteSpace(service.DisplayName) ? service.Name
+            : service.DisplayName.Contains(service.Name, StringComparison.OrdinalIgnoreCase) ? service.DisplayName
             : $"{service.DisplayName} ({service.Name})";
 
     private static bool IsTransitional(string state) =>
