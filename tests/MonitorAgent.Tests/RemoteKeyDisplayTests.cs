@@ -34,6 +34,8 @@ public sealed class RemoteKeyDisplayTests
         var settings = new SettingsViewModel(new AgentApiClient());
         settings.RemoteEnabled = true;
         Assert.False(settings.RemoteAdministration);
+        settings.RemoteKeyPanelOpen = true;
+        Assert.False(settings.RemoteAdministration);
         Assert.Equal("Key unavailable here; regenerate to display it.", settings.ViewerKeyDisplay);
     }
     private static string Hash(string key) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(key)));

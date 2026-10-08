@@ -736,3 +736,9 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - بطلب المالك: Allow access وViewer وAdmin ومفاتيحهما وأزرار إعادة الإنشاء تختفي عند 127.0.0.1 وتظهر عند اختيار أي عنوان شبكة آخر، باستخدام binding المعكوس لـCanEditNetworkOptions الذي يُحدّث مع اختيار العنوان. تغيير عرض فقط دون حذف المفاتيح.
 - التحقق: Release build ناجح، صفر أخطاء وتحذيرا SYSLIB0057 قائمان؛ 189 نجاح/4 SKIPPED/0 فشل. لم تُختبر الشاشة تفاعليًا؛ لا تعديل master أو نشر.
+
+### R4-S05 — فصل HTTPS عن checkbox إدارة الوصول حسب تصحيح المالك
+- الحالة: DONE-VERIFIED
+- أعيد Enable remote HTTPS access مستقلًا ظاهرًا كما سابقًا؛ Allow remote administration فوق Viewer وAdmin هو الذي يختفي معهما عند 127.0.0.1 ويظهر مع عناوين الشبكة. Viewer ثابت، Admin قابل للتعديل عندما يسمح الخيار الرئيسي بالإدارة؛ المفاتيح ونسخها وإعادة إنشائها محفوظة.
+- إنشاء المفاتيح الناقصة أصبح عند اختيار Allow remote administration؛ تحميل حالة الخدمة لا ينشئ مفاتيح. إعداد الصلاحيات يطبق عبر Save، ولا تغيير في مفاتيح الخدمة الحالية. الحفاظ على الخيار الرئيسي أثناء نتائج إنشاء المفتاح دون استبدال التعديل المعلق بحالة الخدمة القديمة.
+- التحقق: Release build النهائي 0 warnings/errors (incremental؛ تحذيرا SYSLIB0057 قائمان في rebuild)؛ 189 نجاح/4 SKIPPED/0 فشل. الاختبار Access_toggle_does_not_implicitly_enable_admin يغطي كذلك رفض عميل غير مسؤول لتفعيل الإدارة. الواجهة لم تختبر تفاعليًا؛ لا master/push/install.

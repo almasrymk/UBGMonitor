@@ -310,7 +310,8 @@
                         </StackPanel>
                     </Grid>
                     <StackPanel IsEnabled="{Binding CanManageRemoteAccess}">
-                        <CheckBox IsVisible="{Binding !CanEditNetworkOptions}" Content="Allow access (HTTPS)" IsChecked="{Binding RemoteEnabled}" IsEnabled="{Binding CanEditNetworkOptions}"/>
+                        <CheckBox Content="Enable remote HTTPS access" IsChecked="{Binding RemoteEnabled}" IsEnabled="{Binding CanEditNetworkOptions}"/>
+                        <CheckBox IsVisible="{Binding !CanEditNetworkOptions}" Content="Allow remote administration with a separate admin key" IsChecked="{Binding RemoteKeyPanelOpen}"/>
                         <StackPanel IsVisible="{Binding !CanEditNetworkOptions}" Spacing="6" Margin="16,0,0,6">
                             <Grid ColumnDefinitions="100,*,Auto">
                                 <CheckBox Content="Viewer" IsChecked="True" IsEnabled="False"/>
@@ -319,7 +320,7 @@
                                 <Button Grid.Column="2" Content="↻" ToolTip.Tip="Regenerate viewer key" Command="{Binding ManageRemoteAccessCommand}" CommandParameter="create-viewer-key" Classes="footer"/>
                             </Grid>
                             <Grid ColumnDefinitions="100,*,Auto">
-                                <CheckBox Content="Admin" IsChecked="{Binding RemoteAdministration}"/>
+                                <CheckBox Content="Admin" IsChecked="{Binding RemoteAdministration}" IsEnabled="{Binding RemoteKeyPanelOpen}"/>
                                 <SelectableTextBlock Grid.Column="1" Tag="admin" PointerPressed="RemoteKey_PointerPressed" Text="{Binding AdminKeyDisplay}" VerticalAlignment="Center" TextWrapping="Wrap">
                                 </SelectableTextBlock>
                                 <Button Grid.Column="2" Content="↻" ToolTip.Tip="Regenerate admin key" Command="{Binding ManageRemoteAccessCommand}" CommandParameter="create-admin-key" Classes="footer"/>

@@ -123,9 +123,11 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly RemoteKeyDisplayStore _remoteKeyDisplayStore = new();
     private bool _loadingRemoteStatus;
     private bool _preparingRemoteKeys;
-    partial void OnRemoteEnabledChanged(bool value)
+    [ObservableProperty] private bool _remoteKeyPanelOpen;
+    partial void OnRemoteKeyPanelOpenChanged(bool value)
     {
         if (_loadingRemoteStatus || _loadingListenAddress || !IsLoaded || !CanManageRemoteAccess) return;
+        RemoteAdministration = value;
         if (value) _ = PrepareRemoteKeysAsync();
     }
     private async Task PrepareRemoteKeysAsync()
@@ -207,6 +209,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         var result = await _client.ManageRemoteAccessAsync(new(action, RemoteEnabled, RemoteAdministration, OpenFirewallPort));
         if (result is null) { StatusMessage = "Remote action failed. Create the required keys and save the listening address/port first."; return; }
         var pendingFlags = (RemoteEnabled, RemoteAdministration, OpenFirewallPort);
+        var pendingPanel = RemoteKeyPanelOpen;
         if (result.Key is not null)
         {
             try { _remoteKeyDisplayStore.Save(action == "create-viewer-key" ? "viewer" : "admin", result.Key); }
@@ -220,6 +223,9 @@ public sealed partial class SettingsViewModel : ObservableObject
         ApplyRemoteStatus(result.Status);
         if (result.Key is not null)
         {
+            _loadingRemoteStatus = true;
+            try { RemoteKeyPanelOpen = pendingPanel; }
+            finally { _loadingRemoteStatus = false; }
             RemoteEnabled = pendingFlags.RemoteEnabled;
             RemoteAdministration = pendingFlags.RemoteAdministration;
             OpenFirewallPort = pendingFlags.OpenFirewallPort;
@@ -240,6 +246,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         _loadingRemoteStatus = true;
         try
         {
+            RemoteKeyPanelOpen = status.AllowAdministration;
             RemoteEnabled = status.Enabled; RemoteAdministration = status.AllowAdministration; OpenFirewallPort = status.OpenFirewall;
             if (!CanEditNetworkOptions) { RemoteEnabled = true; OpenFirewallPort = true; }
         }
