@@ -278,3 +278,14 @@
 - اختبار عدم الانكسار: لا source متتبع أصبح ignored؛ مجلدات Reports المصدر ما زالت متتبعة.
 - غير المتحقق: ignore ليس منعًا لـgit add -f ولا بديلًا عن scanning.
 - اختلاف عن الخطة: root anchoring لبيانات Reports/Data ضروري بسبب وجود source directories بنفس الاسم.
+
+### R1-S07 — فحص الأسرار في المصدر والتوزيع
+- الحالة: DONE-UNVERIFIED
+- ماذا تغير ولماذا: job مستقل يستخدم Gitleaks8.30.1 binary مجاني مع SHA256 ثابت؛ PR range من merge-base إلى head، push range من before إلى head، manual/new branch آخر commit. فحص التوزيع بعد publish على OS matrix؛ فاحص PowerShell7 يرفض credentials غير الفارغة/Setting/Ui/MonitorPoints والـblobs في كل appsettings*.json ويطبع file/field فقط.
+- الملفات: .gitleaks.toml، ci.yml، check-release-secrets.ps1، test-release-secrets.ps1.
+- الأوامر الفعلية: إصدار Gitleaks الرسمي والتحقق من checksum نجح؛ git scan e4d30c1..HEAD وstaged scan code0. throwaway repository به credential وهمي في commit ثم scanner بنفس config/flags code1؛ rule monitoragent-licensing-credential في fixture.json. أزيل repo المؤقت بعد التحقق من مسار cleanup؛ تاريخ المنتج لم يُعد كتابته. فاحص publish المحلي نجح2 settings files. self-tests9 حالات نجحت، ومنها secret في ملف environment إضافي، والقيم لا تظهر في المخرجات. build0 أخطاء/0تحذيرات؛ suite109pass/1skip/0fail؛ diff check ناجح.
+- اختبار الأمان: scanners ترفض fake secret، protected blob، nested password/key، Setting/MonitorPoints وJSON غير صالح؛ gitleaks default rules مفعلة مع قواعد lcs/lc وdpapi/aes JSON.
+- اختبار عدم الانكسار: clean settings مقبولة؛ نشر Service Release وفحص إعداداته نجح؛ suite كامل.
+- غير المتحقق: CI المعدلة لم تُنشر حسب أمر المستخدم، فلا ادعاء بنجاح GitHub job/Unix PowerShell. المسح لا يدعي تنظيف التاريخ كله. SHA القديم0c66b6a مستثنى فقط، لا secret-value allowlist؛ الإلغاء الإداري يظل Pending.
+- اختلاف عن الخطة: إثبات رفض commit تم محليًا بنفس binary/flags في repo مؤقت مستقل بدل push؛ لا CI حقيقية بدون نشر. scan manual آخر commit لتجنب مسح تاريخ التسريب القديم غير المعالج بالكامل.
+- مرجع الأداة: https://github.com/gitleaks/gitleaks (الوثائق الأصلية؛ download8.30.1/checksums الرسمية).

@@ -1,0 +1,21 @@
+title = "MonitorAgent secret scanning"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Historical licensing credential introduction; removal does not revoke it"
+commits = ["0c66b6a449b2398cb30802ced328515612669f1e"]
+
+[[rules]]
+id = "monitoragent-licensing-credential"
+description = "Licensing client IDs and secrets must not be distributed"
+regex = '''\b(?:lcs|lc)_[A-Za-z0-9_-]{16,}'''
+keywords = ["lcs_", "lc_"]
+
+[[rules]]
+id = "monitoragent-protected-json-secret"
+description = "Machine-protected secret blobs in JSON still expose private installation data"
+path = '''(?i)\.json$'''
+regex = '''(?:dpapi|aes):[A-Za-z0-9+/=_-]{16,}'''
+keywords = ["dpapi:", "aes:"]
