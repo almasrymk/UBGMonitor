@@ -49,7 +49,7 @@ public sealed class ApplicationsTests
         Assert.False(result[1].IsRunning);
     }
 
-    [Theory]
+    [WindowsTheory]
     [InlineData(@"C:\Program Files", null)]
     [InlineData(@"C:\Program Files\", null)]
     [InlineData(@"C:\Users\me\AppData\Local", null)]
