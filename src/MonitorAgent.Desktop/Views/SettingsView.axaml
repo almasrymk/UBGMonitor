@@ -353,13 +353,13 @@
                     </StackPanel></Border>
                     <Border Classes="settingscard">
                         <Grid ColumnDefinitions="32,16,*">
-                            <mi:MaterialIcon Kind="CertificateOutline" Width="26" Height="26" Foreground="{DynamicResource AccentGreenBrush}" VerticalAlignment="Top" Margin="0,0,0,0"/>
+                            <mi:MaterialIcon Kind="FileCertificateOutline" Width="26" Height="26" Foreground="{DynamicResource AccentGreenBrush}" VerticalAlignment="Top" Margin="0,0,0,0"/>
                             <StackPanel Grid.Column="2" Spacing="8" IsEnabled="{Binding CanManageRemoteAccess}">
                                 <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
                                     <TextBlock Text="Certificate" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                     <Border IsVisible="{Binding CertificateIsValid}" CornerRadius="14" Padding="10,4" Background="#235F2C"><StackPanel Orientation="Horizontal" Spacing="6"><mi:MaterialIcon Kind="ShieldCheck" Width="14" Height="14" Foreground="White"/><TextBlock Text="Valid" Foreground="White" FontSize="12"/></StackPanel></Border>
-                                    <TextBlock IsVisible="{Binding CertificateIsValid}" Text="The current certificate is within its validity period." FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
-                                    <TextBlock IsVisible="{Binding !CertificateIsValid}" Text="No current certificate configured." FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                                    <TextBlock IsVisible="{Binding CertificateIsValid}" Text="{Binding CertificateSummary}" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                                    <TextBlock IsVisible="{Binding !CertificateIsValid}" Text="{Binding CertificateSummary}" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                                 </StackPanel>
                                 <Border BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1" CornerRadius="6" Padding="14,10" Background="{DynamicResource SurfaceDarkBrush}">
                                     <Grid ColumnDefinitions="1.5*,24,*">

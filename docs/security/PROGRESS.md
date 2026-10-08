@@ -838,3 +838,9 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - إعادة بناء البطاقة: أيقونة يسار مستقلة؛ Certificate وشارة Valid والوصف في صف أعلى، معلومات bordered في عمودين (Fingerprint وزر Copy ثم Serial يسار؛ Expires On/Issuer/Subject يمين)، وزرّا Regenerate Certificate/Import Customer PFX أسفل التفاصيل بعرض ووصف وأيقونات المرجع. حذف صف Validity من التفاصيل ونقل حالته للشارة. tooltip للبيانات الطويلة يحفظ إمكانية قراءتها ونسخ البصمة بلا prefix.
 - الشارة تتبع validity الفعلية ولا تستخدم بيانات المرجع ولا تدّعي trust أو اتصال فعلي. كل القيمة الفعلية من الخدمة.
 - Release build ناجح صفر أخطاء مع تحذيري SYSLIB0057 القائمين؛ 196 نجاح/4 SKIPPED/0 فشل. المطابقة البصرية النهائية أثناء تشغيل الواجهة غير متحققة، لا ادعاء pixel-perfect. لا master/push/install.
+
+### R4-S05 — تصحيح تحديث بيانات الشهادة وتشخيص metadata الناقصة
+- الحالة: DONE-VERIFIED
+- UpdateCertificateDisplay موحد للتحميل والاستيراد ونتائج الإدارة؛ الاستيراد كان يحدث البصمة فقط فتم تصحيح تحديث Serial/Expiry/Issuer/Subject/Valid بالكامل. أيقونة البطاقة FileCertificateOutline بدل CertificateOutline لتوافق مرجع المستند. البصمة دون metadata تعرض رسالة rebuild/restart للخدمة بدل وصف خاطئ بغياب الشهادة؛ لا تزوير حالة Valid.
+- اختبار الشهادة يطبق metadata الحقيقية على ViewModel ويثبت ظهور Valid والتفاصيل، وحالة DTO قديمة تثبت رسالة التشخيص. Release build ناجح صفر أخطاء وتحذيرا SYSLIB0057 قائمان؛ 196 نجاح/4 SKIPPED/0 فشل.
+- عملية Service موجودة محليًا لكن مسارها لم يتوفر بصلاحيات الفحص؛ لم يثبت أن نسختها قديمة ولم تُوقف أو تُشغّل. العرض الفعلي ما زال يحتاج تشغيل الخدمة والواجهة المبنيتين من نفس الفرع. لا master/push/install.

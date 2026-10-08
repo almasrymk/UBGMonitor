@@ -120,6 +120,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string _certificateIssuer = "—";
     [ObservableProperty] private string _certificateSerial = "—";
     [ObservableProperty] private string _certificateValidity = "Not configured";
+    [ObservableProperty] private string _certificateSummary = "Certificate details unavailable.";
     [ObservableProperty] private bool _certificateIsValid;
     [ObservableProperty] private string _certificateFingerprint = "—";
     [ObservableProperty]
@@ -277,6 +278,15 @@ public sealed partial class SettingsViewModel : ObservableObject
             if (!CanEditNetworkOptions) { RemoteEnabled = true; OpenFirewallPort = true; }
         }
         finally { _loadingRemoteStatus = false; }
+        UpdateCertificateDisplay(status);
+        OnPropertyChanged(nameof(CanManageRemoteAccess));
+        _savedFingerprints[SectionGeneral] = JsonSerializer.Serialize(_snapshot.General) + JsonSerializer.Serialize(new
+        { RemoteEnabled = status.Enabled, RemoteAdministration = status.AllowAdministration, OpenFirewallPort = status.OpenFirewall });
+        RefreshHasChanges();
+    }
+
+    public void UpdateCertificateDisplay(RemoteAccessStatus status)
+    {
         RemoteFingerprint = status.Fingerprint is null ? "No remote certificate yet." : "Certificate SHA-256: " + status.Fingerprint;
         CertificateExpiry = status.CertificateNotAfter?.ToString("yyyy/MM/dd HH:mm") ?? "—";
         CertificateSubject = status.CertificateSubject ?? "—";
@@ -288,10 +298,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         RemoteCertificateDetails = status.CertificateNotAfter is { } expires && status.CertificateNotBefore is { } starts
             ? $"Validity: {(starts <= DateTime.Now && expires > DateTime.Now ? "Current" : "Outside validity period")}\nExpires on: {expires:yyyy/MM/dd HH:mm}\nSubject: {status.CertificateSubject}\nIssuer: {status.CertificateIssuer}\nSerial number: {status.CertificateSerialNumber}"
             : "No certificate details available.";
-        OnPropertyChanged(nameof(CanManageRemoteAccess));
-        _savedFingerprints[SectionGeneral] = JsonSerializer.Serialize(_snapshot.General) + JsonSerializer.Serialize(new
-        { RemoteEnabled = status.Enabled, RemoteAdministration = status.AllowAdministration, OpenFirewallPort = status.OpenFirewall });
-        RefreshHasChanges();
+        CertificateSummary = CertificateIsValid ? "The current certificate is within its validity period." : status.Fingerprint is null ? "No certificate configured." : status.CertificateNotAfter is null ? "Certificate details unavailable. Rebuild and restart the MonitorAgent service." : "The certificate is outside its validity period.";
     }
 
     private void LoadRemoteKeyDisplays(RemoteAccessStatus status)

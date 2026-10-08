@@ -32,6 +32,16 @@ public sealed class RemoteAccessTests : IDisposable
         Assert.Equal(current.Subject, metadata.CertificateSubject);
         Assert.Equal(current.Issuer, metadata.CertificateIssuer);
         Assert.Equal(current.SerialNumber, metadata.CertificateSerialNumber);
+        var display = new MonitorAgent.UI.ViewModels.SettingsViewModel(new AgentApiClient());
+        display.UpdateCertificateDisplay(metadata);
+        Assert.True(display.CertificateIsValid);
+        Assert.Equal(current.SerialNumber, display.CertificateSerial);
+        Assert.Equal(current.Subject, display.CertificateSubject);
+        Assert.Equal(current.Issuer, display.CertificateIssuer);
+        Assert.NotEqual("—", display.CertificateExpiry);
+        display.UpdateCertificateDisplay(new(false, false, false, false, false, "TEST-ONLY-fingerprint"));
+        Assert.False(display.CertificateIsValid);
+        Assert.Contains("restart", display.CertificateSummary);
         Assert.True(current.HasPrivateKey);
     }
     [Fact]

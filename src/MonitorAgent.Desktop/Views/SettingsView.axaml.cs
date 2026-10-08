@@ -144,6 +144,6 @@ public partial class SettingsView : UserControl
         var result = await settings.Client.ManageRemoteAccessAsync(new MonitorAgent.Shared.Models.RemoteAccessAction("import-certificate", Pfx: Convert.ToBase64String(bytes.ToArray()), PfxPassword: password.Text));
         password.Text = string.Empty;
         settings.StatusMessage = result is null ? "Certificate import failed. Check its password, private key and expiration." : "Customer certificate imported. Reconnect remote clients after verifying the fingerprint.";
-        if (result is not null) settings.RemoteFingerprint = "Certificate SHA-256: " + result.Status.Fingerprint;
+        if (result is not null) settings.UpdateCertificateDisplay(result.Status);
     }
 }
