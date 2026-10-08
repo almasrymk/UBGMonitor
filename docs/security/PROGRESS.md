@@ -74,3 +74,13 @@
 - اختبار عدم الانكسار المضاف: تشغيل كل الاختبارات الأصلية قبل التنفيذ.
 - ما لم يتم التحقق منه ولماذا: Linux/macOS لم يُختبرا؛ baseline لا يثبت إغلاق أي ثغرة. الاختبارات الأصلية تتضمن فحص هاردوير محلي وطلبات public-IP، واختبار التقارير يستخدم مسار البيانات الافتراضي؛ سيتم عزل مسار البيانات في R0-S03.
 - اختلاف عن الخطة: لا شيء؛ مشاكل البيئة المقيدة موثقة منفصلة عن نتيجة إعادة التشغيل الناجحة.
+
+### R0-S03 — تجهيز اختبارات الأنظمة الثلاثة وعزل بياناتها
+- الحالة: DONE-UNVERIFIED
+- ماذا تغيّر ولماذا: تغير هدف الاختبارات من `net8.0-windows` إلى `net8.0` مع بقاء كل الاختبارات الأصلية على Windows. أضيفت `WindowsFact` و`UnixFact`، ووُسمت الاختبارات الثمانية التي تنشئ WindowsInventoryCollector أو WindowsSystemProbe أو HardwareMonitorReader بأنها Windows-only. تهيئة الاختبارات تضبط `MONITORAGENT_HOME` و`SecretProtector.KeyFile` إلى مجلد مؤقت منفصل لكل testhost قبل تهيئة المسارات، وتضبطه 0700 على Unix؛ لا تُستخدم بيانات خدمة حقيقية ولا مفتاح root الافتراضي.
+- الملفات: `tests/MonitorAgent.Tests/MonitorAgent.Tests.csproj`، `PlatformFactAttributes.cs`، `TestEnvironment.cs`، `TestEnvironmentTests.cs`، `SystemInfoServiceTests.cs`، `HardwareCardServiceTests.cs`.
+- الأوامر التي نُفذت ونتيجتها الفعلية: البناء الأول نجح مع 7 تحذيرات CA1416؛ أضيفت annotations صحيحة للنظام بدون تعطيل التحليل. `dotnet build MonitorAgent.sln -c Release` بعدها نجح مع 0 تحذيرات و0 أخطاء. `dotnet test MonitorAgent.sln -c Release --no-build --no-restore` نجح: 87 ناجحًا، 0 فاشلًا، 1 متجاوزًا، 88 إجماليًا؛ المتجاوز هو اختبار mode على Unix، وكل الـ86 الأصليين نجحوا على Windows.
+- اختبار الأمان المضاف: `StateAndReportsUseTheIsolatedTestDirectory` يثبت عزل كل مسارات البيانات والمفتاح؛ `TestDirectoryIsPrivateOnUnix` يثبت mode 0700 عند تشغيله على Unix.
+- اختبار عدم الانكسار المضاف: إعادة تشغيل جميع الاختبارات الأصلية بعد تغيير الهدف؛ لم يُحذف أو يُضعف أي assertion.
+- ما لم يتم التحقق منه ولماذا: Linux/macOS غير متاحين محليًا؛ CI في R0-S04 سيكشف نتيجتهما. اختبارات الهاردوير الأصلية لا تزال تفحص الجهاز المحلي وpublic-IP؛ تنظيف المجلد المؤقت best-effort عند إغلاق testhost لأن SQLite قد يحتفظ بملف مفتوح.
+- اختلاف عن الخطة: عزل بيانات الاختبارات ضروري لتشغيلها على Unix بدون صلاحيات root ولمنع تعديل بيانات خدمة مثبتة؛ تعديل في harness فقط وليس في المنتج.

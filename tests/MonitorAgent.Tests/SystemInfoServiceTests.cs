@@ -4,9 +4,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace MonitorAgent.Tests;
 
+[System.Runtime.Versioning.SupportedOSPlatform("windows")]
 public sealed class SystemInfoServiceTests
 {
-    [Fact]
+    [WindowsFact]
     public async Task GetSnapshotAsync_DoesNotThrow()
     {
         var snapshot = await CreateSut().GetSnapshotAsync();
@@ -20,7 +21,7 @@ public sealed class SystemInfoServiceTests
         Assert.NotNull(snapshot.Os);
     }
 
-    [Fact]
+    [WindowsFact]
     public async Task GetTopProcessesAsync_ReturnsRequestedCountOrLess()
     {
         var processes = await CreateSut().GetTopProcessesAsync(5);
@@ -29,7 +30,7 @@ public sealed class SystemInfoServiceTests
         Assert.True(processes.Count <= 5);
     }
 
-    [Fact]
+    [WindowsFact]
     public async Task GetTopProcessesSortedAsync_Cpu_ReturnsRequestedCountOrLess()
     {
         var processes = await CreateSut().GetTopProcessesSortedAsync(5, "cpu");
@@ -39,7 +40,7 @@ public sealed class SystemInfoServiceTests
         Assert.All(processes, item => Assert.Equal("%", item.Unit));
     }
 
-    [Fact]
+    [WindowsFact]
     public async Task GetTopProcessesSortedAsync_Ram_UsesMegabytes()
     {
         var processes = await CreateSut().GetTopProcessesSortedAsync(5, "ram");
@@ -49,7 +50,7 @@ public sealed class SystemInfoServiceTests
         Assert.All(processes, item => Assert.Equal("MB", item.Unit));
     }
 
-    [Fact]
+    [WindowsFact]
     public async Task GetTopProcessesSortedAsync_Network_UsesKilobytesPerSecond()
     {
         var processes = await CreateSut().GetTopProcessesSortedAsync(5, "network");

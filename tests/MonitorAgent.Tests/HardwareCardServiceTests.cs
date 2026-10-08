@@ -6,7 +6,8 @@ namespace MonitorAgent.Tests;
 
 public sealed class HardwareCardServiceTests
 {
-    [Fact]
+    [WindowsFact]
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
     public async Task GetStaticLevelsAsync_ReturnsLevels124_WithExpectedCounts()
     {
         var sut = new HardwareService(new FakeLocalConfigCache(), new WindowsInventoryCollector(), NullLogger<HardwareService>.Instance);
@@ -27,7 +28,8 @@ public sealed class HardwareCardServiceTests
         Assert.Equal("Product Key", response.Levels[2].Items[23].Name);
     }
 
-    [Fact]
+    [WindowsFact]
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
     public async Task GetLevelAsync_1_2_4_ReturnsRequestedLevel()
     {
         var sut = new HardwareService(new FakeLocalConfigCache(), new WindowsInventoryCollector(), NullLogger<HardwareService>.Instance);
@@ -45,7 +47,8 @@ public sealed class HardwareCardServiceTests
         Assert.Null(await sut.GetLevelAsync(3));
     }
 
-    [Fact]
+    [WindowsFact]
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
     public async Task SensorsService_GetLevelAsync_Returns16Items()
     {
         var sut = new SensorsService(new HardwareMonitorReader());
