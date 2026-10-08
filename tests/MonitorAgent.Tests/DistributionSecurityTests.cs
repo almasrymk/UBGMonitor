@@ -26,6 +26,8 @@ public sealed class DistributionSecurityTests
         Assert.Equal(string.Empty, licensing.GetProperty("ClientId").GetString());
         Assert.False(root.TryGetProperty("Setting", out _));
         Assert.False(root.TryGetProperty("MonitorPoints", out _));
+        Assert.Equal(string.Empty, root.GetProperty("Routing").GetProperty("MadkhalServerUrl").GetString());
+        Assert.Equal(string.Empty, root.GetProperty("Routing").GetProperty("CentralApiUrl").GetString());
     }
 
     [Fact]

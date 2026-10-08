@@ -55,6 +55,7 @@ public sealed class MadkhalMonitor : BackgroundService, IMonitoringModule
 
     public async Task RunCycleAsync(CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(_routing.MadkhalServerUrl)) return;
         _logger.LogInformation("[Madkhal] Checking the Madkhal server {Url}...", _routing.MadkhalServerUrl);
         var watch = System.Diagnostics.Stopwatch.StartNew();
         var available = await IsAvailableAsync(cancellationToken);

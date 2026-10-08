@@ -235,3 +235,16 @@
 ## ملخص التسليم المحلي لـRun 5
 
 الأجزاء الآمنة وتوسعة التسجيل مجهزة ومختبرة محليًا؛ Run5 كامل وF18/F19 لم ينتهوا. لا push/PR/merge/deploy/migration إنتاج؛ master لم يتغير بعد طلب المستخدم الأحدث. Run1 يتوقف مؤقتًا عند S02، وباقي التشغيلات ليست منجزة. المطلوب قبل التفعيل: قرار registration UX، دومين/JWK معتمدان، staging migration/backup، حماية provisioning/state، تأكيد انتقال وإلغاء الاعتماد المكشوف، واعتماد الدمج والنشر منفصلين. لا حاجة لأي سر خاص في المحادثة.
+
+## Run 1 — استئناف التنفيذ المحلي
+طلب صاحب المشروع «كمل» يستأنف باقي خطوات Run1 المصرح بتنفيذها، ثم التحضير الفني للتشغيل التالي؛ كل العمل على codex/security-hardening-enrollment وبدون نشر. لا تغيير أسماء المنتج أو تصميمه.
+
+### R1-S03 — التوجيه الآمن والإعدادات النظيفة
+- الحالة: DONE-VERIFIED
+- ماذا تغير ولماذا: Routing defaults فارغة في الكود والتوزيع؛ Madkhal/Central فارغان يبقيان بلا طلب أو log أو issue. Central يقبل HTTPS أو HTTP loopback فقط؛ القيمة غير الصالحة تحذر مرة واحدة دون عرض العنوان. DatabaseConnectionString الشبكية يتم تجاهلها واستخدام local.db في StateFolder دائمًا مع بقاء باقي الحقول.
+- الملفات: RoutingOptions.cs، appsettings.json، MadkhalMonitor.cs، ConfigPuller.cs، RoutingSecurityTests.cs، DistributionSecurityTests.cs.
+- الأوامر ونتائجها: Release build ناجح 0 أخطاء/0 تحذيرات؛ suite104 pass/1 Unix skip/0fail. أول build كشف اسم test logger متعارضًا مع Log؛ أُصلح ثم أُعيد البناء والاختبار ولم تُضعف assertions.
+- اختبار الأمان: defaults فارغة؛ Empty_routing_is_silent؛ Unsafe_central_url_is_idle_and_warns_once؛ network DB path لا يطبق.
+- اختبار عدم الانكسار: HTTPS وHTTP localhost/127.0.0.1 تحفظ fields؛ Madkhal المضبوط يحدّث الصحة بنجاح.
+- غير المتحقق: لا خدمة عميل أو منصة إنتاج؛ اختبارات HTTP fake محلية؛ Linux/macOS الجديد لم يشغلا.
+- اختلاف عن الخطة: رفض userinfo/query/fragment في base URL لتجنب التباس تركيب مسار config؛ غير المضبوط لا يعود لقيمة أضعف.
