@@ -248,3 +248,13 @@
 - اختبار عدم الانكسار: HTTPS وHTTP localhost/127.0.0.1 تحفظ fields؛ Madkhal المضبوط يحدّث الصحة بنجاح.
 - غير المتحقق: لا خدمة عميل أو منصة إنتاج؛ اختبارات HTTP fake محلية؛ Linux/macOS الجديد لم يشغلا.
 - اختلاف عن الخطة: رفض userinfo/query/fragment في base URL لتجنب التباس تركيب مسار config؛ غير المضبوط لا يعود لقيمة أضعف.
+
+### R1-S04 — تثبيت نظيف بلا نقاط تجريبية
+- الحالة: DONE-VERIFIED
+- ماذا تغير ولماذا: CreateDefault بلا monitor points. cache يحتوي فقط IDs العينات الحالية يتحول إلى قائمة فارغة؛ مسار UpgradeLegacySample السابق يستمر دون إعادة إضافة العينات. الإعدادات/الحدود/هوية/version/DB الحالية تحفظ. أضيفت مسارات اختيارية لاختبار cache/settings في ملفات مؤقتة دون تغيير مسارات المنتج الافتراضية.
+- الملفات: LocalConfigCache.cs، LocalConfigCacheSecurityTests.cs.
+- الأوامر الفعلية: اختبار reproducer قبل الإصلاح4 حالات:3 فشل و1 نجاح (التثبيت النظيف والعينات القديمة/الحالية أعادت نقاطًا). بعد الإصلاح Release build0 أخطاء/0تحذيرات؛ suite108 pass/1skip/0fail.
+- اختبار الأمان: Clean_install_without_Setting_has_zero_monitor_points؛ إزالة sample-only cache وثباتها عند إعادة القراءة.
+- اختبار عدم الانكسار: Real_monitor_points_and_existing_settings_survive_cache_reload يحافظ على النقطة الحقيقية وDB/version/address؛ migration تحفظ الهوية والحدود.
+- غير المتحقق: تثبيت VM حقيقي غير منفذ؛ الاختبارات تستعمل مجلدات مؤقتة؛ legacy camera rule القديمة ظلت كما كانت.
+- اختلاف عن الخطة: dependency paths اختيارية لعزل الاختبارات فقط؛ samples لا تحذف من قائمة مخلوطة بنقاط عميل حقيقية.

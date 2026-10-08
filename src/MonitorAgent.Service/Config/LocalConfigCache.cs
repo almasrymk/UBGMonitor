@@ -31,6 +31,7 @@ public sealed class LocalConfigCache : ILocalConfigCache
     };
 
     private readonly string _path;
+    private readonly string _appSettingsPath;
     private readonly IAgentIdentity _identity;
     private readonly IConfiguration _configuration;
     private readonly ILogger<LocalConfigCache> _logger;
@@ -47,12 +48,14 @@ public sealed class LocalConfigCache : ILocalConfigCache
     private GeneralRuntimeSettings _general = new();
     private DeviceSpecSettings _deviceSpec = new();
 
-    public LocalConfigCache(IAgentIdentity identity, IConfiguration configuration, ILogger<LocalConfigCache> logger)
+    public LocalConfigCache(IAgentIdentity identity, IConfiguration configuration, ILogger<LocalConfigCache> logger,
+        string? cachePath = null, string? appSettingsPath = null)
     {
         _identity = identity;
         _configuration = configuration;
         _logger = logger;
-        _path = Path.Combine(AgentPaths.StateFolder, "config.json");
+        _path = cachePath ?? Path.Combine(AgentPaths.StateFolder, "config.json");
+        _appSettingsPath = appSettingsPath ?? Path.Combine(AppContext.BaseDirectory, "appsettings.json");
         _current = CreateDefault();
     }
 
@@ -169,7 +172,7 @@ public sealed class LocalConfigCache : ILocalConfigCache
     private bool TryReadMonitorPoints(out List<MonitorPoint> points)
     {
         points = [];
-        var path = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+        var path = _appSettingsPath;
         if (!File.Exists(path))
         {
             return false;
@@ -246,49 +249,17 @@ public sealed class LocalConfigCache : ILocalConfigCache
             RamCriticalThreshold = 90,
             DiskCriticalThreshold = 90,
             DatabaseConnectionString = $"Data Source={Path.Combine(AgentPaths.StateFolder, "local.db")}",
-            MonitorPoints =
-            [
-                new MonitorPoint
-                {
-                    MonitorPointId = "main-point-a",
-                    DisplayName = "Main Point A",
-                    Type = MonitorPointType.Device,
-                    Address = "127.0.0.1",
-                    Location = "HQ",
-                    Model = "Server",
-                    Enabled = true,
-                    IntervalSeconds = 15
-                },
-                new MonitorPoint
-                {
-                    MonitorPointId = "regional-point-b",
-                    DisplayName = "Regional Point B",
-                    Type = MonitorPointType.Device,
-                    Address = "127.0.0.1",
-                    Location = "Region",
-                    Model = "Satellite",
-                    Enabled = true,
-                    IntervalSeconds = 15
-                },
-                new MonitorPoint
-                {
-                    MonitorPointId = "remote-point-c",
-                    DisplayName = "Remote Point C",
-                    Type = MonitorPointType.Device,
-                    Address = "192.0.2.1",
-                    Location = "Remote",
-                    Model = "IP Camera",
-                    Enabled = true,
-                    IntervalSeconds = 15
-                }
-            ]
+            MonitorPoints = []
         };
     }
 
     private AgentRuntimeConfig UpgradeLegacySample(AgentRuntimeConfig loaded)
     {
         var ids = loaded.MonitorPoints.Select(p => p.MonitorPointId).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        if (!ids.Contains("camera-01") || ids.Count > 2)
+        var currentSamples = new HashSet<string>(["main-point-a", "regional-point-b", "remote-point-c"], StringComparer.OrdinalIgnoreCase);
+        var isCurrentSample = ids.Count > 0 && ids.IsSubsetOf(currentSamples);
+        var isLegacySample = ids.Contains("camera-01") && ids.Count <= 2;
+        if (!isCurrentSample && !isLegacySample)
         {
             return loaded;
         }
