@@ -155,7 +155,11 @@ public sealed partial class SettingsViewModel : ObservableObject
         var status = await _client.GetRemoteAccessAsync();
         if (status is null) return;
         var key = _remoteKeyDisplayStore.Load(role, role == "viewer" ? status.ViewerKeyHash : status.AdminKeyHash);
-        if (key.Length > 0) await UiPlatform.CopySensitiveTextAsync(key);
+        if (key.Length > 0)
+        {
+            await UiPlatform.CopySensitiveTextAsync(key);
+            StatusMessage = role == "viewer" ? "Viewer key copied." : "Admin key copied.";
+        }
         else StatusMessage = "This key is unavailable here or has changed; regenerate it locally.";
     }
     public bool CanManageRemoteAccess => _client.CanAdminister && _client.IsLocalTransport;

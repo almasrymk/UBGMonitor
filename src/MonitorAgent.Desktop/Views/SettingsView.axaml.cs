@@ -63,7 +63,9 @@ public partial class SettingsView : UserControl
     }
     private async void RemoteKey_PointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e)
     {
-        if (sender is not SelectableTextBlock label || !e.GetCurrentPoint(label).Properties.IsRightButtonPressed) return;
+        if (sender is not SelectableTextBlock label) return;
+        var pointer = e.GetCurrentPoint(label).Properties;
+        if (!pointer.IsLeftButtonPressed && !pointer.IsRightButtonPressed) return;
         var settings = (DataContext as MainViewModel)?.Settings ?? DataContext as SettingsViewModel;
         if (settings?.CanManageRemoteAccess != true || label.Tag is not string role) return;
         e.Handled = true;

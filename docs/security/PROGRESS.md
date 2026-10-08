@@ -765,3 +765,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - بطلب المالك: IsChecked لصف Viewer يتبع RemoteKeyPanelOpen بـOneWay؛ اختيار Allow remote administration يحدد Viewer وإلغاء الخيار يلغي علامته. Viewer يظل IsEnabled=false ولا يغيره المستخدم مباشرة. تغيير عرض فقط، دون تغيير صحة المفاتيح أو قواعد مصادقة الخدمة.
 - التحقق: Release build ناجح صفر أخطاء مع تحذيري SYSLIB0057 القائمين؛ 195 نجاح/4 SKIPPED/0 فشل. لم تُختبر الشاشة تفاعليًا؛ لا master أو نشر.
+
+### R4-S05 — تنسيق صفوف المفاتيح والنسخ بالضغط
+- الحالة: DONE-VERIFIED
+- تصغير Viewer/Admin بـScaleTransform 0.85 وخط 12 مقارنة بالخيار الرئيسي؛ المفاتيح باللون AccentBlueBrush وخط Bold ومؤشر Hand وتلميح نسخ. الضغط اليسار أو اليمين ينسخ عبر نفس التحقق من البصمة والصلاحية وSensitiveClipboard ويعرض رسالة دون نص المفتاح. نقل خيار فتح البورت فوق Allow remote administration وصفوفه.
+- التحقق: آخر Release build ناجح 0 warnings/errors (incremental)؛ 195 نجاح/4 SKIPPED/0 فشل. مطابقة الشاشة بصريًا والclipboard الحقيقي لم تختبرا تفاعليًا؛ لا master/push/install.
