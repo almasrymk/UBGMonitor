@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - 'security/**'
+      - 'cloud/**'
       - master
   workflow_dispatch:
 
