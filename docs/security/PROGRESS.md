@@ -577,3 +577,9 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الأوامر: restore، Release build بلا warnings/errors، tests: 154 نجاح/3 skip/0 فشل. إعادة vulnerable audit أثبتت اختفاء تنبيه SQLite وبقاء حزمتين في الاختبارات لإصلاح لاحق.
 - اختبار عدم الانكسار: ReportStore وSQLite المحلي ضمن suite الحالية. Unix native runtimes ما زالت تحتاج CI.
 - مصادر: https://github.com/advisories/GHSA-2m69-gcr7-jv3q وhttps://github.com/ericsink/SQLitePCL.raw .
+
+### R7-S02b — إزالة تبعيات الاختبار المصابة
+- الحالة: DONE-VERIFIED
+- التغيير: xUnit 2.5.3 إلى 2.9.3 فقط؛ يحافظ على واجهة اختبارات xUnit 2 ولا يغير runner. الحزمتان System.Net.Http 4.3.0 وSystem.Text.RegularExpressions 4.3.0 لم تعودا في vulnerable dependency graph.
+- التحقق: restore ناجح، Release build بلا warnings/errors؛ 154 نجاح/3 Unix skip/0 فشل. vulnerable audit النهائي لجميع المشاريع بلا أي vulnerabilities مبلغ عنها. التقرير TestResults/dependency-vulnerabilities-final.json محلي فقط.
+- الحد: خلو الفحص لا يثبت غياب جميع الثغرات، والاختبار عبر Unix لم يُشغّل محليًا.
