@@ -44,6 +44,19 @@
 
 ## متابعة التنفيذ على master
 
+### توجيه أحدث — العمل المحلي فقط
+بعد دمج Run 0، طلب المستخدم عدم تعديل master مباشرة وعدم نشر التغييرات تلقائيًا، وتوسيع Run 5 لدعم Device Enrollment في Agent وLicensingPlatform. تم الانتقال إلى codex/security-hardening-enrollment؛ commits اللاحقة محلية ولا push/merge جديد. commit R1-S01 كان قد تم على master محليًا قبل وصول التوجيه ولم يُنشر. نسخة المنصة المعزولة تحت .security-work/LicensingPlatform مستبعدة من تتبع مستودع Agent؛ تعديلات المنصة تبقى في مستودعها المستقل. D1=NO؛ العنوان الحالي مؤقت وليس اعتماد D2؛ endpoint JWK لا يمثل اعتماد D3. لن يُعطل Authentication أو توضع مفاتيح غير مؤكدة أو سر مشترك في Agent.
+
+### R1-S02 — اختبارات إعدادات التوزيع
+- الحالة: DONE-VERIFIED
+- ماذا تغيّر ولماذا: أضيف اختبار يقرأ appsettings.json الموزع ويمنع ClientId/ClientSecret أو نقاط شخصية، واختبار يحافظ على قابلية إعداد بيانات تطوير من IConfiguration دون تثبيتها في defaults.
+- الملفات: tests/MonitorAgent.Tests/DistributionSecurityTests.cs وPROGRESS.md.
+- الأوامر ونتيجتها: dotnet build MonitorAgent.sln -c Release --no-restore نجح 0 أخطاء/0 تحذيرات؛ dotnet test MonitorAgent.sln -c Release --no-build --no-restore نجح 89 اختبارًا/1 متجاوزًا/0 فشل، إجمالي 90.
+- اختبار الأمان: ShippedSettingsContainNoCredentialsOrPersonalMonitorPoints.
+- اختبار عدم الانكسار: DeveloperCredentialsRemainConfigurableWithoutChangingProductCode.
+- ما لم يتم التحقق منه: اختبار الإضافات على Linux/macOS لم يُشغّل بعد؛ لا نشر تلقائي بناءً على التوجيه الأحدث.
+- اختلاف عن الخطة: العمل في فرع محلي منفصل؛ توسعة Run 5 مفوضة من المستخدم وتحتاج خطة توافق مستقلة.
+
 - تمت إعادة استهداف PR #1 إلى master بإذن المستخدم، وإصلاح WindowsTheory دون إضعاف assertions. CI run 37755384482 نجح على الأنظمة الثلاثة، ثم دُمج PR #1 عند 8e60a995383ffd669f71e0f80b8d10d3254b4b4d.
 - git merge-base --is-ancestor أثبت أن فرعي security/hardening وsecurity/run-0-baseline داخل master. لا حاجة لدمج نفس commits مرة ثانية أو حذف الفروع.
 - تحديث master المحلي كان fast-forward. R0-S06: build 0 أخطاء/0 تحذيرات وtests 87 ناجحًا/1 متجاوزًا على Windows؛ CI أثبت تشغيل Linux/macOS أيضًا. وصف انتظار CI السابق تاريخي ولم يعد الحالة الحالية.
