@@ -896,3 +896,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - عنوان Monitor Points بأيقونة ChartBar؛ شريط إضافة أخضر وأيقونة PlusCircleOutline، بحث بأيقونة Magnify وفلتر All Types؛ بطاقة Configured Monitor Points بأيقونة القائمة. تقليل عرض الأعمدة وارتفاع الصفوف 62، وتسمية Short/Alert Level/Actions، وإضافة زر Pencil يبدأ تحرير الاسم للنقطة المحددة بجانب الحذف.
 - البحث والفلتر يعملان على عرض النقاط فقط؛ الحفظ ما زال يلتقط المجموعة الأصلية كاملة، فلا حذف للنقاط المخفية. البحث في الاسم والمعرف والعنوان والنوع دون حساسية لحالة الأحرف، والتصفية تتحدث مع إضافة/حذف النقاط وتعديلها أثناء وجود فلتر. Commands وإعدادات database/application/device محفوظة.
 - Build Release ناجح صفر أخطاء؛ آخر بناء incremental صفر تحذيرات. اختبارات الرجوع 196 نجاح و4 SKIPPED وصفر فشل. المطابقة البصرية والبحث والتفاعل داخل DataGrid أثناء التشغيل DONE-UNVERIFIED؛ لوحة الرسائل العامة لم تنقل ولا بيانات مشاكل وهمية من الصورة. لا master/push/install.
+
+### R4-S05 — توسيط أسهم الحقول الرقمية
+- الحالة: DONE-VERIFIED
+- ضبط HorizontalContentAlignment وVerticalContentAlignment إلى Center على RepeatButton وContentPresenter، وتمديد زر السهم داخل نصف الحاوية مع Margin صفر؛ تصحيح انحراف الأسهم لليسار دون تغيير موضع الحاوية أو القيم.
+- Release build ناجح وتحذيرا الشهادة القائمان؛ 196 اختبار ناجح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.

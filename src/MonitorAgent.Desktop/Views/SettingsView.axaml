@@ -70,6 +70,8 @@
             <Setter Property="BorderThickness" Value="0"/>
         </Style>
         <Style Selector="NumericUpDown.monitorcompact /template/ RepeatButton /template/ ContentPresenter">
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="0"/>
@@ -81,8 +83,8 @@
                         <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
                         <Border Grid.Column="1" Width="20" Height="28" Margin="0,0,5,0" CornerRadius="4" Background="#2A2D33" VerticalAlignment="Center">
                             <Grid RowDefinitions="*,*">
-                                <RepeatButton Name="PART_IncreaseButton" Padding="0" MinWidth="0" MinHeight="0" Background="Transparent" BorderThickness="0" ToolTip.Tip="Increase"><mi:MaterialIcon Kind="ChevronUp" Width="12" Height="12"/></RepeatButton>
-                                <RepeatButton Name="PART_DecreaseButton" Grid.Row="1" Padding="0" MinWidth="0" MinHeight="0" Background="Transparent" BorderThickness="0" ToolTip.Tip="Decrease"><mi:MaterialIcon Kind="ChevronDown" Width="12" Height="12"/></RepeatButton>
+                                <RepeatButton Name="PART_IncreaseButton" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Margin="0" Padding="0" MinWidth="0" MinHeight="0" Background="Transparent" BorderThickness="0" ToolTip.Tip="Increase"><mi:MaterialIcon Kind="ChevronUp" Width="12" Height="12"/></RepeatButton>
+                                <RepeatButton Name="PART_DecreaseButton" Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Margin="0" Padding="0" MinWidth="0" MinHeight="0" Background="Transparent" BorderThickness="0" ToolTip.Tip="Decrease"><mi:MaterialIcon Kind="ChevronDown" Width="12" Height="12"/></RepeatButton>
                             </Grid>
                         </Border>
                     </Grid>
