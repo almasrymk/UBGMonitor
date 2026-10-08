@@ -268,3 +268,13 @@
 - اختبار عدم الانكسار: كتابة/قراءة settings الأساسية تنجح مع حفظ واسترجاع نسخة ملف الاختبار الأصلية في finally؛ لا لمس إعدادات عميل.
 - غير المتحقق: تثبيت VM غير منفذ؛ الاختبار Release-only مقصود، Debug لم يُختبر في هذه الخطوة.
 - اختلاف عن الخطة: لا شيء.
+
+### R1-S06 — تجاهل ملفات الأسرار والحالة والتوزيع
+- الحالة: DONE-VERIFIED
+- ماذا تغير ولماذا: منع publish/ وcert/key/state/local-config من الإضافة العرضية. Data/ وReports/ مربوطتان بجذر المستودع حتى لا تخفي مجلدات Reports التي تحتوي كودًا حقيقيًا.
+- الملفات: .gitignore.
+- الأوامر الفعلية: git check-ignore نجح لـ11 مسارًا تمثيليًا؛ git ls-files -ci --exclude-standard صفر؛ build Release0 أخطاء/0تحذيرات؛ suite109pass/1skip/0fail.
+- اختبار الأمان: أسماء secret.key وlicense/client JSON وpfx/p12/snk/key وlocal appsettings متجاهلة حتى لو غير موجودة.
+- اختبار عدم الانكسار: لا source متتبع أصبح ignored؛ مجلدات Reports المصدر ما زالت متتبعة.
+- غير المتحقق: ignore ليس منعًا لـgit add -f ولا بديلًا عن scanning.
+- اختلاف عن الخطة: root anchoring لبيانات Reports/Data ضروري بسبب وجود source directories بنفس الاسم.
