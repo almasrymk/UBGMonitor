@@ -844,3 +844,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - UpdateCertificateDisplay موحد للتحميل والاستيراد ونتائج الإدارة؛ الاستيراد كان يحدث البصمة فقط فتم تصحيح تحديث Serial/Expiry/Issuer/Subject/Valid بالكامل. أيقونة البطاقة FileCertificateOutline بدل CertificateOutline لتوافق مرجع المستند. البصمة دون metadata تعرض رسالة rebuild/restart للخدمة بدل وصف خاطئ بغياب الشهادة؛ لا تزوير حالة Valid.
 - اختبار الشهادة يطبق metadata الحقيقية على ViewModel ويثبت ظهور Valid والتفاصيل، وحالة DTO قديمة تثبت رسالة التشخيص. Release build ناجح صفر أخطاء وتحذيرا SYSLIB0057 قائمان؛ 196 نجاح/4 SKIPPED/0 فشل.
 - عملية Service موجودة محليًا لكن مسارها لم يتوفر بصلاحيات الفحص؛ لم يثبت أن نسختها قديمة ولم تُوقف أو تُشغّل. العرض الفعلي ما زال يحتاج تشغيل الخدمة والواجهة المبنيتين من نفس الفرع. لا master/push/install.
+
+### R4-S05 — زرّا الشهادة والفاصل والأيقونة
+- الحالة: DONE-VERIFIED
+- تصغير Regenerate/Import إلى عرض 265/240 وpadding 10,6، وإضافة فاصل عمودي 1px خفيف بين عمود Fingerprint/Serial وعمود التاريخ/Issuer/Subject. استبدال MaterialIcon برسم Path vector لمستند ذي زاوية مطوية وقفل بحسب المرجع، بلون الثيم الأخضر وحجم 26. الرسم إعادة بناء من المرجع وليس ملف المصدر الأصلي؛ التطابق البصري الحرفي غير متحقق.
+- آخر Build incremental ناجح 0 warnings/errors؛ 196 نجاح/4 SKIPPED/0 فشل. العرض تفاعليًا غير متحقق؛ لا master/push/install.
