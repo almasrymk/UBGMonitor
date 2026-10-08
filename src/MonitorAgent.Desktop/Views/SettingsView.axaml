@@ -305,33 +305,47 @@
                     <StackPanel Orientation="Horizontal" Spacing="14" Margin="0,4,0,6"><mi:MaterialIcon Kind="ShieldCheck" Width="28" Height="28" Foreground="{DynamicResource AccentGreenBrush}" VerticalAlignment="Center"/><TextBlock Text="Secure Remote Access" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center"/></StackPanel>
                     <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,12"
                                Text="Configure secure remote access for this device. Choose the listening address and port; keys are prepared automatically. Changes to access and firewall options are applied when you click Save."/>
-                    <Border Classes="settingscard"><StackPanel Spacing="8">
-                    <StackPanel Orientation="Horizontal" Spacing="14" Margin="0,4,0,6"><mi:MaterialIcon Kind="Web" Width="22" Height="22" Foreground="{DynamicResource AccentGreenBrush}" VerticalAlignment="Center"/><TextBlock Text="Connection Endpoint" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/></StackPanel>
-                    <TextBlock Text="Choose the network interface and service port." FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
-                    <Grid ColumnDefinitions="*,28,*">
-                        <StackPanel Grid.Column="0">
-                            <TextBlock Classes="flabel" Text="Service listens on"/>
-                            <ComboBox Classes="field wide" ItemsSource="{Binding ListenAddressOptions}"
-                                      SelectedValueBinding="{Binding Address}" DisplayMemberBinding="{Binding Label}"
-                                      SelectedValue="{Binding ServiceListenAddress}"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="2">
-                            <TextBlock Classes="flabel" Text="Service port"/>
-                            <TextBox Classes="field wide" Text="{Binding ServicePort}"/>
-                        </StackPanel>
-                    </Grid>
-                    <StackPanel IsEnabled="{Binding CanManageRemoteAccess}">
-                        <StackPanel IsVisible="{Binding NetworkIndicatorsVisible}" Orientation="Horizontal" Spacing="20" Margin="0,4,0,8">
-                            <StackPanel Orientation="Horizontal" Spacing="5">
-                                <mi:MaterialIcon Kind="Check" Width="14" Height="14" Foreground="{DynamicResource AccentGreenBrush}" VerticalAlignment="Center"/>
-                                <TextBlock Text="HTTPS selected" FontSize="12" Foreground="{DynamicResource AccentGreenBrush}" VerticalAlignment="Center"/>
+                    <Border Classes="settingscard">
+                        <Grid ColumnDefinitions="32,16,*">
+                            <mi:MaterialIcon Kind="Web" Width="26" Height="26" Foreground="{DynamicResource AccentGreenBrush}" VerticalAlignment="Top" Margin="0,0,0,0"/>
+                            <StackPanel Grid.Column="2" Spacing="8">
+                                <TextBlock Text="Connection Endpoint" FontSize="16" FontWeight="SemiBold"/>
+                                <TextBlock Text="Choose the network interface and port for the remote access service." FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                <Grid ColumnDefinitions="*,20,*" Margin="0,2,0,0">
+                                    <StackPanel Grid.Column="0" Spacing="4">
+                                        <TextBlock Text="Listen address" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13"/>
+                                        <ComboBox Classes="field wide" Height="35" MinHeight="35" Margin="0" Padding="12,5" CornerRadius="5"
+                                                  ItemsSource="{Binding ListenAddressOptions}" SelectedValueBinding="{Binding Address}"
+                                                  DisplayMemberBinding="{Binding Label}" SelectedValue="{Binding ServiceListenAddress}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Spacing="4">
+                                        <TextBlock Text="Service port" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13"/>
+                                        <TextBox Classes="field wide" Height="35" MinHeight="35" Margin="0" Padding="12,5" CornerRadius="5" Text="{Binding ServicePort}"/>
+                                    </StackPanel>
+                                </Grid>
+                                <StackPanel IsVisible="{Binding NetworkIndicatorsVisible}" Orientation="Horizontal" Spacing="28" Margin="0,6,0,0">
+                                    <Grid ColumnDefinitions="32,14,*">
+                                        <Border Width="30" Height="30" CornerRadius="15" Background="{DynamicResource AccentGreenBrush}" VerticalAlignment="Top">
+                                            <mi:MaterialIcon Kind="Check" Width="20" Height="20" Foreground="White"/>
+                                        </Border>
+                                        <StackPanel Grid.Column="2" Spacing="3">
+                                            <TextBlock Text="HTTPS Enabled" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AccentGreenBrush}"/>
+                                            <TextBlock Text="Remote access uses HTTPS when saved." FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="32,14,*">
+                                        <Border Width="30" Height="30" CornerRadius="15" Background="{DynamicResource AccentGreenBrush}" VerticalAlignment="Top">
+                                            <mi:MaterialIcon Kind="Check" Width="20" Height="20" Foreground="White"/>
+                                        </Border>
+                                        <StackPanel Grid.Column="2" Spacing="3">
+                                            <TextBlock Text="Firewall Port Open" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AccentGreenBrush}"/>
+                                            <TextBlock Text="The service port opens when you save." FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
                             </StackPanel>
-                            <StackPanel Orientation="Horizontal" Spacing="5">
-                                <mi:MaterialIcon Kind="Check" Width="14" Height="14" Foreground="{DynamicResource AccentGreenBrush}" VerticalAlignment="Center"/>
-                                <TextBlock Text="Firewall port will open on Save" FontSize="12" Foreground="{DynamicResource AccentGreenBrush}" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </StackPanel>
-                    </StackPanel></StackPanel></Border>
+                        </Grid>
+                    </Border>
                     <Border Classes="settingscard" IsVisible="{Binding NetworkIndicatorsVisible}"><StackPanel Spacing="8" IsEnabled="{Binding CanManageRemoteAccess}">
                         <StackPanel Orientation="Horizontal" Spacing="14" Margin="0,4,0,6"><mi:MaterialIcon Kind="AccountGroup" Width="22" Height="22" Foreground="{DynamicResource AccentGreenBrush}" VerticalAlignment="Center"/><TextBlock Text="Access Permissions" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/></StackPanel>
                         <TextBlock Text="Manage remote viewer and administrator permissions." FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
