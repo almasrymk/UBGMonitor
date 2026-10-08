@@ -23,11 +23,13 @@ if systemctl is-active --quiet monitoragent 2>/dev/null; then
     systemctl stop monitoragent
 fi
 
-# The app saves its settings into the "Setting" section of appsettings.json; an update must not wipe them.
-saved=""
-if [ -f "$settings" ]; then
-    saved="$(mktemp)"
-    cp "$settings" "$saved"
+umask 0077
+mkdir -p /var/lib/monitoragent /var/log/monitoragent
+chown root:root /var/lib/monitoragent /var/log/monitoragent
+chmod 700 /var/lib/monitoragent
+chmod 750 /var/log/monitoragent
+if [ -f "$settings" ] && [ ! -f /var/lib/monitoragent/settings.json ] && [ ! -f /var/lib/monitoragent/appsettings.previous.json ]; then
+    install -o root -g root -m 600 "$settings" /var/lib/monitoragent/appsettings.previous.json
 fi
 
 echo "Copying the agent to $target..."
@@ -35,27 +37,8 @@ mkdir -p "$target"
 cp -a "$here/app/." "$target/"
 chmod +x "$target/MonitorAgent.Service"
 
-if [ -n "$saved" ]; then
-    if command -v python3 >/dev/null 2>&1; then
-        python3 - "$saved" "$settings" <<'EOF'
-import json, sys
-old = json.load(open(sys.argv[1], encoding="utf-8-sig"))
-new = json.load(open(sys.argv[2], encoding="utf-8-sig"))
-if "Setting" in old:
-    new["Setting"] = old["Setting"]
-    with open(sys.argv[2], "w", encoding="utf-8") as f:
-        json.dump(new, f, indent=2)
-    print("Kept the saved settings.")
-EOF
-    else
-        cp "$saved" "$settings"
-        echo "Kept the previous settings file (python3 is not installed to merge it with the new one)."
-    fi
-    rm -f "$saved"
-fi
-
-# The settings hold the protected database passwords and the access key.
-chmod 600 "$settings"
+chown -R root:root "$target"
+chmod -R go+rX,go-w "$target"
 
 if [ -d "$here/desktop" ]; then
     echo "Copying the MonitorAgent app to /opt/monitoragent-desktop..."
@@ -63,6 +46,8 @@ if [ -d "$here/desktop" ]; then
     mkdir -p /opt/monitoragent-desktop
     cp -a "$here/desktop/." /opt/monitoragent-desktop/
     chmod +x /opt/monitoragent-desktop/MonitorAgent
+    chown -R root:root /opt/monitoragent-desktop
+    chmod -R go+rX,go-w /opt/monitoragent-desktop
     install -D -m 644 "$here/monitoragent.png" /usr/share/pixmaps/monitoragent.png
     install -D -m 644 "$here/monitoragent.desktop" /usr/share/applications/monitoragent.desktop
     ln -sf /opt/monitoragent-desktop/MonitorAgent /usr/local/bin/monitoragent

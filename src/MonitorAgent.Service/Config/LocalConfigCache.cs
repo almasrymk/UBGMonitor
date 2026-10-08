@@ -55,7 +55,7 @@ public sealed class LocalConfigCache : ILocalConfigCache
         _configuration = configuration;
         _logger = logger;
         _path = cachePath ?? Path.Combine(AgentPaths.StateFolder, "config.json");
-        _appSettingsPath = appSettingsPath ?? Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+        _appSettingsPath = appSettingsPath ?? ServiceSettingsFile.PrimaryPath;
         _current = CreateDefault();
     }
 
@@ -188,8 +188,9 @@ public sealed class LocalConfigCache : ILocalConfigCache
             }
 
             using var document = JsonDocument.Parse(File.ReadAllText(path));
-            if (!TryGetProperty(document.RootElement, "Setting", out var setting)
-                || !TryGetProperty(setting, "MonitorPoints", out var monitorPoints))
+            var settingsRoot = document.RootElement;
+            var setting = TryGetProperty(settingsRoot, "Setting", out var nested) ? nested : settingsRoot;
+            if (!TryGetProperty(setting, "MonitorPoints", out var monitorPoints))
             {
                 if (!TryGetProperty(document.RootElement, "MonitorPoints", out monitorPoints))
                 {
@@ -198,14 +199,12 @@ public sealed class LocalConfigCache : ILocalConfigCache
             }
 
             points = monitorPoints.Deserialize<List<MonitorPoint>>(AppSettingsJson) ?? [];
-            if (TryGetProperty(document.RootElement, "Setting", out var settingNode)
-                && TryGetProperty(settingNode, "General", out var generalNode))
+            if (TryGetProperty(setting, "General", out var generalNode))
             {
                 _general = generalNode.Deserialize<GeneralRuntimeSettings>(AppSettingsJson) ?? new GeneralRuntimeSettings();
             }
 
-            if (TryGetProperty(document.RootElement, "Setting", out var specParent)
-                && TryGetProperty(specParent, "DeviceSpec", out var specNode))
+            if (TryGetProperty(setting, "DeviceSpec", out var specNode))
             {
                 _deviceSpec = specNode.Deserialize<DeviceSpecSettings>(AppSettingsJson) ?? new DeviceSpecSettings();
             }

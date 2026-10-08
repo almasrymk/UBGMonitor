@@ -48,22 +48,23 @@ dotnet run --project src/MonitorAgent.Desktop
 
 ## تثبيت Windows Service
 
-نفّذ PowerShell **كمسؤول** بعد نشر الخدمة:
+نفّذ PowerShell **كمسؤول** مع حزمة مبنية مسبقًا؛ الجهاز العميل لا يحتاج SDK:
 
 ```powershell
-dotnet publish src/MonitorAgent.Service -c Release -o C:\ProgramData\MonitorAgent\publish
-
-sc.exe create MonitorAgent binPath= "C:\ProgramData\MonitorAgent\publish\MonitorAgent.Service.exe" start= auto
-sc.exe description MonitorAgent "MonitorAgent background service"
-sc.exe start MonitorAgent
+.\scripts\install-service.ps1 -Source C:\Packages\Service -DesktopSource C:\Packages\Desktop
+# للمطور فقط: .\scripts\install-service.ps1 -BuildFromSource
+.\scripts\verify-permissions.ps1
 ```
 
 إيقاف وإزالة:
 
 ```powershell
-sc.exe stop MonitorAgent
-sc.exe delete MonitorAgent
+.\scripts\uninstall-service.ps1
 ```
+
+البرنامج في `%ProgramFiles%\MonitorAgent\Service` والواجهة في `Desktop`؛ البيانات في `%ProgramData%\MonitorAgent`. إعدادات المستخدم في `settings.json` كبيانات فقط، دون دخولها في إعدادات logging. أول تشغيل يحفظ backups ويُرحّل إعدادات وData/Reports القديمة؛ لا يستبدل إعدادات موجودة. الإزالة العادية تحفظ البيانات والمجموعات، و`-Purge` / `--purge` لحذفها صراحة.
+
+على Linux/macOS شغّل install.sh من الحزمة بـsudo ثم `bash verify-permissions.sh`. ملفات البرنامج root-owned بلا group/other write، state0700 وملفات الأسرار0600. قبل التحديث تُحفظ الإعدادات القديمة0600 داخل state للترحيل. راجع backups قبل حذفها؛ قد تحتوي أسرارًا قديمة.
 
 ## المعمارية
 

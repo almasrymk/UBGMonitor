@@ -1,78 +1,81 @@
-# MonitorAgent Windows Service install / update (elevates itself to Administrator)
-$ErrorActionPreference = "Stop"
-
-$principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
-if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Start-Process powershell -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$PSCommandPath`""
-    exit
+param([string]$Source, [string]$DesktopSource, [switch]$BuildFromSource)
+# Run from an elevated PowerShell. Customers install prebuilt packages; SDK is optional.
+$ErrorActionPreference = 'Stop'
+$identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+$principal = [Security.Principal.WindowsPrincipal]::new($identity)
+if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'Run this installer from an Administrator PowerShell.' }
+$serviceName = 'MonitorAgent'
+$state = Join-Path $env:ProgramData 'MonitorAgent'
+$installRoot = Join-Path $env:ProgramFiles 'MonitorAgent'
+$target = Join-Path $installRoot 'Service'
+$legacy = Join-Path $state 'publish'
+if ($BuildFromSource) {
+    if ($Source) { throw 'Use either -Source or -BuildFromSource.' }
+    $Source = Join-Path $env:TEMP ('MonitorAgent.Publish.' + [guid]::NewGuid().ToString('N'))
+    dotnet publish (Join-Path (Split-Path $PSScriptRoot -Parent) 'src/MonitorAgent.Service/MonitorAgent.Service.csproj') -c Release -o $Source
+    if ($LASTEXITCODE -ne 0) { throw 'Publish failed.' }
 }
-
-$serviceName = "MonitorAgent"
+if (-not $Source -or -not (Test-Path -LiteralPath (Join-Path $Source 'MonitorAgent.Service.exe'))) { throw 'Specify -Source pointing to a prebuilt Windows service folder.' }
+foreach ($candidate in @($Source, $DesktopSource) | Where-Object { $_ }) {
+    if (Get-ChildItem -LiteralPath $candidate -Recurse -Force | Where-Object { $_.Attributes -band [IO.FileAttributes]::ReparsePoint }) { throw 'Package cannot contain reparse points.' }
+}
+function Protect-Tree([string]$Path, [bool]$PublicRead) {
+    if (Test-Path -LiteralPath $Path) {
+        if ((Get-Item -LiteralPath $Path -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "Protected path is a reparse point: $Path" }
+        if (Get-ChildItem -LiteralPath $Path -Recurse -Force | Where-Object { $_.Attributes -band [IO.FileAttributes]::ReparsePoint }) { throw "Protected tree contains a reparse point: $Path" }
+    } else { New-Item -ItemType Directory -Path $Path | Out-Null }
+    $items = @((Get-Item -LiteralPath $Path)) + @(Get-ChildItem -LiteralPath $Path -Recurse -Force)
+    foreach ($item in $items) {
+        $acl = if ($item.PSIsContainer) { [Security.AccessControl.DirectorySecurity]::new() } else { [Security.AccessControl.FileSecurity]::new() }
+        $acl.SetAccessRuleProtection($true, $false)
+        $acl.SetOwner([Security.Principal.SecurityIdentifier]::new('S-1-5-32-544'))
+        $inheritance = if ($item.PSIsContainer) { [Security.AccessControl.InheritanceFlags]'ContainerInherit,ObjectInherit' } else { [Security.AccessControl.InheritanceFlags]::None }
+        foreach ($sid in @('S-1-5-18', 'S-1-5-32-544')) {
+            $acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new([Security.Principal.SecurityIdentifier]::new($sid), 'FullControl', $inheritance, 'None', 'Allow'))
+        }
+        if ($PublicRead) { $acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new([Security.Principal.SecurityIdentifier]::new('S-1-5-32-545'), 'ReadAndExecute', $inheritance, 'None', 'Allow')) }
+        Set-Acl -LiteralPath $item.FullName -AclObject $acl
+    }
+}
 foreach ($group in @('MonitorAgent Admins', 'MonitorAgent Viewers')) {
     if (-not (Get-LocalGroup -Name $group -ErrorAction SilentlyContinue)) { New-LocalGroup -Name $group | Out-Null }
 }
-$installingUser = [Security.Principal.WindowsIdentity]::GetCurrent().Name
-if (-not (Get-LocalGroupMember -Group 'MonitorAgent Admins' | Where-Object Name -eq $installingUser)) {
-    Add-LocalGroupMember -Group 'MonitorAgent Admins' -Member $installingUser
-}
-Write-Host 'MonitorAgent access groups created. Sign out and sign in again for new group membership to apply.'
-$publish = "C:\ProgramData\MonitorAgent\publish"
-$root = Split-Path -Parent $PSScriptRoot
-$settingsPath = Join-Path $publish "appsettings.json"
-
-# Before the rename the service was "ClientAgentService" in C:\ProgramData\ClientAgent: remove it and move its data here.
-$legacy = Get-Service -Name "ClientAgentService" -ErrorAction SilentlyContinue
-if ($legacy) {
-    Write-Host "Removing the old ClientAgentService..."
-    if ($legacy.Status -ne "Stopped") {
-        Stop-Service -Name "ClientAgentService" -Force
-        $legacy.WaitForStatus("Stopped", [TimeSpan]::FromSeconds(30))
-    }
-    sc.exe delete "ClientAgentService" | Out-Null
-    while (Get-Service -Name "ClientAgentService" -ErrorAction SilentlyContinue) { Start-Sleep -Milliseconds 500 }
-}
-netsh advfirewall firewall delete rule name="UBG Monitor Agent API" | Out-Null
-$legacyFolder = "C:\ProgramData\ClientAgent"
-if ((Test-Path $legacyFolder) -and -not (Test-Path "C:\ProgramData\MonitorAgent")) {
-    Write-Host "Moving $legacyFolder to C:\ProgramData\MonitorAgent..."
-    Move-Item $legacyFolder "C:\ProgramData\MonitorAgent"
-    Get-ChildItem $publish -Filter "ClientAgent.*" -File -ErrorAction SilentlyContinue | Remove-Item -Force
-}
-
+if (-not (Get-LocalGroupMember -Group 'MonitorAgent Admins' | Where-Object SID -eq $identity.User)) { Add-LocalGroupMember -Group 'MonitorAgent Admins' -Member $identity.User.Value }
+Write-Host 'Sign out and in after installation to apply MonitorAgent group membership.'
 $existing = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
-if ($existing) {
-    if ($existing.Status -ne "Stopped") {
-        Write-Host "Stopping $serviceName..."
-        Stop-Service -Name $serviceName -Force
-        $existing.WaitForStatus("Stopped", [TimeSpan]::FromSeconds(30))
-    }
-    sc.exe delete $serviceName | Out-Null
-    while (Get-Service -Name $serviceName -ErrorAction SilentlyContinue) { Start-Sleep -Milliseconds 500 }
+if ($existing -and $existing.Status -ne 'Stopped') { Stop-Service $serviceName; $existing.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(30)) }
+Protect-Tree $state $false
+Protect-Tree $installRoot $true
+Protect-Tree $target $true
+# Preserve settings from installations already using ProgramFiles before replacing binaries.
+$oldSettings = Join-Path $target 'appsettings.json'
+$previous = Join-Path $state 'appsettings.previous.json'
+if ((Test-Path -LiteralPath $oldSettings) -and -not (Test-Path -LiteralPath (Join-Path $state 'settings.json')) -and -not (Test-Path -LiteralPath $previous)) { Copy-Item -LiteralPath $oldSettings -Destination $previous }
+Copy-Item -Path (Join-Path $Source '*') -Destination $target -Recurse -Force
+Protect-Tree $target $true
+if ($DesktopSource) {
+    $desktopTarget = Join-Path $installRoot 'Desktop'
+    Protect-Tree $desktopTarget $true
+    Copy-Item -Path (Join-Path $DesktopSource '*') -Destination $desktopTarget -Recurse -Force
+    Protect-Tree $desktopTarget $true
 }
-
-# The app saves its settings into the "Setting" section of the published appsettings.json; publishing must not wipe them.
-$savedSetting = $null
-if (Test-Path $settingsPath) {
-    $savedSetting = (Get-Content $settingsPath -Raw | ConvertFrom-Json).Setting
-}
-
-Write-Host "Publishing to $publish..."
-dotnet publish "$root\src\MonitorAgent.Service\MonitorAgent.Service.csproj" -c Release -o $publish --nologo -v q
-if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed." }
-
-if ($savedSetting) {
-    $settings = Get-Content $settingsPath -Raw | ConvertFrom-Json
-    $settings | Add-Member -NotePropertyName Setting -NotePropertyValue $savedSetting -Force
-    $settings | ConvertTo-Json -Depth 100 | Set-Content $settingsPath -Encoding UTF8
-    Write-Host "Kept the saved settings."
-}
-
-sc.exe create $serviceName binPath= "`"$publish\MonitorAgent.Service.exe`"" start= delayed-auto DisplayName= "MonitorAgent" | Out-Null
-sc.exe description $serviceName "MonitorAgent background service" | Out-Null
-# Restart automatically if the service crashes or exits with an error.
+Protect-Tree $state $false
+& (Join-Path $PSScriptRoot 'verify-permissions.ps1') -InstallRoot $installRoot -StateRoot $state
+if ($LASTEXITCODE -ne 0) { throw 'Permission verification failed.' }
+$binary = '"' + (Join-Path $target 'MonitorAgent.Service.exe') + '"'
+if ($existing) { sc.exe config $serviceName binPath= $binary start= delayed-auto | Out-Null }
+else { sc.exe create $serviceName binPath= $binary start= delayed-auto DisplayName= 'MonitorAgent' | Out-Null }
+if ($LASTEXITCODE -ne 0) { throw 'Service registration failed.' }
+sc.exe description $serviceName 'MonitorAgent background service' | Out-Null
 sc.exe failure $serviceName reset= 86400 actions= restart/5000/restart/10000/restart/30000 | Out-Null
-sc.exe failureflag $serviceName 1 | Out-Null
-
-Start-Service -Name $serviceName
-Get-Service -Name $serviceName | Format-Table -AutoSize Name, DisplayName, Status, StartType
-Write-Host "$serviceName installed and running. Manage it from services.msc."
+$marker = Join-Path $state 'layout-migrated'
+if (Test-Path -LiteralPath $marker) { Remove-Item -LiteralPath $marker }
+Start-Service $serviceName
+for ($attempt = 0; $attempt -lt 30 -and -not (Test-Path -LiteralPath $marker); $attempt++) { Start-Sleep -Seconds 1 }
+if (-not (Test-Path -LiteralPath $marker)) { throw 'Migration did not complete. Legacy files were preserved; inspect service logs.' }
+if (Test-Path -LiteralPath $legacy) {
+    $resolvedLegacy = [IO.Path]::GetFullPath($legacy)
+    if ($resolvedLegacy -ne [IO.Path]::GetFullPath((Join-Path $state 'publish'))) { throw 'Unsafe legacy cleanup path.' }
+    Remove-Item -LiteralPath $resolvedLegacy -Recurse -Force
+}
+Write-Host 'MonitorAgent installed. State and backups remain in ProgramData; binaries are in ProgramFiles.'

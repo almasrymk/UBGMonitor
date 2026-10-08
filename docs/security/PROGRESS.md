@@ -407,3 +407,49 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 
 ## Run 3 — خطة التنفيذ
 المضي بتفويض المستخدم السابق: State settings/data/report منفصلة عن install، Atomic owner-only writes وmigration backup قبل أي تغيير؛ temp-folder tests fresh/upgrade/re-run/interrupted وحماية logging config. Windows installer prebuilt/default ProgramFiles وACL/check/source switch/desktop؛ Unix ownership/modes/legacy snapshot بدل merge. Verification scripts وREADME. لا تشغيل installer على الجهاز الحالي؛ تحقق أجهزة OS/customer يظل DONE-UNVERIFIED.
+
+### R3-S01 — فصل install/state
+- الحالة: DONE-VERIFIED
+- الملفات: AgentPaths، ServiceSettingsFile، LocalConfigCache، Program، PrivateFile.
+- التغيير: Data/Reports/settings.json داخل state على كل OS وMONITORAGENT_HOME محفوظ؛ ملفات install لا تكتبها الخدمة. settings.json direct data-root لا تدخل IConfiguration/Serilog. atomic replacement مع Flush(true)، Unix0600 creation/0700 parent دون الاعتماد على umask. لم يبق نداء development writer حتىDebug.
+- التحقق: Release build0أخطاء/0تحذيرات؛ suite133pass/2skip/0fail. HTTP settings roundtrip ناجح وinvalid PUT لا يكتب؛ tests تستخدم state مؤقتة فقط. test host استكمل ReportStore وfake notification/logger بعد أن كشف roundtrip الأول نقص DI؛ لم يُضعف test لإخفاء الفشل.
+- غير المتحقق: installer ACL protection وحساب LocalSystem لا تثبتها temp-folder tests.
+
+### R3-S02 — الترحيل والنسخ الاحتياطية
+- الحالة: DONE-UNVERIFIED
+- التغيير: legacy snapshot/publish/appsettings Setting أوUi ->settings.json فقط إن غير موجود؛ backups timestamp+GUID قبل نقل/كتابة. Windows Data/Reports per-file streaming/durable copy ثمdelete؛ conflict يحفظ النسختين ويوقف؛ partial identical destination يستكمل. license/config/history الأخرى لا تُمس. successful layout marker فقط بعد انتهاء النقل.
+- الملفات: StateMigration، PrivateFile، StateMigrationTests، Program.
+- التحقق: upgrade/password/license/history/idempotence، fresh install، existing-settings priority، interrupted copy/conflict نجحت؛ suite133pass/2skip. ملفات logging legacy لا تنتقل لعقد settings. Unix owner-only migration test موجود وتخطى على Windows.
+- غير المتحقق: نسخة DB كبيرة/real customer upgrade/Unix permissions والـowner verification. لا migration على installation حقيقية.
+
+### R3-S03 — تثبيت Windows من حزمة وحماية ACL
+- الحالة: DONE-UNVERIFIED
+- التغيير: -Source prebuilt، -BuildFromSource opt-in، -DesktopSource؛ ProgramFiles Service/Desktop وquoted service binary path. stateSYSTEM/Administrators فقط مع protected inheritance علىtree؛ binaries read-onlyUsers وreject reparse points؛ verifier قبلstart؛ حذفpublish القديم فقط بعد migration marker. uninstall يغلق MonitorAgent API ويحتفظ بالبيانات إلاPurge validated absolute target.
+- الملفات: install/uninstall-service.ps1، verify-permissions.ps1.
+- التحقق: PowerShell parser ناجح، build/suite أعلاه. Script mutation لم تُنفذ؛ service manager/groups/ACL/customer folders غير ملموسة.
+- اختلاف: installer يطلب elevated shell بدل self-elevation الذي يفقد parameters؛ fail clear message. legacy ClientAgent rename قديم لا يُستحدث؛ المنتج الحالي لا يُعاد تسميته.
+
+### R3-S04 — Linux ownership/state/layout
+- الحالة: DONE-UNVERIFIED
+- التغيير: root:root binaries/Desktop، go+rX/go-w؛ state0700/log0750، legacy snapshot0600 بدل Python merge؛ debpreinst/postinst يحفظان migration source؛ unitStateDirectoryMode0700/LogsDirectoryMode0750/UMask0077 معUserroot كماهو.
+- التحقق: bash -n عبرGit Bash ناجح install/uninstall/debpreinst/postinst/postrm؛ .NET build/tests أعلاه. لم تُثبت حزمة أوsystemd ولم تُغير firewall.
+- غير المتحقق: Linux runtime/install/owner matrix.
+
+### R3-S05 — macOS ownership/state/layout
+- الحالة: DONE-UNVERIFIED
+- التغيير: root:wheel/go-w وstate0700/log0750؛ snapshot0600 بدلmerge فيtar/pkg؛ launchdplist root:wheel0644. signing/quarantine القديمة لم تُغير حسبRun7 documentation gate.
+- التحقق: bash -n install/uninstall/build-pkg ناجح؛ build/suite أعلاه. لاMac أوlaunchd/package هنا.
+
+### R3-S06 — سكربتات تحقق الصلاحيات
+- الحالة: DONE-UNVERIFIED
+- الملفات: verify-permissions.ps1/.sh.
+- التغيير: PASS/FAIL لكلpath؛ منعreparse/symlink وowners غيرالموثوقين وwrite grants للـinstall/read-write state. Unixroot وموداتstateوالbinary تفحص؛ nonzero عندالفشل.
+- التحقق: syntaxPowerShell/Bash ناجح فقط؛ لاادعاءPASS بعدfresh/upgrade لأن installer لمينفذ.
+
+### R3-S07 — توثيق install/migration
+- الحالة: DONE-VERIFIED
+- README يوضحprebuilt paths وdata-onlysettings/backups/verification/purge. build0/0وسuite133pass/2skip.
+- جمع S01–S07 لأن writer/location/legacy snapshot/installer cleanup عقود مترابطة؛ فصل install القديم عن writerالجديد كان يعيدإدخالsettingsداخلbinaryfolder أويفقدmigration source. لاpush أوmaster.
+
+## Run 4 — خطة التنفيذ
+تنفيذ مستقل محليًا: TLS-mode perDB أولًا معlegacyCompatibility وnewVerify وتحذيرظاهروtest-withverification؛ ثمremoteHTTPS/cert/keyhash/localadminenable/firewallopt-in/limits وDesktoppairing. certificates self-generatedper-install لاproductionlicensinganchors؛ لاكتابةPFX/secretللمصدر؛ اختباراتTLSconnectionbuilders/httpfakes/tempstate، liveDB/remotePCوتأكيدfingerprint الحقيقيowner-verification. Run5D2/D3 يبقيانBLOCKED لحيناعتمادإداري.

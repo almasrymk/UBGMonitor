@@ -5,6 +5,7 @@ using MonitorAgent.Service.Config;
 
 namespace MonitorAgent.Tests;
 
+[Collection("ServiceSettings")]
 public sealed class ReleaseSettingsTests
 {
     [Fact]

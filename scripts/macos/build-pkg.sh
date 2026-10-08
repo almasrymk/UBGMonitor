@@ -23,7 +23,12 @@ cat > "$scripts/preinstall" <<EOF
 # Keep the settings the app saved; the package replaces appsettings.json.
 if [ -f /usr/local/monitoragent/appsettings.json ]; then
     mkdir -p "/Library/Application Support/MonitorAgent"
-    cp /usr/local/monitoragent/appsettings.json "/Library/Application Support/MonitorAgent/appsettings.previous.json"
+    umask 0077
+    chown root:wheel "/Library/Application Support/MonitorAgent"
+    chmod 700 "/Library/Application Support/MonitorAgent"
+    if [ ! -f "/Library/Application Support/MonitorAgent/settings.json" ] && [ ! -f "/Library/Application Support/MonitorAgent/appsettings.previous.json" ]; then
+        install -o root -g wheel -m 600 /usr/local/monitoragent/appsettings.json "/Library/Application Support/MonitorAgent/appsettings.previous.json"
+    fi
 fi
 launchctl bootout system/$label 2>/dev/null || true
 exit 0
@@ -39,22 +44,13 @@ for group in monitoragent monitoragent-admin; do
     fi
 done
 echo "Sign out and in to apply MonitorAgent group membership."
-settings=/usr/local/monitoragent/appsettings.json
-saved="/Library/Application Support/MonitorAgent/appsettings.previous.json"
+umask 0077
 mkdir -p /Library/Logs/MonitorAgent "/Library/Application Support/MonitorAgent"
-if [ -f "\$saved" ]; then
-    /usr/bin/python3 - "\$saved" "\$settings" <<'PY' 2>/dev/null || cp "\$saved" "\$settings"
-import json, sys
-old = json.load(open(sys.argv[1], encoding="utf-8-sig"))
-new = json.load(open(sys.argv[2], encoding="utf-8-sig"))
-if "Setting" in old:
-    new["Setting"] = old["Setting"]
-    with open(sys.argv[2], "w", encoding="utf-8") as f:
-        json.dump(new, f, indent=2)
-PY
-    rm -f "\$saved"
-fi
-chmod 600 "\$settings"
+chown -R root:wheel /usr/local/monitoragent /Applications/MonitorAgent.app "/Library/Application Support/MonitorAgent" /Library/Logs/MonitorAgent
+chmod -R go+rX,go-w /usr/local/monitoragent /Applications/MonitorAgent.app
+chmod 700 "/Library/Application Support/MonitorAgent"
+chmod 750 /Library/Logs/MonitorAgent
+find "/Library/Application Support/MonitorAgent" -type f -exec chmod 600 {} +
 chown root:wheel /Library/LaunchDaemons/$label.plist
 chmod 644 /Library/LaunchDaemons/$label.plist
 launchctl bootstrap system /Library/LaunchDaemons/$label.plist

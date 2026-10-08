@@ -20,13 +20,11 @@ public static class AgentPaths
                 : "/var/lib/monitoragent");
 
     /// <summary>The readings, problems and reports.db behind the reports.</summary>
-    public static string DataFolder => Home is not null || !OperatingSystem.IsWindows()
-        ? Path.Combine(StateFolder, "Data")
-        : Path.Combine(AppContext.BaseDirectory, "Data");
+    public static string InstallFolder => AppContext.BaseDirectory;
+    public static string SettingsPath => Path.Combine(StateFolder, "settings.json");
+    public static string DataFolder => Path.Combine(StateFolder, "Data");
 
-    public static string ReportsFolder => Home is not null || !OperatingSystem.IsWindows()
-        ? Path.Combine(StateFolder, "Reports")
-        : Path.Combine(AppContext.BaseDirectory, "Reports");
+    public static string ReportsFolder => Path.Combine(StateFolder, "Reports");
 
     public static string LogFolder => Home is not null
         ? Path.Combine(Home, "logs")

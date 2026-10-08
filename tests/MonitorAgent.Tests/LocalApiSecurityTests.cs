@@ -21,8 +21,19 @@ using MonitorAgent.Shared.Security;
 
 namespace MonitorAgent.Tests;
 
+[Collection("ServiceSettings")]
 public sealed class LocalApiSecurityTests
 {
+    private sealed class Notifications : INotificationStore
+    {
+        public IReadOnlyList<AgentIssueDto> GetNotifications() => [];
+        public void ShowTemporary(AgentIssueDto message, TimeSpan duration) { }
+    }
+    private sealed class Issues : IIssueDataLogger
+    {
+        public void Record(string source, IReadOnlyList<AgentIssueDto> issues) { }
+        public void RecordResolved(string source, IReadOnlyList<AgentIssueDto> issues) { }
+    }
     private sealed class License : ILicenseState
     {
         public bool IsLicensed { get; set; }
@@ -43,6 +54,8 @@ public sealed class LocalApiSecurityTests
             var cache = new FakeLocalConfigCache();
             cache.General.RemoteAccessKey = key;
             var services = new ServiceCollection().AddSingleton<ILocalConfigCache>(cache)
+                .AddSingleton(new MonitorAgent.Service.Reports.ReportStore(NullLogger<MonitorAgent.Service.Reports.ReportStore>.Instance))
+                .AddSingleton<IIssueDataLogger, Issues>().AddSingleton<INotificationStore, Notifications>()
                 .AddSingleton<ILicenseState>(new License { IsLicensed = licensed }).AddSingleton<NotificationTrigger>()
                 .AddSingleton<IMonitorHealthStore, MonitorHealthStore>()
                 .AddSingleton<IConnectivityTracker, ConnectivityTracker>()
@@ -56,6 +69,32 @@ public sealed class LocalApiSecurityTests
             return new App(host, services);
         }
         public async ValueTask DisposeAsync() { await Host.DisposeAsync(); await Services.DisposeAsync(); }
+    }
+
+    [Fact]
+    public async Task Settings_get_and_invalid_put_preserve_storage_and_reject_client_protected_passwords()
+    {
+        var path = ServiceSettingsFile.PrimaryPath;
+        var original = File.Exists(path) ? File.ReadAllBytes(path) : null;
+        try
+        {
+            ServiceSettingsFile.WriteSection(System.Text.Json.Nodes.JsonNode.Parse("""{"General":{"MachineName":"fixture"},"MonitorPoints":[]}""")!.AsObject());
+            var before = File.ReadAllBytes(path);
+            await using var app = await App.Start(true);
+            using var client = app.Client;
+            var response = await client.GetFromJsonAsync<System.Text.Json.Nodes.JsonObject>(ApiRoutes.Settings);
+            Assert.Equal("fixture", response!["General"]!["MachineName"]!.GetValue<string>());
+            response["General"]!["ServicePort"] = 70000;
+            Assert.Equal(HttpStatusCode.BadRequest, (await client.PutAsJsonAsync(ApiRoutes.Settings, response)).StatusCode);
+            Assert.Equal(before, File.ReadAllBytes(path));
+            Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync(ApiRoutes.DatabaseTest, new DatabaseTestRequest(Login: new DatabaseLogin { Password = "aes:TEST-ONLY" }))).StatusCode);
+            response["General"]!["ServicePort"] = 5050;
+            SettingsContract.Merge(response, ServiceSettingsFile.ReadSection());
+            using var savedResponse = await client.PutAsJsonAsync(ApiRoutes.Settings, response);
+            Assert.True(savedResponse.StatusCode == HttpStatusCode.NoContent, await savedResponse.Content.ReadAsStringAsync());
+            Assert.Equal("fixture", ServiceSettingsFile.ReadSection()["General"]!["MachineName"]!.GetValue<string>());
+        }
+        finally { if (original is null) File.Delete(path); else PrivateFile.WriteAllBytes(path, original); }
     }
 
     [Fact]

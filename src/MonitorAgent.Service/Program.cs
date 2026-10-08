@@ -10,6 +10,8 @@ using MonitorAgent.Service.Runtime;
 using MonitorAgent.Service.SystemInfo;
 using Serilog;
 
+StateMigration.Run(AgentPaths.StateFolder, AgentPaths.InstallFolder, OperatingSystem.IsWindows());
+
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .WriteTo.File(Path.Combine(AgentPaths.LogFolder, "bootstrap-.log"), rollingInterval: RollingInterval.Day, retainedFileCountLimit: null)
