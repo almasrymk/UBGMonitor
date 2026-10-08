@@ -795,3 +795,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - حجم الزرّين 28×24 مع Padding=2 وخط 12، مع الحفاظ على المسافة السابقة ووظيفة إعادة الإنشاء.
 - Release build ناجح صفر أخطاء وتحذيرا SYSLIB0057 قائمان؛ 195 نجاح/4 SKIPPED/0 فشل. لم يُختبر المظهر تفاعليًا؛ لا master/push/install.
+
+### R4-S05 — أسماء خياري المفاتيح
+- الحالة: DONE-VERIFIED
+- النصوص أصبحت Viewer key وAdmin key بطلب المالك؛ دون تغيير الوظائف.
+- Release build ناجح صفر أخطاء وتحذيرا SYSLIB0057 قائمان؛ 195 نجاح/4 SKIPPED/0 فشل. المظهر تفاعليًا غير متحقق؛ لا master/push/install.
