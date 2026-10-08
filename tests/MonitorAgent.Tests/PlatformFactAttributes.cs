@@ -1,5 +1,14 @@
 namespace MonitorAgent.Tests;
 
+public sealed class WindowsTheoryAttribute : TheoryAttribute
+{
+    public WindowsTheoryAttribute()
+    {
+        if (!OperatingSystem.IsWindows())
+            Skip = "Requires Windows path and special-folder semantics; run on the Windows CI runner.";
+    }
+}
+
 public sealed class WindowsFactAttribute : FactAttribute
 {
     public WindowsFactAttribute()
