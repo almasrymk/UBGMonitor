@@ -18,6 +18,10 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using MonitorAgent.Shared.Security;
+using System.Security.Cryptography.X509Certificates;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Http.Timeouts;
 
 namespace MonitorAgent.Service.LocalApi;
 
@@ -27,6 +31,8 @@ public sealed class LocalApiHost : BackgroundService
     private readonly LocalApiOptions _options;
     private readonly ILogger<LocalApiHost> _logger;
     private WebApplication? _app;
+    private X509Certificate2? _remoteCertificate;
+    private readonly RemoteAbuseGuard _abuse = new();
 
     public LocalApiHost(IServiceProvider rootProvider, IOptions<LocalApiOptions> options, ILogger<LocalApiHost> logger)
     {
@@ -52,24 +58,55 @@ public sealed class LocalApiHost : BackgroundService
             catch { await local.DisposeAsync(); throw; }
         }
         var cache = _rootProvider.GetRequiredService<ILocalConfigCache>();
+        var remote = _rootProvider.GetRequiredService<RemoteAccessManager>();
+        var legacy = cache.GetGeneral();
+        try
+        {
+        remote.MigrateLegacy(legacy.RemoteAccessKey, !Listening.From(legacy, _options.Port).LocalOnly);
+        if (!string.IsNullOrEmpty(legacy.RemoteAccessKey))
+        {
+            var settings = ServiceSettingsFile.ReadSection();
+            if (settings["General"] is System.Text.Json.Nodes.JsonObject oldGeneral)
+            {
+                PrivateFile.Backup(ServiceSettingsFile.PrimaryPath, Path.Combine(AgentPaths.StateFolder, "backups"));
+                oldGeneral["RemoteAccessKey"] = "";
+                ServiceSettingsFile.WriteSection(settings);
+            }
+        }
+        }
+        catch (Exception ex) when (ex is IOException or CryptographicException or FormatException or System.Text.Json.JsonException)
+        {
+            _logger.LogError("[API] Remote state migration failed; local administration remains available. Error type: {ErrorType}", ex.GetType().Name);
+        }
         while (!stoppingToken.IsCancellationRequested)
         {
             var general = cache.GetGeneral();
             var listen = Listening.From(general, _options.Port);
-            var key = general.RemoteAccessKey;
-            if (!listen.LocalOnly && !string.IsNullOrWhiteSpace(key))
+            var revision = remote.Revision;
+            RemoteAccessStatus remoteStatus;
+            try { remoteStatus = remote.Status(); }
+            catch (Exception ex) when (ex is IOException or CryptographicException or FormatException or System.Text.Json.JsonException)
+            {
+                await StopAppAsync();
+                _rootProvider.GetRequiredService<IFirewall>().Allow(null);
+                _logger.LogError("[API] Remote security state cannot be loaded. Local administration remains available. Error type: {ErrorType}", ex.GetType().Name);
+                await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
+                continue;
+            }
+            if (!listen.LocalOnly && remoteStatus.Enabled && remoteStatus.HasViewerKey)
             {
                 if (!await TryStartAsync(listen, stoppingToken))
                 {
                     await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
                     continue;
                 }
-                UpdateFirewall(listen);
+                if (remoteStatus.OpenFirewall) UpdateFirewall(listen);
+                else _rootProvider.GetRequiredService<IFirewall>().Allow(null);
             }
             else _rootProvider.GetRequiredService<IFirewall>().Allow(null);
             try
             {
-                while (Listening.From(cache.GetGeneral(), _options.Port) == listen && cache.GetGeneral().RemoteAccessKey == key)
+                while (Listening.From(cache.GetGeneral(), _options.Port) == listen && remote.Revision == revision)
                     await Task.Delay(TimeSpan.FromSeconds(3), stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
@@ -80,9 +117,10 @@ public sealed class LocalApiHost : BackgroundService
     {
         var builder = WebApplication.CreateBuilder();
         builder.Logging.ClearProviders();
-        builder.WebHost.UseKestrel();
-        builder.WebHost.UseUrls(listen.Urls);
-        ConfigureServices(builder.Services);
+        var certificate = _rootProvider.GetRequiredService<RemoteAccessManager>().GetCertificate();
+        if (certificate.NotAfter <= DateTime.Now) { certificate.Dispose(); _logger.LogError("[API] Remote certificate expired; regenerate it explicitly from the local Administrator connection."); return false; }
+        RemoteTransport.Configure(builder, IPAddress.Parse(listen.Address), listen.Port, certificate);
+        ConfigureServices(builder.Services, tcp: true);
         var app = builder.Build();
         ConfigureApplication(app, AgentAccessRole.Viewer, tcp: true, boundAddress: listen.Address);
 
@@ -90,52 +128,73 @@ public sealed class LocalApiHost : BackgroundService
         {
             await app.StartAsync(stoppingToken);
             _app = app;
+            _remoteCertificate = certificate;
             _listening = listen;
             _logger.LogInformation("[API] Listening on {Urls}", string.Join(", ", listen.Urls));
+            _logger.LogInformation("[API] Certificate SHA256 fingerprint: {Fingerprint}", certificate.GetCertHashString(HashAlgorithmName.SHA256));
             return true;
         }
         catch (Exception ex) when (ex is IOException or System.Net.Sockets.SocketException or InvalidOperationException or FormatException)
         {
             _logger.LogError("[API] Could not listen on {Urls}: {Message}", string.Join(", ", listen.Urls), ex.Message);
             await app.DisposeAsync();
+            certificate.Dispose();
             return false;
         }
     }
 
-    public static void ConfigureServices(IServiceCollection services) { }
+    public static void ConfigureServices(IServiceCollection services, bool tcp = false)
+    {
+        if (!tcp) return;
+        services.AddRequestTimeouts(o => o.DefaultPolicy = new RequestTimeoutPolicy { Timeout = TimeSpan.FromSeconds(30) });
+        services.AddRateLimiter(o =>
+        {
+            o.RejectionStatusCode = 429;
+            o.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context => RateLimitPartition.GetFixedWindowLimiter(
+                context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions { PermitLimit = 600, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+        });
+    }
 
     public void ConfigureApplication(WebApplication app, AgentAccessRole transportRole = AgentAccessRole.None, bool tcp = false, string? boundAddress = null)
     {
         app.UseRouting();
+        if (tcp) { app.UseRequestTimeouts(); app.UseRateLimiter(); }
         app.Use(async (context, next) =>
         {
+            var actualRole = transportRole;
             if (tcp)
             {
-                var key = _rootProvider.GetRequiredService<ILocalConfigCache>().GetGeneral().RemoteAccessKey;
-                if (string.IsNullOrWhiteSpace(key) || !CryptographicOperations.FixedTimeEquals(
-                    SHA256.HashData(Encoding.UTF8.GetBytes(context.Request.Headers[ApiRoutes.AccessKeyHeader].ToString())),
-                    SHA256.HashData(Encoding.UTF8.GetBytes(key))))
+                if (context.Request.ContentLength > 8 * 1024 * 1024) { context.Response.StatusCode = 413; return; }
+                var peer = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                if (_abuse.IsBlocked(peer)) { context.Response.StatusCode = 429; return; }
+                actualRole = _rootProvider.GetRequiredService<RemoteAccessManager>().Authenticate(context.Request.Headers[ApiRoutes.AccessKeyHeader].ToString());
+                if (actualRole == AgentAccessRole.None)
                 {
+                    _abuse.Failed(peer);
                     context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                     return;
                 }
                 var host = context.Request.Host.Host;
-                var allowed = boundAddress == IPAddress.Any.ToString() ? LocalAddresses().Append("127.0.0.1").Contains(host) : host == boundAddress;
+                var computer = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties();
+                var names = new[] { Environment.MachineName, computer.HostName, computer.HostName + "." + computer.DomainName };
+                var allowed = (boundAddress == IPAddress.Any.ToString() ? LocalAddresses().Append("127.0.0.1").Contains(host) : host == boundAddress)
+                    || names.Contains(host, StringComparer.OrdinalIgnoreCase);
                 if (!allowed) { context.Response.StatusCode = StatusCodes.Status400BadRequest; return; }
             }
             var required = context.GetEndpoint()?.Metadata.GetMetadata<RequiredAgentRole>();
-            if (required is null || transportRole < required.Role)
+            if (required is null || actualRole < required.Role || tcp && context.GetEndpoint()?.Metadata.GetMetadata<LocalAdministrationOnly>() is not null)
             {
                 context.Response.StatusCode = StatusCodes.Status403Forbidden;
                 return;
             }
             var failed = false;
+            context.Items["AgentRole"] = actualRole;
             try { await next(); }
             catch { failed = true; throw; }
             finally
             {
                 if (required.Role == AgentAccessRole.Administrator)
-                    _logger.LogInformation("[Audit] Role={Role} Transport={Transport} Action={Action} Result={Result}", transportRole, tcp ? "TCP" : "IPC", context.GetEndpoint()?.DisplayName, failed ? 500 : context.Response.StatusCode);
+                    _logger.LogInformation("[Audit] Role={Role} Transport={Transport} Action={Action} Result={Result}", actualRole, tcp ? "TCP" : "IPC", context.GetEndpoint()?.DisplayName, failed ? 500 : context.Response.StatusCode);
             }
         });
         app.Use(async (context, next) =>
@@ -155,7 +214,7 @@ public sealed class LocalApiHost : BackgroundService
 
             await next();
         });
-        MapEndpoints(app);
+        MapEndpoints(app, tcp);
 
     }
 
@@ -175,6 +234,7 @@ public sealed class LocalApiHost : BackgroundService
         {
             await _app.DisposeAsync();
             _app = null;
+            _remoteCertificate?.Dispose(); _remoteCertificate = null;
         }
     }
 
@@ -205,10 +265,10 @@ public sealed class LocalApiHost : BackgroundService
 
         /// <summary>A single IP also listens on 127.0.0.1 so the app on this computer keeps working.</summary>
         public string[] Urls => LocalOnly
-            ? [$"http://127.0.0.1:{Port}"]
+            ? [$"https://127.0.0.1:{Port}"]
             : Address == IPAddress.Any.ToString()
-                ? [$"http://0.0.0.0:{Port}"]
-                : [$"http://{Address}:{Port}"];
+                ? [$"https://0.0.0.0:{Port}"]
+                : [$"https://{Address}:{Port}"];
 
         public static Listening From(GeneralRuntimeSettings general, int defaultPort)
         {
@@ -266,11 +326,18 @@ public sealed class LocalApiHost : BackgroundService
                Message = _rootProvider.GetRequiredService<ILicenseState>().GetStatus().Message
            };
 
-    private void MapEndpoints(WebApplication app)
+    private void MapEndpoints(WebApplication app, bool tcp)
     {
         var viewer = app.MapGroup("").WithMetadata(new RequiredAgentRole(AgentAccessRole.Viewer));
         var admin = app.MapGroup("").WithMetadata(new RequiredAgentRole(AgentAccessRole.Administrator));
-        viewer.MapGet(ApiRoutes.Status, () =>
+        admin.MapGet(ApiRoutes.RemoteAccess, () => Results.Ok(_rootProvider.GetRequiredService<RemoteAccessManager>().Status())).WithMetadata(new LocalAdministrationOnly());
+        admin.MapPost(ApiRoutes.RemoteAccess, (RemoteAccessAction action, HttpContext context) =>
+        {
+            context.Response.Headers.CacheControl = "no-store";
+            try { return Results.Ok(_rootProvider.GetRequiredService<RemoteAccessManager>().Apply(action)); }
+            catch (Exception ex) when (ex is ArgumentException or FormatException or CryptographicException) { return Results.BadRequest(new { error = "Remote action failed. Check required keys, certificate and selected options." }); }
+        }).WithMetadata(new LocalAdministrationOnly());
+        viewer.MapGet(ApiRoutes.Status, (HttpContext context) =>
         {
             var identity = _rootProvider.GetRequiredService<IAgentIdentity>();
             var connectivity = _rootProvider.GetRequiredService<IConnectivityTracker>();
@@ -287,7 +354,8 @@ public sealed class LocalApiHost : BackgroundService
                 ConfigVersion = cache.GetConfigVersion(),
                 LastSyncUtc = cache.GetLastSyncUtc(),
                 ListenUrls = _listening?.Urls ?? [],
-                Addresses = LocalAddresses()
+                Addresses = LocalAddresses(),
+                AccessRole = context.Items["AgentRole"]?.ToString()
             });
         });
 
@@ -340,6 +408,9 @@ public sealed class LocalApiHost : BackgroundService
             {
                 var before = ServiceSettingsFile.ReadSection();
                 section = SettingsContract.Merge(section, before);
+                if (tcp && (!System.Text.Json.Nodes.JsonNode.DeepEquals(section["General"]?["ServiceListenAddress"], before["General"]?["ServiceListenAddress"])
+                    || !System.Text.Json.Nodes.JsonNode.DeepEquals(section["General"]?["ServicePort"], before["General"]?["ServicePort"])))
+                    return Results.BadRequest(new { error = "Network listener settings can only be changed through local administration." });
                 ServiceSettingsFile.WriteSection(section);
                 _logger.LogInformation("[Settings] Saved by the app to {Path}", ServiceSettingsFile.PrimaryPath);
                 ReportSettingsChanges(SettingsChanges.Describe(before, section));

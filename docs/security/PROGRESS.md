@@ -509,3 +509,63 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - التحقق: Viewer403/admin200/auditبلاقيمة/publicsettingsلاpassword؛ clipboardunchangedclear/changedpreserveunit2حالات؛ build0/0وسuite144pass/3skip.
 - غيرالمتحقق: DesktopUI/Windowsclipboardhistory/cloudsyncوالتوقيتالفعلية؛ لاclipboardالمستخدممعدلةمنالاختبارات.
 - جمع الخطوات لأنprefix/servicewriter/publiccontract/desktop/reveal/scannersأجزاءترحيلمشتركة؛ كلentryمنفصلة، ولاmaster/push/install. اختبارrelease-scanner9casesأعيدتشغيلهحسبoutputالتالي؛ لاادعاءحتىاكتماله.
+
+### R4-S01 — الوصول البعيد الآمن
+- الحالة: DONE-UNVERIFIED
+- التغيير: HTTPS فقط، مفاتيح قراءة وإدارة منفصلة محفوظة كـ hash، تفعيل وإلغاء ودوران من IPC Administrator فقط، شهادة محمية وبصمة pairing صريحة في Desktop، حدود طلبات ومحاولات ومهل. تفاصيل التشغيل في REMOTE_ACCESS.md.
+- الملفات: RemoteAccessManager.cs، RemoteTransport.cs، RemoteAbuseGuard.cs، LocalApiHost.cs، AgentApiClient.cs، CertificateTrust.cs، SettingsViewModel.cs وSettingsView.axaml.
+- التحقق: Release build نجح بلا تحذيرات أو أخطاء؛ 154 اختبارًا ناجحًا، 3 Unix-only متخطاة، 0 فشل. اختبار HTTPS فعلي على Windows ناجح بعد إصلاح تحميل مفتاح Schannel باستخدام UserKeySet مؤقت.
+- اختبار الأمان: RemoteAccessTests وLocalApiSecurityTests يثبتان رفض مفتاح غائب، حدود المحاولات، منع Viewer ومنع إدارة إعداد الوصول البعيد من TCP، ورفض بصمة متغيرة.
+- اختبار عدم الانكسار: HTTPS فعلي بمفتاح قراءة صالح يرجع 200؛ مفاتيح مستقلة ودوران وإلغاء واستخراج حالة صحيحة.
+- غير المتحقق: جهاز ثانٍ وDesktop UI وLocalSystem وUnix والجدار الناري واستيراد شهادة إنتاج؛ لذلك لا ادعاء بجاهزية إنتاجية.
+- جمع الخطوات لأن transport/authentication/pairing عقد اتصال واحد؛ فصلها يكسر اتصال Desktop. R4-S06 موثق في commit مستقل سابقًا.
+
+### R4-S02 — الوصول البعيد الآمن
+- الحالة: DONE-UNVERIFIED
+- التغيير: HTTPS فقط، مفاتيح قراءة وإدارة منفصلة محفوظة كـ hash، تفعيل وإلغاء ودوران من IPC Administrator فقط، شهادة محمية وبصمة pairing صريحة في Desktop، حدود طلبات ومحاولات ومهل. تفاصيل التشغيل في REMOTE_ACCESS.md.
+- الملفات: RemoteAccessManager.cs، RemoteTransport.cs، RemoteAbuseGuard.cs، LocalApiHost.cs، AgentApiClient.cs، CertificateTrust.cs، SettingsViewModel.cs وSettingsView.axaml.
+- التحقق: Release build نجح بلا تحذيرات أو أخطاء؛ 154 اختبارًا ناجحًا، 3 Unix-only متخطاة، 0 فشل. اختبار HTTPS فعلي على Windows ناجح بعد إصلاح تحميل مفتاح Schannel باستخدام UserKeySet مؤقت.
+- اختبار الأمان: RemoteAccessTests وLocalApiSecurityTests يثبتان رفض مفتاح غائب، حدود المحاولات، منع Viewer ومنع إدارة إعداد الوصول البعيد من TCP، ورفض بصمة متغيرة.
+- اختبار عدم الانكسار: HTTPS فعلي بمفتاح قراءة صالح يرجع 200؛ مفاتيح مستقلة ودوران وإلغاء واستخراج حالة صحيحة.
+- غير المتحقق: جهاز ثانٍ وDesktop UI وLocalSystem وUnix والجدار الناري واستيراد شهادة إنتاج؛ لذلك لا ادعاء بجاهزية إنتاجية.
+- جمع الخطوات لأن transport/authentication/pairing عقد اتصال واحد؛ فصلها يكسر اتصال Desktop. R4-S06 موثق في commit مستقل سابقًا.
+
+### R4-S03 — الوصول البعيد الآمن
+- الحالة: DONE-UNVERIFIED
+- التغيير: HTTPS فقط، مفاتيح قراءة وإدارة منفصلة محفوظة كـ hash، تفعيل وإلغاء ودوران من IPC Administrator فقط، شهادة محمية وبصمة pairing صريحة في Desktop، حدود طلبات ومحاولات ومهل. تفاصيل التشغيل في REMOTE_ACCESS.md.
+- الملفات: RemoteAccessManager.cs، RemoteTransport.cs، RemoteAbuseGuard.cs، LocalApiHost.cs، AgentApiClient.cs، CertificateTrust.cs، SettingsViewModel.cs وSettingsView.axaml.
+- التحقق: Release build نجح بلا تحذيرات أو أخطاء؛ 154 اختبارًا ناجحًا، 3 Unix-only متخطاة، 0 فشل. اختبار HTTPS فعلي على Windows ناجح بعد إصلاح تحميل مفتاح Schannel باستخدام UserKeySet مؤقت.
+- اختبار الأمان: RemoteAccessTests وLocalApiSecurityTests يثبتان رفض مفتاح غائب، حدود المحاولات، منع Viewer ومنع إدارة إعداد الوصول البعيد من TCP، ورفض بصمة متغيرة.
+- اختبار عدم الانكسار: HTTPS فعلي بمفتاح قراءة صالح يرجع 200؛ مفاتيح مستقلة ودوران وإلغاء واستخراج حالة صحيحة.
+- غير المتحقق: جهاز ثانٍ وDesktop UI وLocalSystem وUnix والجدار الناري واستيراد شهادة إنتاج؛ لذلك لا ادعاء بجاهزية إنتاجية.
+- جمع الخطوات لأن transport/authentication/pairing عقد اتصال واحد؛ فصلها يكسر اتصال Desktop. R4-S06 موثق في commit مستقل سابقًا.
+
+### R4-S04 — الوصول البعيد الآمن
+- الحالة: DONE-UNVERIFIED
+- التغيير: HTTPS فقط، مفاتيح قراءة وإدارة منفصلة محفوظة كـ hash، تفعيل وإلغاء ودوران من IPC Administrator فقط، شهادة محمية وبصمة pairing صريحة في Desktop، حدود طلبات ومحاولات ومهل. تفاصيل التشغيل في REMOTE_ACCESS.md.
+- الملفات: RemoteAccessManager.cs، RemoteTransport.cs، RemoteAbuseGuard.cs، LocalApiHost.cs، AgentApiClient.cs، CertificateTrust.cs، SettingsViewModel.cs وSettingsView.axaml.
+- التحقق: Release build نجح بلا تحذيرات أو أخطاء؛ 154 اختبارًا ناجحًا، 3 Unix-only متخطاة، 0 فشل. اختبار HTTPS فعلي على Windows ناجح بعد إصلاح تحميل مفتاح Schannel باستخدام UserKeySet مؤقت.
+- اختبار الأمان: RemoteAccessTests وLocalApiSecurityTests يثبتان رفض مفتاح غائب، حدود المحاولات، منع Viewer ومنع إدارة إعداد الوصول البعيد من TCP، ورفض بصمة متغيرة.
+- اختبار عدم الانكسار: HTTPS فعلي بمفتاح قراءة صالح يرجع 200؛ مفاتيح مستقلة ودوران وإلغاء واستخراج حالة صحيحة.
+- غير المتحقق: جهاز ثانٍ وDesktop UI وLocalSystem وUnix والجدار الناري واستيراد شهادة إنتاج؛ لذلك لا ادعاء بجاهزية إنتاجية.
+- جمع الخطوات لأن transport/authentication/pairing عقد اتصال واحد؛ فصلها يكسر اتصال Desktop. R4-S06 موثق في commit مستقل سابقًا.
+
+### R4-S05 — الوصول البعيد الآمن
+- الحالة: DONE-UNVERIFIED
+- التغيير: HTTPS فقط، مفاتيح قراءة وإدارة منفصلة محفوظة كـ hash، تفعيل وإلغاء ودوران من IPC Administrator فقط، شهادة محمية وبصمة pairing صريحة في Desktop، حدود طلبات ومحاولات ومهل. تفاصيل التشغيل في REMOTE_ACCESS.md.
+- الملفات: RemoteAccessManager.cs، RemoteTransport.cs، RemoteAbuseGuard.cs، LocalApiHost.cs، AgentApiClient.cs، CertificateTrust.cs، SettingsViewModel.cs وSettingsView.axaml.
+- التحقق: Release build نجح بلا تحذيرات أو أخطاء؛ 154 اختبارًا ناجحًا، 3 Unix-only متخطاة، 0 فشل. اختبار HTTPS فعلي على Windows ناجح بعد إصلاح تحميل مفتاح Schannel باستخدام UserKeySet مؤقت.
+- اختبار الأمان: RemoteAccessTests وLocalApiSecurityTests يثبتان رفض مفتاح غائب، حدود المحاولات، منع Viewer ومنع إدارة إعداد الوصول البعيد من TCP، ورفض بصمة متغيرة.
+- اختبار عدم الانكسار: HTTPS فعلي بمفتاح قراءة صالح يرجع 200؛ مفاتيح مستقلة ودوران وإلغاء واستخراج حالة صحيحة.
+- غير المتحقق: جهاز ثانٍ وDesktop UI وLocalSystem وUnix والجدار الناري واستيراد شهادة إنتاج؛ لذلك لا ادعاء بجاهزية إنتاجية.
+- جمع الخطوات لأن transport/authentication/pairing عقد اتصال واحد؛ فصلها يكسر اتصال Desktop. R4-S06 موثق في commit مستقل سابقًا.
+
+### R4-S07 — الوصول البعيد الآمن
+- الحالة: DONE-UNVERIFIED
+- التغيير: HTTPS فقط، مفاتيح قراءة وإدارة منفصلة محفوظة كـ hash، تفعيل وإلغاء ودوران من IPC Administrator فقط، شهادة محمية وبصمة pairing صريحة في Desktop، حدود طلبات ومحاولات ومهل. تفاصيل التشغيل في REMOTE_ACCESS.md.
+- الملفات: RemoteAccessManager.cs، RemoteTransport.cs، RemoteAbuseGuard.cs، LocalApiHost.cs، AgentApiClient.cs، CertificateTrust.cs، SettingsViewModel.cs وSettingsView.axaml.
+- التحقق: Release build نجح بلا تحذيرات أو أخطاء؛ 154 اختبارًا ناجحًا، 3 Unix-only متخطاة، 0 فشل. اختبار HTTPS فعلي على Windows ناجح بعد إصلاح تحميل مفتاح Schannel باستخدام UserKeySet مؤقت.
+- اختبار الأمان: RemoteAccessTests وLocalApiSecurityTests يثبتان رفض مفتاح غائب، حدود المحاولات، منع Viewer ومنع إدارة إعداد الوصول البعيد من TCP، ورفض بصمة متغيرة.
+- اختبار عدم الانكسار: HTTPS فعلي بمفتاح قراءة صالح يرجع 200؛ مفاتيح مستقلة ودوران وإلغاء واستخراج حالة صحيحة.
+- غير المتحقق: جهاز ثانٍ وDesktop UI وLocalSystem وUnix والجدار الناري واستيراد شهادة إنتاج؛ لذلك لا ادعاء بجاهزية إنتاجية.
+- جمع الخطوات لأن transport/authentication/pairing عقد اتصال واحد؛ فصلها يكسر اتصال Desktop. R4-S06 موثق في commit مستقل سابقًا.

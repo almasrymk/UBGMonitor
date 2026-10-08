@@ -88,6 +88,18 @@ public sealed class ClientPreferences
     }
 
     public string Theme { get; set; } = "Dark";
+    [JsonIgnore]
+    public Dictionary<string, string> CertificatePins { get; set; } = new();
+    [JsonPropertyName("CertificatePins")]
+    public string StoredCertificatePins
+    {
+        get => CertificatePins.Count == 0 ? "" : SecretProtector.Protect(JsonSerializer.Serialize(CertificatePins));
+        set
+        {
+            var plain = SecretProtector.Unprotect(value);
+            CertificatePins = plain.Length == 0 ? new() : JsonSerializer.Deserialize<Dictionary<string, string>>(plain) ?? new();
+        }
+    }
 
     /// <summary>Before the rename the app's folder was "AgentMonitor"; moves it once so the layout and preferences stay.</summary>
     public static void MoveLegacyFolder()

@@ -19,6 +19,8 @@ using MonitorAgent.Service.Runtime;
 using MonitorAgent.Shared.Constants;
 using MonitorAgent.Shared.Models;
 using MonitorAgent.Shared.Security;
+using System.Security.Cryptography.X509Certificates;
+using MonitorAgent.UI.Services;
 
 namespace MonitorAgent.Tests;
 
@@ -55,14 +57,20 @@ public sealed class LocalApiSecurityTests
     {
         public WebApplication Host { get; }
         public ServiceProvider Services { get; }
-        public HttpClient Client => Host.GetTestClient();
+        private readonly X509Certificate2? _certificate;
+        public HttpClient Client => _certificate is null ? Host.GetTestClient() : new HttpClient(new HttpClientHandler
+        { ServerCertificateCustomValidationCallback = (_, cert, _, errors) => CertificateTrust.Accept(cert, errors, CertificateTrust.Fingerprint(_certificate)) }) { BaseAddress = new Uri(Host.Urls.Single()) };
         public AuditLog Log { get; }
-        private App(WebApplication host, ServiceProvider services, AuditLog log) { Host = host; Services = services; Log = log; }
-        public static async Task<App> Start(bool licensed, AgentAccessRole role = AgentAccessRole.Administrator, bool tcp = false, string key = "")
+        public RemoteAccessManager Remote => Services.GetRequiredService<RemoteAccessManager>();
+        private App(WebApplication host, ServiceProvider services, AuditLog log, X509Certificate2? certificate = null) { Host = host; Services = services; Log = log; _certificate = certificate; }
+        public static async Task<App> Start(bool licensed, AgentAccessRole role = AgentAccessRole.Administrator, bool tcp = false, string key = "", bool realHttps = false)
         {
             var cache = new FakeLocalConfigCache();
             cache.General.RemoteAccessKey = key;
+            var remote = new RemoteAccessManager(Path.Combine(TestEnvironment.Home, "remote-" + Guid.NewGuid().ToString("N"), "remote.json"));
+            remote.MigrateLegacy(key, tcp);
             var services = new ServiceCollection().AddSingleton<ILocalConfigCache>(cache)
+                .AddSingleton(remote)
                 .AddSingleton(new MonitorAgent.Service.Reports.ReportStore(NullLogger<MonitorAgent.Service.Reports.ReportStore>.Instance))
                 .AddSingleton<IIssueDataLogger, Issues>().AddSingleton<INotificationStore, Notifications>()
                 .AddSingleton<ILicenseState>(new License { IsLicensed = licensed }).AddSingleton<NotificationTrigger>()
@@ -70,15 +78,49 @@ public sealed class LocalApiSecurityTests
                 .AddSingleton<IConnectivityTracker, ConnectivityTracker>()
                 .AddSingleton<IAgentIdentity>(new AgentIdentity(Options.Create(new AgentOptions()))).BuildServiceProvider();
             var builder = WebApplication.CreateBuilder();
-            builder.WebHost.UseTestServer();
-            LocalApiHost.ConfigureServices(builder.Services);
+            X509Certificate2? certificate = null;
+            if (realHttps) { certificate = remote.GetCertificate(); RemoteTransport.Configure(builder, IPAddress.Loopback, 0, certificate); }
+            else builder.WebHost.UseTestServer();
+            LocalApiHost.ConfigureServices(builder.Services, tcp);
             var host = builder.Build();
             var log = new AuditLog();
             new LocalApiHost(services, Options.Create(new LocalApiOptions()), log).ConfigureApplication(host, role, tcp, "127.0.0.1");
             await host.StartAsync();
-            return new App(host, services, log);
+            return new App(host, services, log, certificate);
         }
-        public async ValueTask DisposeAsync() { await Host.DisposeAsync(); await Services.DisposeAsync(); }
+        public async ValueTask DisposeAsync() { await Host.DisposeAsync(); await Services.DisposeAsync(); _certificate?.Dispose(); }
+    }
+
+    [Fact]
+    public async Task Real_https_transport_serves_pinned_viewer_and_never_serves_plain_http()
+    {
+        await using var app = await App.Start(true, tcp: true, key: "TEST-ONLY-https-key", realHttps: true);
+        using var client = app.Client;
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync(ApiRoutes.Status)).StatusCode);
+        client.DefaultRequestHeaders.Add(ApiRoutes.AccessKeyHeader, "TEST-ONLY-https-key");
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync(ApiRoutes.Status)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsync(ApiRoutes.LicenseDeactivate, null)).StatusCode);
+        using var plaintext = new HttpClient();
+        var address = new UriBuilder(app.Host.Urls.Single()) { Scheme = "http" }.Uri;
+        try { Assert.False((await plaintext.GetAsync(new Uri(address, ApiRoutes.Status))).IsSuccessStatusCode); }
+        catch (HttpRequestException) { /* TLS port may close a plaintext connection without an HTTP response. */ }
+    }
+
+    [Fact]
+    public async Task Remote_admin_key_cannot_enable_remote_access_and_wrong_keys_are_limited()
+    {
+        await using var app = await App.Start(true, tcp: true, key: "TEST-ONLY-remote-key");
+        var key = app.Remote.Apply(new("create-admin-key")).Key;
+        using var client = app.Client;
+        client.DefaultRequestHeaders.Host = "127.0.0.1";
+        client.DefaultRequestHeaders.Add(ApiRoutes.AccessKeyHeader, key);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync(ApiRoutes.Status)).StatusCode);
+        app.Remote.Apply(new("configure", Enabled: true, AllowAdministration: true));
+        Assert.Equal(HttpStatusCode.OK, (await client.PostAsync(ApiRoutes.LicenseRefresh, null)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsJsonAsync(ApiRoutes.RemoteAccess, new RemoteAccessAction("configure", Enabled: true))).StatusCode);
+        client.DefaultRequestHeaders.Remove(ApiRoutes.AccessKeyHeader);
+        for (var i = 0; i < 4; i++) Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync(ApiRoutes.Status)).StatusCode);
+        Assert.Equal((HttpStatusCode)429, (await client.GetAsync(ApiRoutes.Status)).StatusCode);
     }
 
     [Fact]

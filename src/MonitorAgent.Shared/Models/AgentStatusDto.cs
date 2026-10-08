@@ -10,4 +10,5 @@ public sealed record AgentStatusDto(
     string ConfigVersion = "1",
     DateTime? LastSyncUtc = null,
     string[]? ListenUrls = null,
-    List<string>? Addresses = null);
+    List<string>? Addresses = null,
+    string? AccessRole = null);

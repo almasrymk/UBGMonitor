@@ -110,6 +110,30 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     /// <summary>Asks the user to go on with a change that cannot be undone; the argument is the warning. True = go on.</summary>
     public Func<string, Task<bool>>? ConfirmWarning { get; set; }
+    [ObservableProperty] private bool _remoteEnabled;
+    [ObservableProperty] private bool _remoteAdministration;
+    [ObservableProperty] private bool _openFirewallPort;
+    [ObservableProperty] private string _remoteFingerprint = "Remote access has not been configured.";
+    [ObservableProperty] private string _newRemoteKey = string.Empty;
+    public bool CanManageRemoteAccess => _client.CanAdminister && _client.IsLocalTransport;
+    [RelayCommand]
+    private async Task ManageRemoteAccessAsync(string action)
+    {
+        if (!CanManageRemoteAccess) return;
+        if (action is "regenerate-certificate" or "revoke-viewer-key" or "revoke-admin-key" &&
+            (ConfirmWarning is null || !await ConfirmWarning("This changes remote access and can disconnect paired applications. Continue?"))) return;
+        var result = await _client.ManageRemoteAccessAsync(new(action, RemoteEnabled, RemoteAdministration, OpenFirewallPort));
+        if (result is null) { StatusMessage = "Remote action failed. Create the required keys and save the listening address/port first."; return; }
+        ApplyRemoteStatus(result.Status);
+        NewRemoteKey = result.Key ?? string.Empty;
+        StatusMessage = result.Key is null ? "Remote access updated." : "Key returned once. Store it securely; the service keeps only its hash.";
+    }
+    private void ApplyRemoteStatus(RemoteAccessStatus status)
+    {
+        RemoteEnabled = status.Enabled; RemoteAdministration = status.AllowAdministration; OpenFirewallPort = status.OpenFirewall;
+        RemoteFingerprint = status.Fingerprint is null ? "No remote certificate yet." : "Certificate SHA-256: " + status.Fingerprint;
+        OnPropertyChanged(nameof(CanManageRemoteAccess));
+    }
 
     public SettingsViewModel(AgentApiClient client)
     {
@@ -117,6 +141,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         _client.RoleChanged += () => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
             OnPropertyChanged(nameof(CanAdminister));
+            OnPropertyChanged(nameof(CanManageRemoteAccess));
+            NewRemoteKey = string.Empty;
             OnPropertyChanged(nameof(AccessExplanation));
             SaveCommand.NotifyCanExecuteChanged();
         });
@@ -205,6 +231,7 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     private async Task LoadServiceAddressesAsync()
     {
+        if (CanManageRemoteAccess && await _client.GetRemoteAccessAsync() is { } remote) ApplyRemoteStatus(remote);
         var addresses = (await _client.GetStatusAsync())?.Addresses ?? [];
         foreach (var address in addresses)
         {
@@ -219,7 +246,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         if (AgentApiClient.ParseAddress(ApiBaseUrl) is not { } uri)
         {
             IsConnectionOk = false;
-            ConnectionMessage = "Type the service address, for example 192.168.1.10:5050 or http://pc-name:5050.";
+            ConnectionMessage = "Remote connections require HTTPS, for example https://pc-name:5050. Existing HTTP remote addresses require re-pairing.";
             return;
         }
 
@@ -230,9 +257,22 @@ public sealed partial class SettingsViewModel : ObservableObject
         IsConnectionOk = false;
         ConnectionMessage = "Connecting...";
         var error = await _client.CheckConnectionAsync();
+        if (error is not null && _client.PendingCertificateFingerprint is { } fingerprint && ConfirmWarning is not null
+            && await ConfirmWarning($"Server certificate SHA-256:\n{fingerprint}\n\nCompare this value with the server's local Administrator screen. Trust this exact certificate for {ApiBaseUrl}?"))
+        {
+            _client.ConfirmPendingCertificate();
+            error = await _client.CheckConnectionAsync();
+        }
         IsConnectionOk = error is null;
         ConnectionMessage = error ?? $"Connected to {ApiBaseUrl}.";
         ConnectRequested?.Invoke(this, EventArgs.Empty);
+    }
+    [RelayCommand]
+    private async Task ResetPairingAsync()
+    {
+        if (_client.IsLocalTransport || ConfirmWarning is null || !await ConfirmWarning("Reset the saved server certificate pairing? Verify the next fingerprint independently before accepting it.")) return;
+        _client.ForgetCertificatePin();
+        await Connect();
     }
 
     public IReadOnlyList<RetentionOption> RetentionOptions { get; } =
@@ -368,6 +408,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     private void SavePreferences() =>
         new ClientPreferences
         {
+            CertificatePins = ClientPreferences.Load().CertificatePins,
             ApiBaseUrl = string.IsNullOrWhiteSpace(ApiBaseUrl) ? DefaultApiBaseUrl : ApiBaseUrl.Trim(),
             AccessKey = ClientAccessKey.Trim(),
             Theme = _snapshot.General.Theme

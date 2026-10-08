@@ -7,6 +7,7 @@ namespace MonitorAgent.Shared.Security;
 
 public enum AgentAccessRole { None, Viewer, Administrator }
 public sealed record RequiredAgentRole(AgentAccessRole Role);
+public sealed record LocalAdministrationOnly;
 
 public static class LocalIpc
 {

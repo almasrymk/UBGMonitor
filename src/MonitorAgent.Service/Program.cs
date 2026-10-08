@@ -113,6 +113,7 @@ try
     builder.Services.AddHostedService<ApplicationsWatcher>();
     builder.Services.AddHostedService<ConfigPuller>();
     builder.Services.AddHostedService<LocalApiHost>();
+    builder.Services.AddSingleton<RemoteAccessManager>();
 
     var host = builder.Build();
     _ = host.Services.GetRequiredService<ISensorsService>();
