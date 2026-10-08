@@ -36,17 +36,18 @@ public sealed class AutomaticRemoteKeyTests
         private static string? Hash(string? key) => key is null ? null : Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(key)));
     }
     [Theory]
-    [InlineData(false, true)]
-    [InlineData(true, true)]
-    [InlineData(false, false)]
-    public async Task Network_selection_creates_missing_keys_or_displays_existing_keys_without_enabling_admin(bool existing, bool accept)
+    [InlineData(false, true, false)]
+    [InlineData(true, true, true)]
+    [InlineData(false, false, false)]
+    [InlineData(true, true, false)]
+    public async Task Network_selection_creates_missing_keys_or_displays_existing_keys_without_enabling_admin(bool existing, bool accept, bool cached)
     {
         using var transport = new Transport(existing);
         using var http = new HttpClient(transport);
         var client = new AgentApiClient(http);
         typeof(AgentApiClient).GetProperty(nameof(AgentApiClient.Role))!.SetValue(client, AgentAccessRole.Administrator);
         var store = new RemoteKeyDisplayStore(Path.Combine(TestEnvironment.Home, Guid.NewGuid() + ".json"));
-        if (existing) { store.Save("viewer", transport.Viewer!); store.Save("admin", transport.Admin!); }
+        if (cached) { store.Save("viewer", transport.Viewer!); store.Save("admin", transport.Admin!); }
         var settings = new SettingsViewModel(client, store);
         settings.ServiceListenAddress = "192.168.1.8";
         settings.ConfirmWarning = _ => Task.FromResult(accept);
@@ -58,8 +59,11 @@ public sealed class AutomaticRemoteKeyTests
         {
             Assert.Equal(transport.Viewer, settings.ViewerKeyDisplay);
             Assert.Equal(transport.Admin, settings.AdminKeyDisplay);
-            Assert.Equal(existing ? 0 : 2, transport.Actions.Count);
+            Assert.Equal(cached ? 0 : 2, transport.Actions.Count);
             Assert.True(settings.RemoteEnabled);
+            var prepare = typeof(SettingsViewModel).GetMethod("PrepareRemoteKeysAsync", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+            await (Task)prepare.Invoke(settings, null)!;
+            Assert.Equal(cached ? 0 : 2, transport.Actions.Count); // Later visits retain both keys.
         }
         else { Assert.Empty(transport.Actions); Assert.Equal("127.0.0.1", settings.ServiceListenAddress); }
     }

@@ -138,8 +138,10 @@ public sealed partial class SettingsViewModel : ObservableObject
         {
             var status = await _client.GetRemoteAccessAsync();
             if (status is null) { StatusMessage = "Could not read remote keys. Retry after connecting locally."; return; }
-            if (!status.HasViewerKey) await ManageRemoteAccessAsync("create-viewer-key");
-            if (!status.HasAdminKey) await ManageRemoteAccessAsync("create-admin-key");
+            if (!status.HasViewerKey || _remoteKeyDisplayStore.Load("viewer", status.ViewerKeyHash).Length == 0)
+                await ManageRemoteAccessCoreAsync("create-viewer-key", true);
+            if (!status.HasAdminKey || _remoteKeyDisplayStore.Load("admin", status.AdminKeyHash).Length == 0)
+                await ManageRemoteAccessCoreAsync("create-admin-key", true);
             if (await _client.GetRemoteAccessAsync() is { } current) LoadRemoteKeyDisplays(current);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.Cryptography.CryptographicException)
@@ -195,14 +197,15 @@ public sealed partial class SettingsViewModel : ObservableObject
         if (accepted && ServiceListenAddress == selected) await PrepareRemoteKeysAsync();
     }
     [RelayCommand]
-    private async Task ManageRemoteAccessAsync(string action)
+    private Task ManageRemoteAccessAsync(string action) => ManageRemoteAccessCoreAsync(action);
+    private async Task ManageRemoteAccessCoreAsync(string action, bool automaticFirstDisplay = false)
     {
         if (!CanManageRemoteAccess) return;
         if (action is "create-viewer-key" or "create-admin-key")
         {
             var current = await _client.GetRemoteAccessAsync();
             if (current is null) return;
-            if ((action == "create-viewer-key" ? current.HasViewerKey : current.HasAdminKey) &&
+            if (!automaticFirstDisplay && (action == "create-viewer-key" ? current.HasViewerKey : current.HasAdminKey) &&
                 (ConfirmWarning is null || !await ConfirmWarning("Regenerating this key disconnects applications using the old key. Continue?"))) return;
         }
         if (action is "regenerate-certificate" or "revoke-viewer-key" or "revoke-admin-key" &&
@@ -360,7 +363,11 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     private async Task LoadServiceAddressesAsync()
     {
-        if (CanManageRemoteAccess && await _client.GetRemoteAccessAsync() is { } remote) ApplyRemoteStatus(remote);
+        if (CanManageRemoteAccess && await _client.GetRemoteAccessAsync() is { } remote)
+        {
+            ApplyRemoteStatus(remote);
+            if (!CanEditNetworkOptions) await PrepareRemoteKeysAsync();
+        }
         var addresses = (await _client.GetStatusAsync())?.Addresses ?? [];
         foreach (var address in addresses)
         {
