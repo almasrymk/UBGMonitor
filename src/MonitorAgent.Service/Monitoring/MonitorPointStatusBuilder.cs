@@ -35,6 +35,7 @@ public static class MonitorPointStatusBuilder
                 StatusSinceUtc = health.GetStatusSinceUtc(point.MonitorPointId),
                 DeviceKind = point.Type == MonitorPointType.Device ? point.DeviceKind : null,
                 Target = MonitorPointText.Target(point)
+                ,TlsMode = point.Database?.TlsMode
             };
         }).ToList();
     }

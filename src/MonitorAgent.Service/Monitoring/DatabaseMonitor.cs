@@ -44,7 +44,7 @@ public sealed class DatabaseMonitor : BackgroundService, IMonitoringModule
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Database monitor cycle failed");
+                _logger.LogError("Database monitor cycle failed: {ErrorType}", ex.GetType().Name);
             }
 
             await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);
@@ -55,6 +55,7 @@ public sealed class DatabaseMonitor : BackgroundService, IMonitoringModule
     {
         var config = await _configCache.GetConfigAsync(cancellationToken);
         var points = config.MonitorPoints.Where(p => p.Enabled && p.Type == MonitorPointType.Database).ToList();
+        UpdateTlsWarning(config.MonitorPoints, _health);
         var active = new HashSet<string>(points.Select(p => p.MonitorPointId), StringComparer.OrdinalIgnoreCase);
         foreach (var id in _nextCheckUtc.Keys.Where(id => !active.Contains(id)).ToList())
         {
@@ -150,21 +151,17 @@ public sealed class DatabaseMonitor : BackgroundService, IMonitoringModule
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
-            var message = ex.Message.ReplaceLineEndings(" ").Trim();
-            var hint = Hint(login, ex);
-            if (hint is not null && message.IndexOf(". ", StringComparison.Ordinal) is > 0 and var end)
-            {
-                message = message[..(end + 1)];
-            }
-
-            message = message.Length > 240 ? message[..240] + "..." : message;
-            return hint is null ? message : $"{message} {hint}";
+            return DescribeFailure(login, ex);
         }
     }
+    public static string DescribeFailure(DatabaseLogin login, Exception failure)
+        => "Database connection failed. Check the target, credentials and certificate configuration. " + Hint(login, failure);
 
     private static string? Hint(DatabaseLogin login, Exception ex)
     {
         var text = ex.Message;
+        if (login.TlsMode == DatabaseTlsMode.Verify && (text.Contains("certificate", StringComparison.OrdinalIgnoreCase) || text.Contains("SSL", StringComparison.OrdinalIgnoreCase) || text.Contains("TLS", StringComparison.OrdinalIgnoreCase)))
+            return "Server identity verification failed. Install a trusted certificate matching the server name, or explicitly choose Compatibility (server identity not verified).";
         var port = login.Port > 0 ? login.Port : DefaultPort(login.Engine);
         if (login.Engine == DatabaseEngine.SqlServer)
         {
@@ -203,8 +200,9 @@ public sealed class DatabaseMonitor : BackgroundService, IMonitoringModule
     private static string Password(string? stored) =>
         stored is { Length: > 0 } && !SecretProtector.IsProtected(stored) ? stored : SecretProtector.Unprotect(stored);
 
-    private static DbConnection CreateConnection(DatabaseLogin login)
+    public static DbConnection CreateConnection(DatabaseLogin login)
     {
+        if (!Enum.IsDefined(login.TlsMode) || !Enum.IsDefined(login.Engine)) throw new ArgumentException("Invalid database security mode.");
         var password = Password(login.Password);
         return login.Engine switch
         {
@@ -215,6 +213,7 @@ public sealed class DatabaseMonitor : BackgroundService, IMonitoringModule
                 Database = login.Database,
                 Username = login.Username,
                 Password = password,
+                SslMode = login.TlsMode == DatabaseTlsMode.Verify ? Npgsql.SslMode.VerifyFull : Npgsql.SslMode.Prefer,
                 Timeout = 8
             }.ConnectionString),
             DatabaseEngine.MySql => new MySqlConnection(new MySqlConnectionStringBuilder
@@ -224,6 +223,7 @@ public sealed class DatabaseMonitor : BackgroundService, IMonitoringModule
                 Database = login.Database,
                 UserID = login.Username,
                 Password = password,
+                SslMode = login.TlsMode == DatabaseTlsMode.Verify ? MySqlSslMode.VerifyFull : MySqlSslMode.Preferred,
                 ConnectionTimeout = 8
             }.ConnectionString),
             _ => new SqlConnection(BuildSqlServer(login, password))
@@ -238,8 +238,8 @@ public sealed class DatabaseMonitor : BackgroundService, IMonitoringModule
             InitialCatalog = login.Database,
             IntegratedSecurity = login.IntegratedSecurity,
             // Older servers cannot do the TLS that the driver asks for by default.
-            Encrypt = SqlConnectionEncryptOption.Optional,
-            TrustServerCertificate = true,
+            Encrypt = login.TlsMode == DatabaseTlsMode.Verify ? SqlConnectionEncryptOption.Mandatory : SqlConnectionEncryptOption.Optional,
+            TrustServerCertificate = login.TlsMode != DatabaseTlsMode.Verify,
             ConnectTimeout = 8
         };
         if (!login.IntegratedSecurity)
@@ -249,6 +249,17 @@ public sealed class DatabaseMonitor : BackgroundService, IMonitoringModule
         }
 
         return builder.ConnectionString;
+    }
+    public static void UpdateTlsWarning(IEnumerable<MonitorPoint> points, IMonitorHealthStore health)
+    {
+        var compatibility = points.Where(p => p.Type == MonitorPointType.Database && p.Database is { TlsMode: DatabaseTlsMode.Compatibility }).Select(p => p.DisplayName).ToList();
+        if (compatibility.Count == 0) health.ClearIssue("security:database-tls");
+        else
+        {
+            var message = "Compatibility mode: " + string.Join(", ", compatibility) + ". Test verification and fix the server certificate before switching explicitly.";
+            if (health.GetIssues().FirstOrDefault(i => i.Id == "security:database-tls")?.Message != message)
+                health.SetIssue("security:database-tls", "Warning", "Database server identity not verified", message);
+        }
     }
 
     private static string EngineLabel(DatabaseEngine engine)
@@ -263,6 +274,11 @@ public sealed class DatabaseMonitor : BackgroundService, IMonitoringModule
     {
         try
         {
+            var path = new SqliteConnectionStringBuilder(connectionString).DataSource;
+            if (!string.IsNullOrEmpty(path) && path != ":memory:")
+            {
+                if (!File.Exists(path)) PrivateFile.WriteAllBytes(path, []); else PrivateFile.Secure(path);
+            }
             await using var connection = new SqliteConnection(connectionString);
             await connection.OpenAsync(cancellationToken);
             await using var command = connection.CreateCommand();

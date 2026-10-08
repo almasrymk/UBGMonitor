@@ -1,6 +1,6 @@
 # MonitorAgent — Client Monitoring Agent
 
-منظومة مراقبة مركزية (`MonitorAgent`) تشمل Windows Service لجمع بيانات الجهاز، Local API على `localhost`، وتطبيق سطح مكتب (Avalonia) يعمل على Windows وLinux وmacOS.
+منظومة مراقبة مركزية (`MonitorAgent`) تشمل خدمة لجمع بيانات الجهاز، Local API عبر اتصال نظام التشغيل، وتطبيق سطح مكتب (Avalonia) يعمل على Windows وLinux وmacOS.
 
 ## المسار
 
@@ -36,11 +36,9 @@ dotnet test MonitorAgent.sln
 dotnet run --project src/MonitorAgent.Service
 ```
 
-اختبار Local API (مرتبط بـ `127.0.0.1` فقط):
+الاتصال المحلي من الواجهة يستخدم named pipes على Windows وUnix sockets على Linux/macOS. لا يوجد HTTP loopback للاستخدام المحلي. تشغيل خدمة التطوير يحتاج حسابًا مرفوعًا حتى يقبل العميل هوية endpoint.
 
-```powershell
-curl http://127.0.0.1:5050/api/status
-```
+المجموعات المحلية: `MonitorAgent Admins` للإدارة و`MonitorAgent Viewers` للقراءة على Windows، و`monitoragent-admin` / `monitoragent` على Unix. مستخدم الإدارة على Unix ينضم إلى المجموعتين. يلزم تسجيل الخروج والدخول بعد تغيير العضوية. Viewer يرى الإعدادات دون كلمات المرور أو المفاتيح ولا يمكنه تعديلها أو إدارة الترخيص أو بدء اختبار اتصال قاعدة بيانات.
 
 تشغيل الواجهة:
 
@@ -50,28 +48,29 @@ dotnet run --project src/MonitorAgent.Desktop
 
 ## تثبيت Windows Service
 
-نفّذ PowerShell **كمسؤول** بعد نشر الخدمة:
+نفّذ PowerShell **كمسؤول** مع حزمة مبنية مسبقًا؛ الجهاز العميل لا يحتاج SDK:
 
 ```powershell
-dotnet publish src/MonitorAgent.Service -c Release -o C:\ProgramData\MonitorAgent\publish
-
-sc.exe create MonitorAgent binPath= "C:\ProgramData\MonitorAgent\publish\MonitorAgent.Service.exe" start= auto
-sc.exe description MonitorAgent "MonitorAgent background service"
-sc.exe start MonitorAgent
+.\scripts\install-service.ps1 -Source C:\Packages\Service -DesktopSource C:\Packages\Desktop
+# للمطور فقط: .\scripts\install-service.ps1 -BuildFromSource
+.\scripts\verify-permissions.ps1
 ```
 
 إيقاف وإزالة:
 
 ```powershell
-sc.exe stop MonitorAgent
-sc.exe delete MonitorAgent
+.\scripts\uninstall-service.ps1
 ```
+
+البرنامج في `%ProgramFiles%\MonitorAgent\Service` والواجهة في `Desktop`؛ البيانات في `%ProgramData%\MonitorAgent`. إعدادات المستخدم في `settings.json` كبيانات فقط، دون دخولها في إعدادات logging. أول تشغيل يحفظ backups ويُرحّل إعدادات وData/Reports القديمة؛ لا يستبدل إعدادات موجودة. الإزالة العادية تحفظ البيانات والمجموعات، و`-Purge` / `--purge` لحذفها صراحة.
+
+على Linux/macOS شغّل install.sh من الحزمة بـsudo ثم `bash verify-permissions.sh`. ملفات البرنامج root-owned بلا group/other write، state0700 وملفات الأسرار0600. قبل التحديث تُحفظ الإعدادات القديمة0600 داخل state للترحيل. راجع backups قبل حذفها؛ قد تحتوي أسرارًا قديمة.
 
 ## المعمارية
 
 - موديولات المراقبة تفحص الموارد والأجهزة وقاعدة البيانات وMadkhal وتكتب النتيجة في السجلات.
 - سحب الإعدادات من Central كل 5 دقائق مع كاش محلي JSON.
-- Local API على `http://127.0.0.1:5050` مع CORS لـ localhost فقط.
+- Local API عبر IPC بهوية وصلاحيات نظام التشغيل؛ لا CORS. TCP يتطلب مفتاحًا حتى من loopback؛ remote Viewer فقط حتى اكتمال تفعيل Run4.
 
 ## الإعدادات
 

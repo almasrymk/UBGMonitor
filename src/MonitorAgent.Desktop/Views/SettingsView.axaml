@@ -11,7 +11,7 @@
                     <StackPanel Grid.Column="0">
                         <TextBlock Classes="flabel" Text="This app connects to"/>
                         <TextBox Classes="field wide" Text="{Binding ApiBaseUrl}"
-                                 ToolTip.Tip="For example 127.0.0.1:5050, 192.168.1.10:5050 or http://pc-name:5050"/>
+                                 ToolTip.Tip="This computer: 127.0.0.1. Remote: https://pc-name:5050"/>
                     </StackPanel>
                     <StackPanel Grid.Column="2">
                         <TextBlock Classes="flabel" Text="Access key of that service (if it has one)"/>
@@ -20,6 +20,7 @@
                 </Grid>
                 <StackPanel Orientation="Horizontal">
                     <Button Content="Connect" Command="{Binding ConnectCommand}" Classes="footer" Margin="0" MinWidth="90"/>
+                    <Button Content="Reset pairing" Command="{Binding ResetPairingCommand}" Classes="footer"/>
                     <TextBlock Classes="connmsg" Classes.ok="{Binding IsConnectionOk}" Text="{Binding ConnectionMessage}"
                                VerticalAlignment="Center" TextWrapping="Wrap" Margin="12,0,0,0" MaxWidth="700"/>
                 </StackPanel>
@@ -199,6 +200,7 @@
                 Background="{DynamicResource SurfaceDarkAltBrush}"
                 BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="0,1,0,0"
                 Padding="12,10">
+            <StackPanel>
             <StackPanel Orientation="Horizontal">
                 <Button Content="Save" Command="{Binding SaveCommand}" Classes="footer" Margin="0,0,8,0" Padding="18,6"
                         ToolTip.Tip="Save the changes in this tab" ToolTip.ShowOnDisabled="True"/>
@@ -212,6 +214,9 @@
                           StrokeLineCap="Round" StrokeJoin="Round"/>
                 </Panel>
                 <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+            </StackPanel>
+            <TextBlock Text="{Binding AccessExplanation}" IsVisible="{Binding !CanAdminister}" Margin="0,8"/>
+            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource ConnectFields}" IsVisible="{Binding !CanAdminister}"/>
             </StackPanel>
         </Border>
 
@@ -232,7 +237,7 @@
             </StackPanel>
         </Border>
 
-        <Panel IsVisible="{Binding IsLoaded}">
+        <Panel IsVisible="{Binding IsLoaded}" IsEnabled="{Binding CanAdminister}" ToolTip.Tip="{Binding AccessExplanation}">
             <!-- General -->
             <ScrollViewer VerticalScrollBarVisibility="Auto"
                           IsVisible="{Binding SelectedSection, Converter={StaticResource EqualsConverter}, ConverterParameter=General}">
@@ -291,25 +296,35 @@
 
                     <TextBlock Text="Service network access" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,22,0,2"/>
                     <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,12"
-                               Text="Where the Agent service answers. To watch this computer from another computer, listen on all network cards or on one IP, and set an access key. Saved with the other General settings."/>
+                               Text="Remote access uses HTTPS. Create a viewer key, choose the listening address and port, then save. Save also applies the remote access and firewall options."/>
                     <Grid ColumnDefinitions="*,28,*">
                         <StackPanel Grid.Column="0">
                             <TextBlock Classes="flabel" Text="Service listens on"/>
                             <ComboBox Classes="field wide" ItemsSource="{Binding ListenAddressOptions}"
                                       SelectedValueBinding="{Binding Address}" DisplayMemberBinding="{Binding Label}"
                                       SelectedValue="{Binding ServiceListenAddress}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
                             <TextBlock Classes="flabel" Text="Service port"/>
                             <TextBox Classes="field wide" Text="{Binding ServicePort}"/>
                         </StackPanel>
-                        <StackPanel Grid.Column="2">
-                            <TextBlock Classes="flabel" Text="Access key for other computers"/>
-                            <TextBox Classes="field wide" Text="{Binding RemoteAccessKey}"/>
-                            <TextBlock Foreground="{DynamicResource AccentYellowBrush}" TextWrapping="Wrap" Margin="0,-8,0,14"
-                                       IsVisible="{Binding IsServiceOpenWithoutKey}"
-                                       Text="Without an access key, any computer on the network can read this computer's data and change its settings."/>
-                        </StackPanel>
                     </Grid>
-
+                    <StackPanel IsEnabled="{Binding CanManageRemoteAccess}">
+                        <CheckBox Content="Enable remote HTTPS access" IsChecked="{Binding RemoteEnabled}" IsEnabled="{Binding CanEditNetworkOptions}"/>
+                        <CheckBox Content="Open this port in this computer's firewall" IsChecked="{Binding OpenFirewallPort}" IsEnabled="{Binding CanEditNetworkOptions}"/>
+                        <CheckBox Content="Allow remote administration with a separate admin key" IsChecked="{Binding RemoteAdministration}"/>
+                        <WrapPanel>
+                            <Button Content="Create / rotate viewer key" Command="{Binding ManageRemoteAccessCommand}" CommandParameter="create-viewer-key" Classes="footer"/>
+                            <Button Content="Create / rotate admin key" Command="{Binding ManageRemoteAccessCommand}" CommandParameter="create-admin-key" Classes="footer"/>
+                            <Button Content="Revoke viewer key" Command="{Binding ManageRemoteAccessCommand}" CommandParameter="revoke-viewer-key" Classes="footer"/>
+                            <Button Content="Revoke admin key" Command="{Binding ManageRemoteAccessCommand}" CommandParameter="revoke-admin-key" Classes="footer"/>
+                            <Button Content="Regenerate certificate" Command="{Binding ManageRemoteAccessCommand}" CommandParameter="regenerate-certificate" Classes="footer"/>
+                            <Button Content="Import customer PFX" Click="ImportCertificate_Click" Classes="footer"/>
+                        </WrapPanel>
+                        <TextBox Text="{Binding NewRemoteKey}" IsReadOnly="True" Watermark="New key appears once here; save it securely."/>
+                        <TextBlock Text="{Binding RemoteFingerprint}" TextWrapping="Wrap" FontSize="11"/>
+                        <TextBlock Text="These actions require a local MonitorAgent Administrator connection." TextWrapping="Wrap" FontSize="11"/>
+                    </StackPanel>
                     <TextBlock Text="This app" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,10,0,2"/>
                     <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,12"
                                Text="The Agent service this app shows: the one on this computer (127.0.0.1) or one on another computer. Kept by this app only."/>
@@ -410,6 +425,7 @@
                         <DataGridTemplateColumn Header="Database" Width="170">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
+                                    <StackPanel>
                                     <Button Click="ConfigureDatabase_Click" Classes="footer" Margin="4,0" Padding="8,4"
                                             HorizontalAlignment="Left" IsVisible="{Binding IsDatabase}">
                                         <StackPanel Orientation="Horizontal">
@@ -418,6 +434,8 @@
                                             <TextBlock Text="{Binding DatabaseSummary}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
+                                    <Button Click="CopyPassword_Click" Content="Copy saved password" IsVisible="{Binding IsDatabase}" Classes="footer" Margin="4,0" Padding="8,4"/>
+                                    </StackPanel>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>

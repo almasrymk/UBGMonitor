@@ -13,6 +13,8 @@ rm -f "/Library/LaunchDaemons/$label.plist"
 rm -rf /usr/local/monitoragent "/Applications/MonitorAgent.app"
 
 if [ "${1:-}" = "--purge" ]; then
+    dseditgroup -o delete monitoragent-admin 2>/dev/null || true
+    dseditgroup -o delete monitoragent 2>/dev/null || true
     rm -rf "/Library/Application Support/MonitorAgent" /Library/Logs/MonitorAgent
     echo "monitoragent removed with its data and logs."
 else

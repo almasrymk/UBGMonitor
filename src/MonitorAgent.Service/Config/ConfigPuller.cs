@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using MonitorAgent.Service.Connectivity;
 using MonitorAgent.Service.Options;
 using MonitorAgent.Service.Runtime;
+using MonitorAgent.Service.Platform;
 using MonitorAgent.Shared.Constants;
 using MonitorAgent.Shared.Models;
 using Microsoft.Extensions.Options;
@@ -21,6 +22,7 @@ public sealed class ConfigPuller : BackgroundService, IConfigPuller
     private readonly IConnectivityTracker _connectivity;
     private readonly RoutingOptions _routing;
     private readonly ILogger<ConfigPuller> _logger;
+    private int _invalidUrlWarning;
 
     public ConfigPuller(
         IHttpClientFactory httpClientFactory,
@@ -57,6 +59,15 @@ public sealed class ConfigPuller : BackgroundService, IConfigPuller
 
     public async Task PullAsync(CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(_routing.CentralApiUrl)) return;
+        if (!Uri.TryCreate(_routing.CentralApiUrl, UriKind.Absolute, out var endpoint)
+            || !(endpoint.Scheme == Uri.UriSchemeHttps || endpoint.Scheme == Uri.UriSchemeHttp && endpoint.IsLoopback)
+            || !string.IsNullOrEmpty(endpoint.UserInfo) || !string.IsNullOrEmpty(endpoint.Query) || !string.IsNullOrEmpty(endpoint.Fragment))
+        {
+            if (Interlocked.Exchange(ref _invalidUrlWarning, 1) == 0)
+                _logger.LogWarning("Central configuration URL must use HTTPS (HTTP is allowed only for loopback); config polling is idle.");
+            return;
+        }
         try
         {
             var url = $"{_routing.CentralApiUrl.TrimEnd('/')}{ApiRoutes.AgentConfig}?agentId={Uri.EscapeDataString(_identity.AgentId)}";
@@ -65,7 +76,16 @@ public sealed class ConfigPuller : BackgroundService, IConfigPuller
             var config = await _httpClient.GetFromJsonAsync<AgentRuntimeConfig>(url, cts.Token);
             if (config is not null)
             {
-                await _cache.SaveConfigAsync(config, cancellationToken);
+                await _cache.SaveConfigAsync(new AgentRuntimeConfig
+                {
+                    ConfigVersion = config.ConfigVersion,
+                    AgentId = config.AgentId,
+                    MonitorPoints = config.MonitorPoints,
+                    DatabaseConnectionString = $"Data Source={Path.Combine(AgentPaths.StateFolder, "local.db")}",
+                    CpuCriticalThreshold = config.CpuCriticalThreshold,
+                    RamCriticalThreshold = config.RamCriticalThreshold,
+                    DiskCriticalThreshold = config.DiskCriticalThreshold
+                }, cancellationToken);
                 _connectivity.SetCentral(true);
                 _logger.LogInformation("Applied config version {Version}", config.ConfigVersion);
             }
@@ -73,7 +93,7 @@ public sealed class ConfigPuller : BackgroundService, IConfigPuller
         catch (Exception ex)
         {
             _connectivity.SetCentral(false);
-            _logger.LogWarning(ex, "Central config is unavailable; using local cache");
+            _logger.LogWarning("Central config is unavailable; using local cache. Error type: {ErrorType}", ex.GetType().Name);
         }
     }
 }

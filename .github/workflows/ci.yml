@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - 'security/**'
+      - 'codex/**'
       - master
   workflow_dispatch:
 
@@ -13,13 +14,23 @@ permissions:
 
 jobs:
   build-and-test:
-    name: Build and test (${{ matrix.os }})
+    name: Build and test (${{ matrix.os }}, ${{ matrix.runtime }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
+        include:
+          - os: windows-latest
+            runtime: win-x64
+          - os: ubuntu-latest
+            runtime: linux-x64
+          - os: ubuntu-latest
+            runtime: linux-arm64
+          - os: macos-latest
+            runtime: osx-x64
+          - os: macos-latest
+            runtime: osx-arm64
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,13 +42,87 @@ jobs:
         run: dotnet restore MonitorAgent.sln
       - name: Build Release
         run: dotnet build MonitorAgent.sln -c Release --no-restore
+      - name: Reject High and Critical dependency vulnerabilities
+        shell: pwsh
+        run: ./scripts/check-vulnerable-packages.ps1
       - name: Test Release
         run: dotnet test MonitorAgent.sln -c Release --no-build --no-restore --logger trx --results-directory TestResults
+      - name: Publish service for distribution checks
+        run: dotnet publish src/MonitorAgent.Service/MonitorAgent.Service.csproj -c Release -r ${{ matrix.runtime }} --self-contained true -o artifacts/ci-service
+      - name: Publish desktop for distribution checks
+        run: dotnet publish src/MonitorAgent.Desktop/MonitorAgent.Desktop.csproj -c Release -r ${{ matrix.runtime }} --self-contained true -o artifacts/ci-desktop
+      - name: Check published settings for secrets and installation data
+        shell: pwsh
+        run: |
+          ./scripts/check-release-secrets.ps1 -PublishPath artifacts/ci-service
+          ./scripts/check-release-secrets.ps1 -PublishPath artifacts/ci-desktop -Desktop
+      - name: Verify release scanner rejects synthetic secrets
+        shell: pwsh
+        run: ./scripts/test-release-secrets.ps1
+      - name: Verify Linux installation permission rules in isolated fixture
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/monitoragent-permissions"
+          sudo mkdir -p "$root/service" "$root/desktop" "$root/state" "$root/logs"
+          sudo cp -R artifacts/ci-service/. "$root/service/"
+          sudo cp -R artifacts/ci-desktop/. "$root/desktop/"
+          sudo touch "$root/state/settings.json" "$root/state/reports.db"
+          sudo chown -R root:root "$root"
+          sudo chmod -R go-w "$root"
+          sudo chmod 700 "$root/state"
+          sudo chmod 750 "$root/logs"
+          sudo chmod 600 "$root/state/settings.json" "$root/state/reports.db"
+          sudo bash scripts/verify-permissions.sh "$root/service" "$root/desktop" "$root/state" "$root/logs"
+          sudo chmod 755 "$root/logs"
+          if sudo bash scripts/verify-permissions.sh "$root/service" "$root/desktop" "$root/state" "$root/logs"; then
+            echo 'Verifier accepted world-readable logs'; exit 1
+          fi
+          sudo chmod 750 "$root/logs"
+          sudo chmod 666 "$root/state/settings.json"
+          if sudo bash scripts/verify-permissions.sh "$root/service" "$root/desktop" "$root/state" "$root/logs"; then
+            echo 'Verifier accepted unsafe permissions'; exit 1
+          fi
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-${{ matrix.os }}
-          path: TestResults/*.trx
+          name: test-results-${{ matrix.runtime }}
+          path: TestResults/*
           if-no-files-found: warn
           retention-days: 14
+
+  secret-scan:
+    name: Scan commit range for secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout complete history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install checksum-pinned Gitleaks binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz --output "$RUNNER_TEMP/gitleaks.tar.gz"
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  $RUNNER_TEMP/gitleaks.tar.gz" | sha256sum --check
+          mkdir -p "$RUNNER_TEMP/gitleaks"
+          tar -xzf "$RUNNER_TEMP/gitleaks.tar.gz" -C "$RUNNER_TEMP/gitleaks" gitleaks
+      - name: Scan PR or push range with redacted output
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            range="$(git merge-base "$BASE_SHA" "$HEAD_SHA")..$HEAD_SHA"
+          elif [[ -n "$BASE_SHA" && "$BASE_SHA" != "0000000000000000000000000000000000000000" ]]; then
+            range="$BASE_SHA..$HEAD_SHA"
+          else
+            range="-1 $HEAD_SHA"
+          fi
+          "$RUNNER_TEMP/gitleaks/gitleaks" git . --config .gitleaks.toml --log-opts="$range" --redact=100 --no-banner

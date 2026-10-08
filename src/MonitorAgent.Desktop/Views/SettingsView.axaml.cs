@@ -43,10 +43,59 @@ public partial class SettingsView : UserControl
         }
 
         var client = ((DataContext as MainViewModel)?.Settings ?? DataContext as SettingsViewModel)?.Client;
-        var dialog = new DatabaseLoginWindow(row.DatabaseLogin?.Copy(), client);
+        if (client?.CanAdminister != true) return;
+        var dialog = new DatabaseLoginWindow(row.DatabaseLogin?.Copy(), client, row.MonitorPointId);
         if (await dialog.ShowDialog<bool>(owner) && dialog.Result is not null)
         {
             row.DatabaseLogin = dialog.Result;
         }
+    }
+    private async void CopyPassword_Click(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.DataContext is not MonitorPointSettingViewModel row || TopLevel.GetTopLevel(this) is not Window owner) return;
+        var client = ((DataContext as MainViewModel)?.Settings ?? DataContext as SettingsViewModel)?.Client;
+        if (client?.CanAdminister != true) return;
+        if (await ThemedDialog.ShowAsync(owner, "Copy saved password", "Other applications can read the clipboard. Copy the service-saved password explicitly? MonitorAgent clears it after 30 seconds if it has not changed.", DialogKind.Warning,
+            [new DialogButton("Copy password", DialogResult.Yes), new DialogButton("Cancel", DialogResult.Cancel, IsPrimary: true)]) != DialogResult.Yes) return;
+        var password = await client.RevealPasswordAsync(row.MonitorPointId);
+        if (password is null) { MonitorAgent.UI.Services.UiPlatform.ShowMessage("Copy password", "No saved password could be read. Save this monitor point first."); return; }
+        await MonitorAgent.UI.Services.UiPlatform.CopySensitiveTextAsync(password);
+    }
+    private async void ImportCertificate_Click(object? sender, RoutedEventArgs e)
+    {
+        if (TopLevel.GetTopLevel(this) is not Window owner) return;
+        var settings = (DataContext as MainViewModel)?.Settings ?? DataContext as SettingsViewModel;
+        if (settings?.CanManageRemoteAccess != true) return;
+        var files = await owner.StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions
+        {
+            Title = "Customer PFX certificate", AllowMultiple = false,
+            FileTypeFilter = [new Avalonia.Platform.Storage.FilePickerFileType("PFX certificate") { Patterns = ["*.pfx", "*.p12"] }]
+        });
+        if (files.Count == 0) return;
+        await using var stream = await files[0].OpenReadAsync();
+        if (stream.CanSeek && stream.Length > 1024 * 1024) { settings.StatusMessage = "Certificate file exceeds the size limit."; return; }
+        var password = new TextBox { PasswordChar = '●', Watermark = "PFX password (leave empty if none)" };
+        var apply = new Button { Content = "Import", Margin = new Avalonia.Thickness(0,12,0,0) };
+        var dialog = new Window { Title = "Import customer certificate", Width = 440, SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Content = new StackPanel { Margin = new Avalonia.Thickness(20), Children = { new TextBlock { Text = "Import this PFX for remote HTTPS. Paired clients may need to verify its new fingerprint.", TextWrapping = Avalonia.Media.TextWrapping.Wrap }, password, apply } } };
+        apply.Click += (_, _) => dialog.Close(true);
+        if (!await dialog.ShowDialog<bool>(owner)) return;
+        using var bytes = new System.IO.MemoryStream();
+        var buffer = new byte[8192];
+        int read;
+        while ((read = await stream.ReadAsync(buffer)) > 0)
+        {
+            if (bytes.Length + read > 1024 * 1024)
+            {
+                password.Text = string.Empty;
+                settings.StatusMessage = "Certificate file exceeds the size limit.";
+                return;
+            }
+            await bytes.WriteAsync(buffer.AsMemory(0, read));
+        }
+        var result = await settings.Client.ManageRemoteAccessAsync(new MonitorAgent.Shared.Models.RemoteAccessAction("import-certificate", Pfx: Convert.ToBase64String(bytes.ToArray()), PfxPassword: password.Text));
+        password.Text = string.Empty;
+        settings.StatusMessage = result is null ? "Certificate import failed. Check its password, private key and expiration." : "Customer certificate imported. Reconnect remote clients after verifying the fingerprint.";
+        if (result is not null) settings.RemoteFingerprint = "Certificate SHA-256: " + result.Status.Fingerprint;
     }
 }

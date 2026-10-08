@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using MonitorAgent.Shared.Security;
+using MonitorAgent.Service.Platform;
 
 namespace MonitorAgent.Service.Config;
 
@@ -14,7 +15,7 @@ public static class ServiceSettingsFile
     private static readonly JsonSerializerOptions WriteOptions = new() { WriteIndented = true };
     private static readonly object Gate = new();
 
-    public static string PrimaryPath => Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+    public static string PrimaryPath => AgentPaths.SettingsPath;
 
     public static JsonObject ReadSection()
     {
@@ -26,8 +27,21 @@ public static class ServiceSettingsFile
             }
 
             var root = JsonNode.Parse(File.ReadAllText(PrimaryPath)) as JsonObject;
-            var section = root?[SectionName] ?? root?["Ui"];
-            return section?.DeepClone() as JsonObject ?? [];
+            var section = root?[SectionName] ?? root?["Ui"] ?? root;
+            var result = section?.DeepClone() as JsonObject ?? [];
+            var changed = false;
+            foreach (var database in (result["MonitorPoints"] as JsonArray ?? []).OfType<JsonObject>().Select(p => p["Database"]).OfType<JsonObject>())
+                if (database["Password"]?.GetValue<string>() is { } password && SecretProtector.IsLegacy(password))
+                {
+                    var replacement = SecretProtector.ReprotectLegacy(password);
+                    if (replacement != password) { database["Password"] = replacement; changed = true; }
+                }
+            if (changed)
+            {
+                PrivateFile.Backup(PrimaryPath, Path.Combine(AgentPaths.StateFolder, "backups"));
+                Write(PrimaryPath, result);
+            }
+            return result;
         }
     }
 
@@ -37,17 +51,6 @@ public static class ServiceSettingsFile
         lock (Gate)
         {
             Write(PrimaryPath, section);
-            foreach (var copy in DevelopmentCopies())
-            {
-                try
-                {
-                    Write(copy, section);
-                }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-                {
-                    // Source / bin copies only keep settings across rebuilds while developing.
-                }
-            }
         }
     }
 
@@ -68,13 +71,10 @@ public static class ServiceSettingsFile
 
     private static void Write(string path, JsonObject section)
     {
-        var root = File.Exists(path) ? JsonNode.Parse(File.ReadAllText(path)) as JsonObject ?? [] : [];
-        root[SectionName] = section.DeepClone();
-        root.Remove("Ui");
-        root.Remove("MonitorPoints");
-        File.WriteAllText(path, root.ToJsonString(WriteOptions));
+        PrivateFile.WriteAllText(path, section.ToJsonString(WriteOptions));
     }
 
+#if DEBUG
     /// <summary>When the service runs from a build folder, the project's appsettings.json (and its other build outputs) are updated too.</summary>
     private static IEnumerable<string> DevelopmentCopies()
     {
@@ -101,4 +101,5 @@ public static class ServiceSettingsFile
             yield break;
         }
     }
+#endif
 }

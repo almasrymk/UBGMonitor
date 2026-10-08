@@ -32,7 +32,7 @@ public sealed partial class MonitorPointSettingViewModel : ObservableObject
     public string DatabaseSummary
         => DatabaseLogin is null || string.IsNullOrWhiteSpace(DatabaseLogin.Server)
             ? "Configure"
-            : $"{DatabaseEngineLabel(DatabaseLogin.Engine)} · {DatabaseLogin.Server}";
+            : $"{DatabaseEngineLabel(DatabaseLogin.Engine)} · {DatabaseLogin.Server}" + (DatabaseLogin.TlsMode == DatabaseTlsMode.Compatibility ? " · server identity not verified" : "");
 
     public string? DatabaseLogo => IsDatabase ? DatabaseLogos.Base64(DatabaseLogin?.Engine) : null;
 

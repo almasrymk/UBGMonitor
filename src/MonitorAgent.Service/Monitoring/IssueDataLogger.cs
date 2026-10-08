@@ -308,7 +308,7 @@ public sealed class IssueDataLogger : BackgroundService, IIssueDataLogger
         var indented = "  " + entryJson.ReplaceLineEndings(Environment.NewLine + "  ");
         if (!File.Exists(path) || new FileInfo(path).Length == 0)
         {
-            File.WriteAllText(path, $"[{Environment.NewLine}{indented}{Environment.NewLine}]{Environment.NewLine}", new UTF8Encoding(false));
+            MonitorAgent.Shared.Security.PrivateFile.WriteAllText(path, $"[{Environment.NewLine}{indented}{Environment.NewLine}]{Environment.NewLine}");
             return;
         }
 

@@ -29,7 +29,7 @@ public sealed partial class DashboardMonitorPointViewModel : ObservableObject
             MonitorPointId = point.MonitorPointId,
             DisplayName = string.IsNullOrWhiteSpace(point.DisplayName) ? point.MonitorPointId : point.DisplayName,
             Glyph = string.IsNullOrWhiteSpace(point.Glyph) ? DeviceIcons.Glyph(point.Type, point.DeviceKind, point.DisplayName) : point.Glyph,
-            Address = point.Address,
+            Address = point.Address + (point.TlsMode == DatabaseTlsMode.Compatibility ? " · server identity not verified" : ""),
             Icon = point.Icon,
             Type = point.Type,
             Status = string.IsNullOrWhiteSpace(point.Status) ? "Unknown" : point.Status

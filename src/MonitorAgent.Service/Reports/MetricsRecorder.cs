@@ -165,7 +165,8 @@ public sealed class MetricsRecorder : BackgroundService
             var report = await _services.GetRequiredService<ReportBuilder>().BuildAsync(ReportTypes.Summary, from, to, null, CancellationToken.None);
             Directory.CreateDirectory(ReportsFolder);
             var file = Path.Combine(ReportsFolder, $"{name}.html");
-            await File.WriteAllTextAsync(file, ReportExporter.ToHtml(report));
+            MonitorAgent.Shared.Security.PrivateFile.WriteAllText(file, ReportExporter.ToHtml(report));
+            await Task.CompletedTask;
             _logger.LogInformation("[Reports] {Name} saved to {File}", name, file);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)

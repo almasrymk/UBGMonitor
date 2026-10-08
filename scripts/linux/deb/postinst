@@ -2,27 +2,19 @@
 set -e
 
 if [ "$1" = "configure" ]; then
-    settings=/opt/monitoragent/appsettings.json
-    saved=/var/lib/monitoragent/appsettings.previous.json
-    if [ -f "$saved" ]; then
-        if command -v python3 >/dev/null 2>&1; then
-            python3 - "$saved" "$settings" <<'EOF' || cp "$saved" "$settings"
-import json, sys
-old = json.load(open(sys.argv[1], encoding="utf-8-sig"))
-new = json.load(open(sys.argv[2], encoding="utf-8-sig"))
-if "Setting" in old:
-    new["Setting"] = old["Setting"]
-    with open(sys.argv[2], "w", encoding="utf-8") as f:
-        json.dump(new, f, indent=2)
-EOF
-        else
-            cp "$saved" "$settings"
-        fi
-        rm -f "$saved"
+    getent group monitoragent >/dev/null || groupadd --system monitoragent
+    getent group monitoragent-admin >/dev/null || groupadd --system monitoragent-admin
+    if [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != root ]; then
+        usermod -aG monitoragent-admin,monitoragent "$SUDO_USER"
+        echo "Sign out and in to apply MonitorAgent group membership."
     fi
-
-    # The settings hold the protected database passwords and the access key.
-    chmod 600 "$settings"
+    umask 0077
+    mkdir -p /var/lib/monitoragent /var/log/monitoragent
+    chown -R root:root /opt/monitoragent /opt/monitoragent-desktop /var/lib/monitoragent /var/log/monitoragent
+    chmod -R go+rX,go-w /opt/monitoragent /opt/monitoragent-desktop
+    chmod 700 /var/lib/monitoragent
+    chmod 750 /var/log/monitoragent
+    find /var/lib/monitoragent -type f -exec chmod 600 {} +
     ln -sf /opt/monitoragent-desktop/MonitorAgent /usr/bin/monitoragent
 
     systemctl daemon-reload

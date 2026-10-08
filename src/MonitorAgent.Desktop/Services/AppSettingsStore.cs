@@ -53,14 +53,26 @@ public sealed class AppSettingsStore
     }
 
     /// <exception cref="IOException">The service did not save the settings; the message says why.</exception>
-    public async Task SaveAsync(UiAppSettings settings, IReadOnlyList<MonitorPoint> monitorPoints)
+    public async Task SaveAsync(UiAppSettings settings, IReadOnlyList<MonitorPoint> monitorPoints, RemoteAccessAction? remoteAccess = null)
     {
+        if (remoteAccess is not null)
+        {
+            if (!_client.CanAdminister || !_client.IsLocalTransport)
+                throw new IOException("Remote access settings require local Administrator access.");
+            var status = await _client.GetRemoteAccessAsync() ?? throw new IOException("Could not check remote access settings. Nothing was saved.");
+            if (remoteAccess.Enabled && !status.HasViewerKey)
+                throw new IOException("Create a viewer key before saving enabled remote access. Nothing was saved.");
+            if (remoteAccess.AllowAdministration && !status.HasAdminKey)
+                throw new IOException("Create a separate admin key before saving remote administration. Nothing was saved.");
+        }
         settings.MonitorPoints = monitorPoints.ToList();
         var section = JsonSerializer.SerializeToNode(settings, JsonOptions) as JsonObject ?? [];
         if (await _client.SaveSettingsAsync(section) is { } error)
         {
             throw new IOException(error);
         }
+        if (remoteAccess is not null && await _client.ManageRemoteAccessAsync(remoteAccess) is null)
+            throw new IOException("General settings were saved, but remote access could not be applied. Check the service and retry Save.");
     }
 }
 
@@ -88,6 +100,18 @@ public sealed class ClientPreferences
     }
 
     public string Theme { get; set; } = "Dark";
+    [JsonIgnore]
+    public Dictionary<string, string> CertificatePins { get; set; } = new();
+    [JsonPropertyName("CertificatePins")]
+    public string StoredCertificatePins
+    {
+        get => CertificatePins.Count == 0 ? "" : SecretProtector.Protect(JsonSerializer.Serialize(CertificatePins));
+        set
+        {
+            var plain = SecretProtector.Unprotect(value);
+            CertificatePins = plain.Length == 0 ? new() : JsonSerializer.Deserialize<Dictionary<string, string>>(plain) ?? new();
+        }
+    }
 
     /// <summary>Before the rename the app's folder was "AgentMonitor"; moves it once so the layout and preferences stay.</summary>
     public static void MoveLegacyFolder()
@@ -111,9 +135,15 @@ public sealed class ClientPreferences
     {
         try
         {
-            return File.Exists(FilePath)
-                ? JsonSerializer.Deserialize<ClientPreferences>(File.ReadAllText(FilePath)) ?? new ClientPreferences()
-                : new ClientPreferences();
+            if (!File.Exists(FilePath)) return new ClientPreferences();
+            var text = File.ReadAllText(FilePath);
+            var preferences = JsonSerializer.Deserialize<ClientPreferences>(text) ?? new ClientPreferences();
+            if (text.Contains("dpapi:", StringComparison.Ordinal) && preferences.AccessKey.Length > 0)
+            {
+                PrivateFile.Backup(FilePath, Path.Combine(Path.GetDirectoryName(FilePath)!, "backups"));
+                preferences.Save();
+            }
+            return preferences;
         }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
         {
@@ -126,7 +156,7 @@ public sealed class ClientPreferences
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(this));
+            PrivateFile.WriteAllText(FilePath, JsonSerializer.Serialize(this));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

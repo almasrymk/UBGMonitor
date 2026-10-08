@@ -4,9 +4,9 @@ public sealed class RoutingOptions
 {
     public const string SectionName = "Routing";
 
-    public string MadkhalServerUrl { get; set; } = "http://madkhal.local:8080";
+    public string MadkhalServerUrl { get; set; } = string.Empty;
 
-    public string CentralApiUrl { get; set; } = "https://api.central.local";
+    public string CentralApiUrl { get; set; } = string.Empty;
 
     public int MadkhalTimeoutSeconds { get; set; } = 5;
 

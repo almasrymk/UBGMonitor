@@ -71,7 +71,7 @@ public static partial class SettingsChanges
                 continue;
             }
 
-            yield return $"{label(path)}: {Format(oldValue)} -> {Format(newValue)}";
+            yield return MonitorAgent.Shared.Security.LogRedaction.Text($"{label(path)}: {Format(oldValue)} -> {Format(newValue)}");
         }
     }
 

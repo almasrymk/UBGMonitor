@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
 using System.Net.Sockets;
+using MonitorAgent.Shared.Security;
 using System.Text.Json;
 using MonitorAgent.Shared.Constants;
 using MonitorAgent.Shared.Models;
@@ -25,7 +26,7 @@ public sealed class AgentApiClient
     public AgentApiClient()
     {
         _ownsHttpClient = true;
-        _http = CreateClient(new Uri("http://127.0.0.1:5050"));
+        _http = CreateLocalClient();
     }
 
     /// <summary>The service address as typed ("192.168.1.10", "pc-name:5050" or a full URL); null when it is not valid.</summary>
@@ -39,7 +40,7 @@ public sealed class AgentApiClient
 
         if (!value.Contains("://", StringComparison.Ordinal))
         {
-            value = "http://" + value;
+            value = "https://" + value;
         }
 
         if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
@@ -47,27 +48,38 @@ public sealed class AgentApiClient
             return null;
         }
 
+        if ((!uri.IsLoopback && uri.Scheme != Uri.UriSchemeHttps) || uri.UserInfo.Length > 0 || uri.Query.Length > 0 || uri.Fragment.Length > 0) return null;
         return uri.IsDefaultPort && !text!.Contains($":{uri.Port}", StringComparison.Ordinal)
             ? new UriBuilder(uri) { Port = 5050 }.Uri
             : uri;
     }
 
     private string _accessKey = string.Empty;
+    public AgentAccessRole Role { get; private set; }
+    public bool CanAdminister => Role == AgentAccessRole.Administrator;
+    public bool IsLocalTransport { get; private set; } = true;
+    public event Action? RoleChanged;
+    public string? PendingCertificateFingerprint { get; private set; }
+    public string? CertificateError { get; private set; }
 
-    /// <summary>True when the service is on this computer, so secrets can be encrypted here for it.</summary>
-    public bool IsLocal => _http.BaseAddress is not { } address
-        || address.IsLoopback
-        || address.Host.Equals(Environment.MachineName, StringComparison.OrdinalIgnoreCase);
-
-    public void SetBaseAddress(string? url, string? accessKey = null)
+    /// <summary>Selects authenticated OS IPC for loopback addresses.</summary>
+    public void SetBaseAddress(string? url, string? accessKey = null, bool force = false)
     {
         if (ParseAddress(url) is not { } uri)
         {
+            if (_ownsHttpClient)
+            {
+                CertificateError = "This address is invalid. Remote HTTP is disabled; enter HTTPS and pair explicitly.";
+                IsLocalTransport = false; Role = AgentAccessRole.None; RoleChanged?.Invoke();
+                var rejectedPrevious = _http;
+                _http = new HttpClient(new RejectedAddressHandler()) { BaseAddress = new Uri("https://invalid.invalid"), Timeout = TimeSpan.FromSeconds(20) };
+                rejectedPrevious.Dispose();
+            }
             return;
         }
 
         var key = accessKey?.Trim() ?? string.Empty;
-        if (_http.BaseAddress is not null && SameRequestUri(_http.BaseAddress, uri) && key == _accessKey)
+        if (!force && _http.BaseAddress is not null && SameRequestUri(_http.BaseAddress, uri) && key == _accessKey)
         {
             return;
         }
@@ -78,7 +90,11 @@ public sealed class AgentApiClient
         }
 
         _accessKey = key;
-        var replacement = CreateClient(uri);
+        PendingCertificateFingerprint = null; CertificateError = null;
+        IsLocalTransport = uri.IsLoopback;
+        Role = AgentAccessRole.None;
+        RoleChanged?.Invoke();
+        var replacement = IsLocalTransport ? CreateLocalClient() : CreateClient(uri);
         if (key.Length > 0)
         {
             replacement.DefaultRequestHeaders.Add(ApiRoutes.AccessKeyHeader, key);
@@ -126,6 +142,27 @@ public sealed class AgentApiClient
     /// <summary>The "Setting" section of the service's appsettings.json.</summary>
     public Task<System.Text.Json.Nodes.JsonObject?> GetSettingsAsync(CancellationToken ct = default)
         => GetAsync<System.Text.Json.Nodes.JsonObject>(ApiRoutes.Settings, "settings", ct);
+    public async Task<string?> RevealPasswordAsync(string pointId, CancellationToken ct = default)
+    {
+        if (!CanAdminister) return null;
+        try
+        {
+            using var response = await _http.PostAsJsonAsync(ApiRoutes.PasswordReveal, new PasswordRevealRequest(pointId), ct);
+            return response.IsSuccessStatusCode ? (await response.Content.ReadFromJsonAsync<PasswordRevealResult>(JsonOptions, ct))?.Password : null;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException) { return null; }
+    }
+    public Task<RemoteAccessStatus?> GetRemoteAccessAsync(CancellationToken ct = default) => GetAsync<RemoteAccessStatus>(ApiRoutes.RemoteAccess, "remote access", ct);
+    public async Task<RemoteAccessResult?> ManageRemoteAccessAsync(RemoteAccessAction action, CancellationToken ct = default)
+    {
+        if (!IsLocalTransport || !CanAdminister) return null;
+        try
+        {
+            using var response = await _http.PostAsJsonAsync(ApiRoutes.RemoteAccess, action, ct);
+            return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<RemoteAccessResult>(JsonOptions, ct) : null;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException) { return null; }
+    }
 
     /// <summary>Asks the service to save its settings; returns null on success, otherwise why it failed.</summary>
     public async Task<string?> SaveSettingsAsync(System.Text.Json.Nodes.JsonObject section, CancellationToken ct = default)
@@ -157,8 +194,16 @@ public sealed class AgentApiClient
         }
     }
 
-    public Task<AgentStatusDto?> GetStatusAsync(CancellationToken ct = default)
-        => GetAsync<AgentStatusDto>(ApiRoutes.Status, "status", ct);
+    public async Task<AgentStatusDto?> GetStatusAsync(CancellationToken ct = default)
+    {
+        var status = await GetAsync<AgentStatusDto>(ApiRoutes.Status, "status", ct);
+        if (!IsLocalTransport && status is not null)
+        {
+            var role = status.AccessRole == "Administrator" ? AgentAccessRole.Administrator : AgentAccessRole.Viewer;
+            if (Role != role) { Role = role; RoleChanged?.Invoke(); }
+        }
+        return status;
+    }
 
     /// <summary>Why the service at the current address does not answer: null when it does.</summary>
     public async Task<string?> CheckConnectionAsync(CancellationToken ct = default)
@@ -166,6 +211,12 @@ public sealed class AgentApiClient
         try
         {
             using var response = await _http.GetAsync(ApiRoutes.Status, ct);
+            if (response.IsSuccessStatusCode && !IsLocalTransport)
+            {
+                var status = await response.Content.ReadFromJsonAsync<AgentStatusDto>(JsonOptions, ct);
+                Role = status?.AccessRole == "Administrator" ? AgentAccessRole.Administrator : AgentAccessRole.Viewer;
+                RoleChanged?.Invoke();
+            }
             return response.StatusCode switch
             {
                 HttpStatusCode.Unauthorized => "The service asks for an access key, and the one in this app is missing or wrong.",
@@ -175,6 +226,12 @@ public sealed class AgentApiClient
         }
         catch (HttpRequestException ex)
         {
+            if (CertificateError is not null) return CertificateError;
+            for (Exception? cause = ex; cause is not null; cause = cause.InnerException)
+            {
+                if (cause is UnauthorizedAccessException) return "You are not allowed to connect. Ask an administrator to add you to the MonitorAgent groups, then sign out and in.";
+                if (cause is System.Security.SecurityException) return "The local endpoint identity could not be verified. Contact an administrator.";
+            }
             return $"No Agent service answers at {_http.BaseAddress}: {ex.Message}";
         }
         catch (TaskCanceledException)
@@ -184,11 +241,11 @@ public sealed class AgentApiClient
     }
 
     /// <summary>Tries the connection from the service's computer, the same way the monitor point will.</summary>
-    public async Task<DatabaseTestResultDto> TestDatabaseAsync(DatabaseLogin login, CancellationToken ct = default)
+    public async Task<DatabaseTestResultDto> TestDatabaseAsync(DatabaseLogin login, CancellationToken ct = default, string? monitorPointId = null, bool verify = false)
     {
         try
         {
-            using var response = await _http.PostAsJsonAsync(ApiRoutes.DatabaseTest, login, ct);
+            using var response = await _http.PostAsJsonAsync(ApiRoutes.DatabaseTest, new DatabaseTestRequest(monitorPointId, login, verify), ct);
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
                 return new DatabaseTestResultDto(false, "The Agent service is too old for this test; reinstall it.");
@@ -451,12 +508,39 @@ public sealed class AgentApiClient
         }
     }
 
-    private static HttpClient CreateClient(Uri baseAddress)
-        => new(CreateIpv4Handler(), disposeHandler: true)
+    private HttpClient CreateClient(Uri baseAddress)
+    {
+        var handler = CreateIpv4Handler();
+        handler.AllowAutoRedirect = false;
+        var authority = baseAddress.GetLeftPart(UriPartial.Authority).ToLowerInvariant();
+        ClientPreferences.Load().CertificatePins.TryGetValue(authority, out var pin);
+        handler.SslOptions.RemoteCertificateValidationCallback = (_, certificate, _, errors) =>
         {
-            BaseAddress = baseAddress,
-            Timeout = TimeSpan.FromSeconds(20)
+            if (CertificateTrust.Accept(certificate, errors, pin)) return true;
+            CertificateError = pin is not null ? "The server certificate fingerprint changed. Verify it with the server administrator and explicitly reset pairing." : "The server certificate is not trusted. Confirm its SHA-256 fingerprint against the server's local Administrator screen.";
+            if (pin is null && certificate is not null) PendingCertificateFingerprint = CertificateTrust.Fingerprint(certificate);
+            return false;
         };
+        return new HttpClient(handler, disposeHandler: true) { BaseAddress = baseAddress, Timeout = TimeSpan.FromSeconds(20) };
+    }
+    public void ConfirmPendingCertificate()
+    {
+        if (PendingCertificateFingerprint is null || _http.BaseAddress is null || IsLocalTransport) return;
+        var address = _http.BaseAddress.GetLeftPart(UriPartial.Authority);
+        var preferences = ClientPreferences.Load();
+        preferences.CertificatePins[address.ToLowerInvariant()] = PendingCertificateFingerprint;
+        preferences.Save();
+        SetBaseAddress(address, _accessKey, force: true);
+    }
+    public void ForgetCertificatePin()
+    {
+        if (_http.BaseAddress is null || IsLocalTransport) return;
+        var address = _http.BaseAddress.GetLeftPart(UriPartial.Authority);
+        var preferences = ClientPreferences.Load();
+        preferences.CertificatePins.Remove(address.ToLowerInvariant());
+        preferences.Save();
+        SetBaseAddress(address, _accessKey, force: true);
+    }
 
     private static bool SameRequestUri(Uri left, Uri right)
         => Uri.Compare(left, right, UriComponents.HttpRequestUrl, UriFormat.SafeUnescaped, StringComparison.OrdinalIgnoreCase) == 0;
@@ -478,6 +562,27 @@ public sealed class AgentApiClient
         return addresses.FirstOrDefault() ?? throw new HttpRequestException($"The computer \"{host}\" was not found.");
     }
 
+    private HttpClient CreateLocalClient()
+    {
+        var handler = new SocketsHttpHandler
+        {
+            ConnectCallback = async (_, ct) =>
+            {
+                Stream connection;
+                AgentAccessRole role;
+                try { connection = await LocalIpc.ConnectAsync(AgentAccessRole.Administrator, ct); role = AgentAccessRole.Administrator; }
+                catch (Exception ex) when (ex is UnauthorizedAccessException or TimeoutException or FileNotFoundException)
+                { connection = await LocalIpc.ConnectAsync(AgentAccessRole.Viewer, ct); role = AgentAccessRole.Viewer; }
+                if (Role != role) { Role = role; RoleChanged?.Invoke(); }
+                return connection;
+            }
+        };
+        return new HttpClient(handler) { BaseAddress = new Uri("http://localhost"), Timeout = TimeSpan.FromSeconds(20) };
+    }
+    private sealed class RejectedAddressHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) => throw new HttpRequestException("Invalid address; remote HTTPS pairing is required.");
+    }
     private static SocketsHttpHandler CreateIpv4Handler()
     {
         return new SocketsHttpHandler

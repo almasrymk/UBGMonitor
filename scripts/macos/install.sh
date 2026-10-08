@@ -12,16 +12,26 @@ target=/usr/local/monitoragent
 plist="/Library/LaunchDaemons/$label.plist"
 settings="$target/appsettings.json"
 
+for group in monitoragent monitoragent-admin; do
+    dscl . -read "/Groups/$group" >/dev/null 2>&1 || dseditgroup -o create "$group"
+    if [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != root ]; then
+        dseditgroup -o edit -a "$SUDO_USER" -t user "$group"
+    fi
+done
+echo "Sign out and in to apply MonitorAgent group membership."
+
 if launchctl print "system/$label" >/dev/null 2>&1; then
     echo "Stopping $label..."
     launchctl bootout "system/$label" || true
 fi
 
-# The app saves its settings into the "Setting" section of appsettings.json; an update must not wipe them.
-saved=""
-if [ -f "$settings" ]; then
-    saved="$(mktemp)"
-    cp "$settings" "$saved"
+umask 0077
+mkdir -p "/Library/Application Support/MonitorAgent" /Library/Logs/MonitorAgent
+chown root:wheel "/Library/Application Support/MonitorAgent" /Library/Logs/MonitorAgent
+chmod 700 "/Library/Application Support/MonitorAgent"
+chmod 750 /Library/Logs/MonitorAgent
+if [ -f "$settings" ] && [ ! -f "/Library/Application Support/MonitorAgent/settings.json" ] && [ ! -f "/Library/Application Support/MonitorAgent/appsettings.previous.json" ]; then
+    install -o root -g wheel -m 600 "$settings" "/Library/Application Support/MonitorAgent/appsettings.previous.json"
 fi
 
 echo "Copying the agent to $target..."
@@ -32,26 +42,14 @@ chmod +x "$target/MonitorAgent.Service"
 xattr -dr com.apple.quarantine "$target" 2>/dev/null || true
 codesign --force --sign - "$target/MonitorAgent.Service" 2>/dev/null || true
 
-if [ -n "$saved" ]; then
-    /usr/bin/python3 - "$saved" "$settings" <<'EOF' 2>/dev/null || cp "$saved" "$settings"
-import json, sys
-old = json.load(open(sys.argv[1], encoding="utf-8-sig"))
-new = json.load(open(sys.argv[2], encoding="utf-8-sig"))
-if "Setting" in old:
-    new["Setting"] = old["Setting"]
-    with open(sys.argv[2], "w", encoding="utf-8") as f:
-        json.dump(new, f, indent=2)
-    print("Kept the saved settings.")
-EOF
-    rm -f "$saved"
-fi
-
-# The settings hold the protected database passwords and the access key.
-chmod 600 "$settings"
+chown -R root:wheel "$target"
+chmod -R go+rX,go-w "$target"
 
 if [ -d "$here/desktop" ]; then
     echo "Installing /Applications/MonitorAgent.app..."
     bash "$here/make-app.sh" "$here" "/Applications/MonitorAgent.app"
+    chown -R root:wheel /Applications/MonitorAgent.app
+    chmod -R go+rX,go-w /Applications/MonitorAgent.app
 fi
 
 install -m 644 "$here/$label.plist" "$plist"

@@ -62,13 +62,19 @@ public sealed class LicenseStore : ILicenseStore
     {
         try
         {
-            return File.Exists(_path)
+            var license = File.Exists(_path)
                 ? JsonSerializer.Deserialize<StoredLicense>(File.ReadAllText(_path), JsonOptions) ?? new StoredLicense()
                 : new StoredLicense();
+            if (license.ProtectedProductKey is { } key && SecretProtector.IsLegacy(key))
+            {
+                var replacement = SecretProtector.ReprotectLegacy(key);
+                if (replacement != key) { PrivateFile.Backup(_path, Path.Combine(Path.GetDirectoryName(_path)!, "backups")); license = license with { ProtectedProductKey = replacement }; Save(license); }
+            }
+            return license;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
         {
-            _logger.LogWarning("[License] Could not read {Path}: {Message}", _path, ex.Message);
+            _logger.LogWarning("[License] Could not read stored license: {ErrorType}", ex.GetType().Name);
             return new StoredLicense();
         }
     }
@@ -77,14 +83,11 @@ public sealed class LicenseStore : ILicenseStore
     {
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
-            var temp = _path + ".tmp";
-            File.WriteAllText(temp, JsonSerializer.Serialize(license, JsonOptions));
-            File.Move(temp, _path, overwrite: true);
+            PrivateFile.WriteAllText(_path, JsonSerializer.Serialize(license, JsonOptions));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            _logger.LogError("[License] Could not save {Path}: {Message}", _path, ex.Message);
+            _logger.LogError("[License] Could not save stored license: {ErrorType}", ex.GetType().Name);
         }
     }
 }

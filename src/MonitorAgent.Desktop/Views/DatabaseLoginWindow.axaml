@@ -57,6 +57,12 @@
 
             <TextBlock x:Name="UserLabel" Classes="flabel" Text="Username"/>
             <TextBox x:Name="UserBox" Classes="field"/>
+            <TextBlock Classes="note" Text="Use a dedicated login with permission for SELECT 1; avoid sa or an owner account."/>
+            <TextBlock Classes="flabel" Text="Server identity / TLS"/>
+            <ComboBox x:Name="TlsModeBox" Classes="field" SelectionChanged="TlsMode_Changed">
+                <ComboBoxItem Content="Verify — trusted certificate and matching server name"/>
+                <ComboBoxItem Content="Compatibility — server identity not verified"/>
+            </ComboBox>
 
             <TextBlock x:Name="PasswordLabel" Classes="flabel" Text="Password"/>
             <TextBox x:Name="PasswordInput" Classes="field" PasswordChar="●" Margin="0,0,0,8"/>
@@ -67,6 +73,7 @@
                        Text="With an IP or computer name as the server, SQL Server must accept TCP/IP connections (SQL Server Configuration Manager › Protocols › TCP/IP = Enabled, then restart SQL Server) and the firewall must allow its port."/>
 
             <TextBlock x:Name="ErrorText" Foreground="{DynamicResource AccentRedBrush}" TextWrapping="Wrap" Margin="0,0,0,12"/>
+            <Button x:Name="VerifyButton" Content="Test with verification" Click="Verify_Click" Margin="0,0,0,12"/>
 
             <DockPanel LastChildFill="False">
                 <Button x:Name="TestButton" DockPanel.Dock="Left" Classes="footer" Margin="0" Content="Test connection" Padding="12,6"

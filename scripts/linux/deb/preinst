@@ -1,10 +1,15 @@
 #!/bin/sh
 set -e
+umask 0077
 
 # The app saves its settings into the "Setting" section of appsettings.json; the new package replaces the file.
 if [ -f /opt/monitoragent/appsettings.json ]; then
     mkdir -p /var/lib/monitoragent
-    cp /opt/monitoragent/appsettings.json /var/lib/monitoragent/appsettings.previous.json
+    chown root:root /var/lib/monitoragent
+    chmod 700 /var/lib/monitoragent
+    if [ ! -f /var/lib/monitoragent/settings.json ] && [ ! -f /var/lib/monitoragent/appsettings.previous.json ]; then
+        install -o root -g root -m 600 /opt/monitoragent/appsettings.json /var/lib/monitoragent/appsettings.previous.json
+    fi
 fi
 
 if [ "$1" = "upgrade" ] && systemctl is-active --quiet monitoragent 2>/dev/null; then

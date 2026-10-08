@@ -213,6 +213,9 @@ public sealed partial class NetworkViewModel : ObservableObject
 
     /// <summary>Asks the Agent service to run a speed test; the service runs it and reports through <see cref="ApplyInternetState"/>.</summary>
     public Func<Task<InternetStateDto?>>? StartSpeedTest { get; set; }
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RunSpeedTestCommand))]
+    private bool _canAdminister;
 
     [RelayCommand(CanExecute = nameof(CanRunSpeedTest))]
     private async Task RunSpeedTestAsync()
@@ -232,7 +235,7 @@ public sealed partial class NetworkViewModel : ObservableObject
         ApplyInternetState(state);
     }
 
-    private bool CanRunSpeedTest() => !IsSpeedTestRunning;
+    private bool CanRunSpeedTest() => CanAdminister && !IsSpeedTestRunning;
 
     /// <summary>Shows the speed test state measured by the service.</summary>
     public void ApplyInternetState(InternetStateDto state)

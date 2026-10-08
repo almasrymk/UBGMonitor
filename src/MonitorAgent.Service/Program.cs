@@ -10,6 +10,13 @@ using MonitorAgent.Service.Runtime;
 using MonitorAgent.Service.SystemInfo;
 using Serilog;
 
+StatePermissions.InitializeCreationMask();
+// Verify key permissions before repairing other files: an unsafe key must be refused, not silently trusted.
+if (!OperatingSystem.IsWindows() && File.Exists(MonitorAgent.Shared.Security.SecretProtector.KeyFile))
+    MonitorAgent.Shared.Security.SecretProtector.VerifyUnixKey(MonitorAgent.Shared.Security.SecretProtector.KeyFile);
+StateMigration.Run(AgentPaths.StateFolder, AgentPaths.InstallFolder, OperatingSystem.IsWindows());
+StatePermissions.Repair(AgentPaths.StateFolder);
+
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .WriteTo.File(Path.Combine(AgentPaths.LogFolder, "bootstrap-.log"), rollingInterval: RollingInterval.Day, retainedFileCountLimit: null)
@@ -106,6 +113,7 @@ try
     builder.Services.AddHostedService<ApplicationsWatcher>();
     builder.Services.AddHostedService<ConfigPuller>();
     builder.Services.AddHostedService<LocalApiHost>();
+    builder.Services.AddSingleton<RemoteAccessManager>();
 
     var host = builder.Build();
     _ = host.Services.GetRequiredService<ISensorsService>();

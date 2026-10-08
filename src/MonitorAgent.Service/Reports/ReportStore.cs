@@ -53,6 +53,8 @@ public sealed class ReportStore
     {
         _logger = logger;
         Directory.CreateDirectory(IssueDataLogger.DataFolder);
+        if (!File.Exists(DatabasePath)) MonitorAgent.Shared.Security.PrivateFile.WriteAllBytes(DatabasePath, []);
+        else MonitorAgent.Shared.Security.PrivateFile.Secure(DatabasePath);
         _connectionString = new SqliteConnectionStringBuilder { DataSource = DatabasePath }.ToString();
         Execute("""
             PRAGMA journal_mode=WAL;
@@ -294,6 +296,8 @@ public sealed class ReportStore
             {
                 using var connection = Open();
                 write(connection);
+                foreach (var path in new[] { DatabasePath, DatabasePath + "-wal", DatabasePath + "-shm" })
+                    if (File.Exists(path)) MonitorAgent.Shared.Security.PrivateFile.Secure(path);
             }
         }
         catch (SqliteException ex)

@@ -18,7 +18,7 @@ public partial class DatabaseLoginWindow : Window
     private readonly AgentApiClient? _client;
     private bool _loading;
 
-    /// <summary>The password as saved; kept when the user does not type a new one.</summary>
+    /// <summary>A newly typed password not saved yet; service-saved credentials arrive only as HasPassword.</summary>
     private string _storedPassword = string.Empty;
 
     /// <summary>What the password box showed on opening (empty when the saved password is encrypted for another computer).</summary>
@@ -30,11 +30,15 @@ public partial class DatabaseLoginWindow : Window
     {
     }
 
-    public DatabaseLoginWindow(DatabaseLogin? current, AgentApiClient? client = null)
+    private readonly string? _monitorPointId;
+    private bool _hasSavedPassword;
+    public DatabaseLoginWindow(DatabaseLogin? current, AgentApiClient? client = null, string? monitorPointId = null)
     {
         InitializeComponent();
         _client = client;
+        _monitorPointId = monitorPointId;
         TestButton.IsVisible = client is not null;
+        VerifyButton.IsVisible = client is not null;
         EngineBox.ItemsSource = _engines;
         Load(current);
     }
@@ -49,12 +53,12 @@ public partial class DatabaseLoginWindow : Window
         DatabaseBox.Text = current?.Database ?? string.Empty;
         UserBox.Text = current?.Username ?? string.Empty;
         IntegratedBox.IsChecked = current?.IntegratedSecurity == true;
-        _storedPassword = current?.Password ?? string.Empty;
-        _shownPassword = SecretProtector.IsProtected(_storedPassword)
-            ? SecretProtector.Unprotect(_storedPassword)
-            : _storedPassword;
-        PasswordInput.Text = _shownPassword;
-        if (_storedPassword.Length > 0 && _shownPassword.Length == 0)
+        TlsModeBox.SelectedIndex = current is null || string.IsNullOrWhiteSpace(current.Server) || current.TlsMode == DatabaseTlsMode.Verify ? 0 : 1;
+        _storedPassword = current?.HasPassword == true ? string.Empty : current?.Password ?? string.Empty;
+        _hasSavedPassword = current?.HasPassword == true;
+        _shownPassword = string.Empty;
+        PasswordInput.Text = string.Empty;
+        if (current?.HasPassword == true || _storedPassword.Length > 0)
         {
             PasswordNote.Text = "The saved password is encrypted on the service's computer. Leave the box empty to keep it, or type a new one.";
         }
@@ -141,7 +145,9 @@ public partial class DatabaseLoginWindow : Window
             Database = database,
             Username = integrated ? string.Empty : user,
             Password = integrated ? string.Empty : Password(),
+            HasPassword = !integrated && _hasSavedPassword,
             IntegratedSecurity = integrated
+            ,TlsMode = TlsModeBox.SelectedIndex == 0 ? DatabaseTlsMode.Verify : DatabaseTlsMode.Compatibility
         };
     }
 
@@ -158,8 +164,7 @@ public partial class DatabaseLoginWindow : Window
             return _storedPassword;
         }
 
-        var encryptHere = OperatingSystem.IsWindows() && (_client is null || _client.IsLocal);
-        return encryptHere ? SecretProtector.Protect(typed) : typed;
+        return typed;
     }
 
     private async void Test_Click(object? sender, RoutedEventArgs e)
@@ -173,13 +178,32 @@ public partial class DatabaseLoginWindow : Window
         SetMessage("Testing the connection...", "TextSecondaryBrush");
         try
         {
-            var result = await _client.TestDatabaseAsync(login);
+            var result = await _client.TestDatabaseAsync(login, monitorPointId: _monitorPointId);
             SetMessage(result.Message, result.Success ? "AccentGreenBrush" : "AccentRedBrush");
         }
         finally
         {
             TestButton.IsEnabled = true;
         }
+    }
+    private async void TlsMode_Changed(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_loading || TlsModeBox.SelectedIndex != 1) return;
+        if (await ThemedDialog.ShowAsync(this, "Server identity not verified", "Compatibility does not verify the database server's identity. Use it only as an explicit exception; fixing the server certificate is recommended.", DialogKind.Warning,
+            [new DialogButton("Use compatibility", DialogResult.Yes), new DialogButton("Cancel", DialogResult.Cancel, IsPrimary: true)]) != DialogResult.Yes) TlsModeBox.SelectedIndex = 0;
+    }
+    private async void Verify_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_client is null || ReadLogin() is not { } login) return;
+        VerifyButton.IsEnabled = false;
+        try
+        {
+            var result = await _client.TestDatabaseAsync(login, monitorPointId: _monitorPointId, verify: true);
+            SetMessage(result.Message, result.Success ? "AccentGreenBrush" : "AccentRedBrush");
+            if (result.Success && await ThemedDialog.ShowAsync(this, "Verification succeeded", "Use Verify for this connection? The change is stored only when you save the settings.", DialogKind.Question,
+                [new DialogButton("Use Verify", DialogResult.Yes), new DialogButton("Keep current mode", DialogResult.Cancel, IsPrimary: true)]) == DialogResult.Yes) TlsModeBox.SelectedIndex = 0;
+        }
+        finally { VerifyButton.IsEnabled = true; }
     }
 
     private void Ok_Click(object? sender, RoutedEventArgs e)

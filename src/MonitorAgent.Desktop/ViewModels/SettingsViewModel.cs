@@ -39,6 +39,8 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     private readonly AppSettingsStore _store;
     private readonly AgentApiClient _client;
+    public bool CanAdminister => _client.CanAdminister;
+    public string AccessExplanation => CanAdminister ? "Administrator access" : "Read-only access. Ask an administrator to add you to MonitorAgent Admins.";
     private UiAppSettings _snapshot = new();
     private List<MonitorPoint> _monitorPointSnapshot = [];
 
@@ -108,10 +110,84 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     /// <summary>Asks the user to go on with a change that cannot be undone; the argument is the warning. True = go on.</summary>
     public Func<string, Task<bool>>? ConfirmWarning { get; set; }
+    [ObservableProperty] private bool _remoteEnabled;
+    [ObservableProperty] private bool _remoteAdministration;
+    [ObservableProperty] private bool _openFirewallPort;
+    [ObservableProperty] private string _remoteFingerprint = "Remote access has not been configured.";
+    [ObservableProperty] private string _newRemoteKey = string.Empty;
+    public bool CanManageRemoteAccess => _client.CanAdminister && _client.IsLocalTransport;
+    public bool CanEditNetworkOptions => string.IsNullOrWhiteSpace(ServiceListenAddress) || ServiceListenAddress.Trim() == LocalOnlyAddress;
+    private bool _loadingListenAddress;
+    private (bool Enabled, bool Administration, bool Firewall) _savedRemoteFlags;
+    private string _lastValidListenAddress = LocalOnlyAddress;
+    partial void OnServiceListenAddressChanged(string? oldValue, string newValue)
+    {
+        // ComboBox can clear SelectedValue temporarily while replacing its selection.
+        if (!System.Net.IPAddress.TryParse(newValue, out _))
+        {
+            var wasLoading = _loadingListenAddress;
+            _loadingListenAddress = true;
+            try { ServiceListenAddress = _lastValidListenAddress; }
+            finally { _loadingListenAddress = wasLoading; }
+            return;
+        }
+        OnPropertyChanged(nameof(CanEditNetworkOptions));
+        var previous = _lastValidListenAddress;
+        _lastValidListenAddress = newValue;
+        if (_loadingListenAddress) return;
+        RemoteEnabled = !CanEditNetworkOptions;
+        OpenFirewallPort = !CanEditNetworkOptions;
+        if (!CanEditNetworkOptions && IsLoaded)
+            _ = ConfirmNetworkSelectionAsync(previous, newValue);
+    }
+    private async Task ConfirmNetworkSelectionAsync(string previous, string selected)
+    {
+        if (ConfirmWarning is null) return;
+        var accepted = await ConfirmWarning("اختيار عنوان شبكة يعني أن اتصال الأجهزة الأخرى سيكون مشفرًا باستخدام HTTPS، وسيتم السماح بالبورت في جدار الحماية عند الضغط على Save. يجب إنشاء Viewer key أولًا. هل تريد المتابعة؟");
+        if (!accepted && ServiceListenAddress == selected)
+        {
+            _loadingListenAddress = true;
+            try { ServiceListenAddress = previous; }
+            finally { _loadingListenAddress = false; }
+            RemoteEnabled = !CanEditNetworkOptions;
+            OpenFirewallPort = !CanEditNetworkOptions;
+        }
+    }
+    [RelayCommand]
+    private async Task ManageRemoteAccessAsync(string action)
+    {
+        if (!CanManageRemoteAccess) return;
+        if (action is "regenerate-certificate" or "revoke-viewer-key" or "revoke-admin-key" &&
+            (ConfirmWarning is null || !await ConfirmWarning("This changes remote access and can disconnect paired applications. Continue?"))) return;
+        var result = await _client.ManageRemoteAccessAsync(new(action, RemoteEnabled, RemoteAdministration, OpenFirewallPort));
+        if (result is null) { StatusMessage = "Remote action failed. Create the required keys and save the listening address/port first."; return; }
+        ApplyRemoteStatus(result.Status);
+        NewRemoteKey = result.Key ?? string.Empty;
+        StatusMessage = result.Key is null ? "Remote access updated." : "Key returned once. Store it securely; the service keeps only its hash.";
+    }
+    private void ApplyRemoteStatus(RemoteAccessStatus status)
+    {
+        _savedRemoteFlags = (status.Enabled, status.AllowAdministration, status.OpenFirewall);
+        RemoteEnabled = status.Enabled; RemoteAdministration = status.AllowAdministration; OpenFirewallPort = status.OpenFirewall;
+        if (!CanEditNetworkOptions) { RemoteEnabled = true; OpenFirewallPort = true; }
+        RemoteFingerprint = status.Fingerprint is null ? "No remote certificate yet." : "Certificate SHA-256: " + status.Fingerprint;
+        OnPropertyChanged(nameof(CanManageRemoteAccess));
+        _savedFingerprints[SectionGeneral] = JsonSerializer.Serialize(_snapshot.General) + JsonSerializer.Serialize(new
+        { RemoteEnabled = status.Enabled, RemoteAdministration = status.AllowAdministration, OpenFirewallPort = status.OpenFirewall });
+        RefreshHasChanges();
+    }
 
     public SettingsViewModel(AgentApiClient client)
     {
         _client = client;
+        _client.RoleChanged += () => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            OnPropertyChanged(nameof(CanAdminister));
+            OnPropertyChanged(nameof(CanManageRemoteAccess));
+            NewRemoteKey = string.Empty;
+            OnPropertyChanged(nameof(AccessExplanation));
+            SaveCommand.NotifyCanExecuteChanged();
+        });
         _store = new AppSettingsStore(client);
         TargetOptions.Add(new TargetOption(AllMonitorPointsId, "All monitor points"));
         ShowUnloaded();
@@ -197,6 +273,7 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     private async Task LoadServiceAddressesAsync()
     {
+        if (CanManageRemoteAccess && await _client.GetRemoteAccessAsync() is { } remote) ApplyRemoteStatus(remote);
         var addresses = (await _client.GetStatusAsync())?.Addresses ?? [];
         foreach (var address in addresses)
         {
@@ -211,7 +288,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         if (AgentApiClient.ParseAddress(ApiBaseUrl) is not { } uri)
         {
             IsConnectionOk = false;
-            ConnectionMessage = "Type the service address, for example 192.168.1.10:5050 or http://pc-name:5050.";
+            ConnectionMessage = "Remote connections require HTTPS, for example https://pc-name:5050. Existing HTTP remote addresses require re-pairing.";
             return;
         }
 
@@ -222,9 +299,22 @@ public sealed partial class SettingsViewModel : ObservableObject
         IsConnectionOk = false;
         ConnectionMessage = "Connecting...";
         var error = await _client.CheckConnectionAsync();
+        if (error is not null && _client.PendingCertificateFingerprint is { } fingerprint && ConfirmWarning is not null
+            && await ConfirmWarning($"Server certificate SHA-256:\n{fingerprint}\n\nCompare this value with the server's local Administrator screen. Trust this exact certificate for {ApiBaseUrl}?"))
+        {
+            _client.ConfirmPendingCertificate();
+            error = await _client.CheckConnectionAsync();
+        }
         IsConnectionOk = error is null;
         ConnectionMessage = error ?? $"Connected to {ApiBaseUrl}.";
         ConnectRequested?.Invoke(this, EventArgs.Empty);
+    }
+    [RelayCommand]
+    private async Task ResetPairingAsync()
+    {
+        if (_client.IsLocalTransport || ConfirmWarning is null || !await ConfirmWarning("Reset the saved server certificate pairing? Verify the next fingerprint independently before accepting it.")) return;
+        _client.ForgetCertificatePin();
+        await Connect();
     }
 
     public IReadOnlyList<RetentionOption> RetentionOptions { get; } =
@@ -254,7 +344,7 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     /// <summary>The service is open to the network and any computer can use it.</summary>
     public bool IsServiceOpenWithoutKey =>
-        ServiceListenAddress.Trim() != LocalOnlyAddress && string.IsNullOrWhiteSpace(RemoteAccessKey);
+        !CanEditNetworkOptions && string.IsNullOrWhiteSpace(RemoteAccessKey);
 
     private static int RetentionDays(int days) => days <= 0 ? DefaultRetentionDays : Math.Clamp(days, 30, 365);
 
@@ -360,12 +450,13 @@ public sealed partial class SettingsViewModel : ObservableObject
     private void SavePreferences() =>
         new ClientPreferences
         {
+            CertificatePins = ClientPreferences.Load().CertificatePins,
             ApiBaseUrl = string.IsNullOrWhiteSpace(ApiBaseUrl) ? DefaultApiBaseUrl : ApiBaseUrl.Trim(),
             AccessKey = ClientAccessKey.Trim(),
             Theme = _snapshot.General.Theme
         }.Save();
 
-    private bool CanSave() => HasChanges && IsLoaded;
+    private bool CanSave() => HasChanges && IsLoaded && CanAdminister;
 
     private static readonly string[] Sections = [SectionGeneral, SectionMonitorPoints, SectionConditions];
     private static readonly TimeSpan StatusMessageDuration = TimeSpan.FromSeconds(4);
@@ -444,7 +535,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             case SectionConditions:
                 return JsonSerializer.Serialize(CaptureDeviceSpec()) + JsonSerializer.Serialize(Capture().Conditions);
             default:
-                return JsonSerializer.Serialize(CaptureGeneral());
+                return JsonSerializer.Serialize(CaptureGeneral()) + JsonSerializer.Serialize(new { RemoteEnabled, RemoteAdministration, OpenFirewallPort });
         }
     }
 
@@ -669,10 +760,12 @@ public sealed partial class SettingsViewModel : ObservableObject
                 ? CaptureMonitorPoints()
                 : _monitorPointSnapshot.Select(ClonePoint).ToList();
 
-            await _store.SaveAsync(settings, points);
+            await _store.SaveAsync(settings, points, section == SectionGeneral && CanManageRemoteAccess
+                ? new RemoteAccessAction("configure", RemoteEnabled, RemoteAdministration, OpenFirewallPort) : null);
             if (section == SectionGeneral)
             {
                 FollowServicePort(current.General, saved.General);
+                _savedRemoteFlags = (RemoteEnabled, RemoteAdministration, OpenFirewallPort);
             }
 
             _snapshot = Clone(settings);
@@ -710,6 +803,9 @@ public sealed partial class SettingsViewModel : ObservableObject
                     break;
                 default:
                     ApplyGeneral(_snapshot.General);
+                    RemoteEnabled = CanEditNetworkOptions ? _savedRemoteFlags.Enabled : true;
+                    RemoteAdministration = _savedRemoteFlags.Administration;
+                    OpenFirewallPort = CanEditNetworkOptions ? _savedRemoteFlags.Firewall : true;
                     break;
             }
         }
@@ -845,7 +941,11 @@ public sealed partial class SettingsViewModel : ObservableObject
             DataRetentionDays = DefaultRetentionDays;
         }
 
-        ServiceListenAddress = string.IsNullOrWhiteSpace(general.ServiceListenAddress) ? LocalOnlyAddress : general.ServiceListenAddress.Trim();
+        _loadingListenAddress = true;
+        try { ServiceListenAddress = string.IsNullOrWhiteSpace(general.ServiceListenAddress) ? LocalOnlyAddress : general.ServiceListenAddress.Trim(); }
+        finally { _loadingListenAddress = false; }
+        RemoteEnabled = !CanEditNetworkOptions;
+        OpenFirewallPort = !CanEditNetworkOptions;
         AddListenOption(ServiceListenAddress);
 
         // 0 = the service's own default port, which is the one this app reached it on.

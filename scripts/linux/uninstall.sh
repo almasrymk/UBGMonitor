@@ -26,6 +26,8 @@ fi
 rm -rf /opt/monitoragent /opt/monitoragent-desktop
 rm -f /usr/share/applications/monitoragent.desktop /usr/share/pixmaps/monitoragent.png /usr/local/bin/monitoragent
 if [ "${1:-}" = "--purge" ]; then
+    groupdel monitoragent-admin 2>/dev/null || true
+    groupdel monitoragent 2>/dev/null || true
     rm -rf /var/lib/monitoragent /var/log/monitoragent
     echo "monitoragent removed with its data and logs."
 else

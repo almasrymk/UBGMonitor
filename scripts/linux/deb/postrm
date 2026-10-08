@@ -20,6 +20,8 @@ case "$1" in
         fi
 
         if [ "$1" = "purge" ]; then
+            groupdel monitoragent-admin 2>/dev/null || true
+            groupdel monitoragent 2>/dev/null || true
             rm -rf /var/lib/monitoragent /var/log/monitoragent
         fi
         ;;

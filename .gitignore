@@ -14,3 +14,16 @@ TestResults/
 
 # Linux / macOS packages built by scripts\publish-unix.ps1
 artifacts/
+.security-work/
+
+# Distribution and installation secrets/state
+publish/
+*.pfx
+*.p12
+*.snk
+*.key
+license.json
+client.json
+appsettings.*.local.json
+/Data/
+/Reports/
