@@ -72,7 +72,9 @@ public partial class SettingsView : UserControl
         void Copied(string copiedRole)
         {
             if (copiedRole != role) return;
-            ToolTip.SetTip(label, "Copied");
+            var hint = new TextBlock { Text = "Copied", FontWeight = Avalonia.Media.FontWeight.Bold };
+            hint.Foreground = Avalonia.Media.Brushes.LimeGreen;
+            ToolTip.SetTip(label, hint);
             ToolTip.SetIsOpen(label, true);
             Avalonia.Threading.DispatcherTimer.RunOnce(() =>
             {

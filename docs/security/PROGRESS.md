@@ -780,3 +780,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - الوقوف على المفتاح يظهر Click to copy؛ بعد نجاح clipboard.SetDataAsync يظهر Copied فورًا لمدة 1200ms ثم يرجع التلميح الأساسي. callback يأتي بعد الكتابة الناجحة وقبل انتظار مسح clipboard بعد 30 ثانية، فلا يظهر نجاح عند فشل الكتابة. لا نص مفتاح في التلميح أو logs.
 - التحقق: Release build ناجح صفر أخطاء وتحذيرا SYSLIB0057 قائمان؛ 195 نجاح/4 SKIPPED/0 فشل. tooltip والclipboard الحقيقي لم يختبرا تفاعليًا؛ لا master/push/install.
+
+### R4-S05 — لون تلميح النسخ
+- الحالة: DONE-VERIFIED
+- Copied باللون LimeGreen وخط Bold حسب طلب المالك. تغيير عرض فقط.
+- Release build ناجح صفر أخطاء مع SYSLIB0057 القائمين؛ 195 نجاح/4 SKIPPED/0 فشل. المظهر تفاعليًا غير متحقق؛ لا master/push/install.
