@@ -890,3 +890,9 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - استبدال الترتيب القديم ببطاقة Threshold Configuration: أعمدة Metric/Minimum/Warning Threshold/Problem Threshold/Alert Level مع نقاط التحذير والمشكلة، وأيقونات خضراء ووصف وفواصل لكل CPU/RAM/Disk/Internet/Download/Upload/Operating system. حقول الحد الأدنى بوحدات ملحقة وحدود رقمية بأسهم، وقوائم Alert/YesNo بنفس bindings الحالية.
 - العنوان الرئيسي وأيقونة المستند وكارت How alerts work من المرجع الثاني؛ القيم حقيقية من الإعدادات، ولا نسخ لمشكلة الخدمة الوهمية من الصورة الأولى. دعم وحدات Remaining disk الموجودة محفوظ بدل إجبار Percent وحذف دعم GB. نظام التشغيل بقي متاحًا مثل المرجع الأول.
 - بناء Release ناجح مع تحذيري الشهادة القائمين؛ الاختبارات 196 نجاح و4 SKIPPED وصفر فشل. مطابقة المظهر تفاعليًا على شاشة المالك DONE-UNVERIFIED، ولا ادعاء pixel-perfect من البناء. لا master/push/install.
+
+### R4-S05 — تصميم إعدادات Monitor Points حسب المرجع
+- الحالة: DONE-VERIFIED
+- عنوان Monitor Points بأيقونة ChartBar؛ شريط إضافة أخضر وأيقونة PlusCircleOutline، بحث بأيقونة Magnify وفلتر All Types؛ بطاقة Configured Monitor Points بأيقونة القائمة. تقليل عرض الأعمدة وارتفاع الصفوف 62، وتسمية Short/Alert Level/Actions، وإضافة زر Pencil يبدأ تحرير الاسم للنقطة المحددة بجانب الحذف.
+- البحث والفلتر يعملان على عرض النقاط فقط؛ الحفظ ما زال يلتقط المجموعة الأصلية كاملة، فلا حذف للنقاط المخفية. البحث في الاسم والمعرف والعنوان والنوع دون حساسية لحالة الأحرف، والتصفية تتحدث مع إضافة/حذف النقاط وتعديلها أثناء وجود فلتر. Commands وإعدادات database/application/device محفوظة.
+- Build Release ناجح صفر أخطاء؛ آخر بناء incremental صفر تحذيرات. اختبارات الرجوع 196 نجاح و4 SKIPPED وصفر فشل. المطابقة البصرية والبحث والتفاعل داخل DataGrid أثناء التشغيل DONE-UNVERIFIED؛ لوحة الرسائل العامة لم تنقل ولا بيانات مشاكل وهمية من الصورة. لا master/push/install.

@@ -443,24 +443,22 @@
             <!-- Monitor points -->
             <Grid Margin="12,8,4,0" RowDefinitions="Auto,*"
                   IsVisible="{Binding SelectedSection, Converter={StaticResource EqualsConverter}, ConverterParameter='Monitor Points'}">
-                <StackPanel Grid.Row="0" Margin="0,0,12,12">
-                    <TextBlock FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,6">
-                        <Run Text="Settings ›" Foreground="{DynamicResource TextSecondaryBrush}"/>
-                        <Run Text="Monitor Points"/>
-                    </TextBlock>
-                    <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,10"
-                               Text="Points are stored in the service appsettings.json. Edit a cell, then Save."/>
-                    <StackPanel Orientation="Horizontal">
-                        <Button Content="Add" Command="{Binding AddMonitorPointCommand}" Classes="footer" Margin="0" Padding="18,6"/>
-                    </StackPanel>
+                <StackPanel Grid.Row="0" Margin="0,0,12,12" Spacing="18">
+                    <Grid ColumnDefinitions="76,18,*" Margin="0,8,0,12"><Border Width="76" Height="76" CornerRadius="10" BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1" Background="{DynamicResource SurfaceDarkBrush}"><mi:MaterialIcon Kind="ChartBar" Width="44" Height="44" Foreground="{DynamicResource AccentGreenBrush}"/></Border><StackPanel Grid.Column="2" Spacing="8" VerticalAlignment="Center"><TextBlock Text="Monitor Points" FontSize="28" FontWeight="SemiBold"/><TextBlock Text="Manage monitor points, thresholds, and collection intervals for this device." FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}"/></StackPanel></Grid>
+                    <Border Classes="settingscard" Margin="0" Padding="16"><Grid ColumnDefinitions="220,16,*,16,230">
+                        <Button Command="{Binding AddMonitorPointCommand}" Height="44" Background="{DynamicResource AccentGreenBrush}" Foreground="White" CornerRadius="6" HorizontalContentAlignment="Center"><StackPanel Orientation="Horizontal" Spacing="12"><mi:MaterialIcon Kind="PlusCircleOutline" Width="22" Height="22"/><TextBlock Text="Add Monitor Point" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/></StackPanel></Button>
+                        <Border Grid.Column="2" Height="44" CornerRadius="6" Background="{DynamicResource InputBrush}" BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1"><Grid ColumnDefinitions="42,*"><mi:MaterialIcon Kind="Magnify" Width="22" Height="22"/><TextBox Grid.Column="1" Text="{Binding MonitorPointSearch}" Watermark="Search monitor points..." BorderThickness="0" Background="Transparent" FontSize="14" VerticalContentAlignment="Center"/></Grid></Border>
+                        <ComboBox Grid.Column="4" ItemsSource="{Binding MonitorPointFilterOptions}" SelectedItem="{Binding MonitorPointTypeFilter}" Height="44" CornerRadius="6" Padding="14,6" HorizontalAlignment="Stretch"/>
+                    </Grid></Border>
                 </StackPanel>
-
-                <controls:AppDataGrid Grid.Row="1" ItemsSource="{Binding MonitorPoints}" SelectedItem="{Binding SelectedMonitorPoint}"
-                                      IsReadOnly="False" Margin="0,0,12,8">
+                <Border Grid.Row="1" Classes="settingscard" Margin="0,0,12,8" Padding="14"><Grid RowDefinitions="Auto,*">
+                    <Grid ColumnDefinitions="70,20,*" Margin="0,0,0,18"><Border Width="70" Height="68" CornerRadius="10" Background="{DynamicResource InputBrush}" BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1"><mi:MaterialIcon Kind="FormatListBulleted" Width="40" Height="40" Foreground="{DynamicResource AccentGreenBrush}"/></Border><StackPanel Grid.Column="2" Spacing="8" VerticalAlignment="Center"><TextBlock Text="Configured Monitor Points" FontSize="21" FontWeight="SemiBold"/><TextBlock Text="View and manage all monitor points for this device. Edit a monitor point to change its settings." FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}"/></StackPanel></Grid>
+                <controls:AppDataGrid Name="MonitorPointsGrid" Grid.Row="1" ItemsSource="{Binding FilteredMonitorPoints}" SelectedItem="{Binding SelectedMonitorPoint}"
+                                      IsReadOnly="False" RowHeight="62" FontSize="13" BorderThickness="1" BorderBrush="{DynamicResource BorderColorBrush}">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Id" Binding="{Binding MonitorPointId}" Width="72"/>
-                        <DataGridTextColumn Header="Name" Binding="{Binding DisplayName}" Width="2*" MinWidth="220"/>
-                        <DataGridTemplateColumn Header="Type" Width="180">
+                        <DataGridTextColumn Header="Name" Binding="{Binding DisplayName}" Width="1.4*" MinWidth="100"/>
+                        <DataGridTemplateColumn Header="Type" Width="90">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <TextBlock Text="{Binding TypeLabel}" VerticalAlignment="Center"/>
@@ -474,7 +472,7 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellEditingTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Header="Device" Width="150">
+                        <DataGridTemplateColumn Header="Device" Width="120">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal" IsVisible="{Binding IsDevice}">
@@ -502,7 +500,7 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellEditingTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Header="Application" Width="220">
+                        <DataGridTemplateColumn Header="Application" Width="110">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal" IsVisible="{Binding IsApplication}">
@@ -530,7 +528,7 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellEditingTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Header="Database" Width="170">
+                        <DataGridTemplateColumn Header="Database" Width="110">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel>
@@ -547,7 +545,7 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Header="Address" Width="180">
+                        <DataGridTemplateColumn Header="Address" Width="90">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal">
@@ -570,14 +568,14 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Header="Shortcut" Width="90" SortMemberPath="ShowInShortcut">
+                        <DataGridTemplateColumn Header="Short" Width="70" SortMemberPath="ShowInShortcut">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <CheckBox Classes="grid" ToolTip.Tip="Show this monitor point on the dashboard" IsChecked="{Binding ShowInShortcut}"/>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Header="Alert" Width="150">
+                        <DataGridTemplateColumn Header="Alert Level" Width="140">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <ComboBox Classes="cell" Margin="4,0" ItemsSource="{Binding $parent[DataGrid].DataContext.AlertOptions}"
@@ -587,17 +585,18 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
                         <DataGridTextColumn Header="Interval" Binding="{Binding IntervalSeconds}" Width="80"/>
-                        <DataGridTemplateColumn Header="" Width="44" CanUserResize="False" CanUserSort="False">
+                        <DataGridTemplateColumn Header="Actions" Width="90" CanUserResize="False" CanUserSort="False">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Button Classes="bin" ToolTip.Tip="Delete this monitor point"
+                                    <StackPanel Orientation="Horizontal" Spacing="6"><Button Click="EditMonitorPoint_Click" Padding="6" MinWidth="0" ToolTip.Tip="Edit monitor point"><mi:MaterialIcon Kind="Pencil" Width="16" Height="16"/></Button><Button Classes="bin" ToolTip.Tip="Delete this monitor point"
                                             Command="{Binding $parent[DataGrid].DataContext.RemoveMonitorPointCommand}"
-                                            CommandParameter="{Binding}"/>
+                                            CommandParameter="{Binding}"/></StackPanel>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
                     </DataGrid.Columns>
                 </controls:AppDataGrid>
+                </Grid></Border>
             </Grid>
 
             <!-- Device specifications -->

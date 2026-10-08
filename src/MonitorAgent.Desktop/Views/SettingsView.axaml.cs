@@ -11,6 +11,14 @@ public partial class SettingsView : UserControl
         InitializeComponent();
     }
 
+    private void EditMonitorPoint_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button) return;
+        MonitorPointsGrid.SelectedItem = button.DataContext;
+        MonitorPointsGrid.CurrentColumn = MonitorPointsGrid.Columns[1];
+        MonitorPointsGrid.BeginEdit();
+    }
+
     private async void Reset_Click(object? sender, RoutedEventArgs e)
     {
         if ((sender as Button)?.DataContext is not SettingsViewModel settings)

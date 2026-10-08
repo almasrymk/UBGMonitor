@@ -346,7 +346,7 @@ public sealed partial class SettingsViewModel : ObservableObject
                 RefreshHasChanges();
             }
         };
-        MonitorPoints.CollectionChanged += (_, _) => RefreshHasChanges();
+        MonitorPoints.CollectionChanged += (_, _) => { RefreshHasChanges(); OnPropertyChanged(nameof(FilteredMonitorPoints)); };
         Conditions.CollectionChanged += (_, e) =>
         {
             foreach (var item in e.NewItems?.OfType<ConditionSettingViewModel>() ?? [])
@@ -827,6 +827,15 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public IReadOnlyList<string> SeverityOptions { get; } = ["Warning", "Critical"];
 
+    [ObservableProperty] private string _monitorPointSearch = string.Empty;
+    [ObservableProperty] private string _monitorPointTypeFilter = "All Types";
+    public IReadOnlyList<string> MonitorPointFilterOptions => new[] { "All Types" }.Concat(MonitorPointTypes.Select(option => option.Label)).ToArray();
+    public IEnumerable<MonitorPointSettingViewModel> FilteredMonitorPoints => MonitorPoints.Where(point =>
+        (MonitorPointTypeFilter == "All Types" || point.TypeLabel == MonitorPointTypeFilter) &&
+        (string.IsNullOrWhiteSpace(MonitorPointSearch) || new[] { point.DisplayName, point.MonitorPointId, point.Address, point.TypeLabel }
+            .Any(value => value?.Contains(MonitorPointSearch.Trim(), StringComparison.OrdinalIgnoreCase) == true)));
+    partial void OnMonitorPointSearchChanged(string value) => OnPropertyChanged(nameof(FilteredMonitorPoints));
+    partial void OnMonitorPointTypeFilterChanged(string value) => OnPropertyChanged(nameof(FilteredMonitorPoints));
     public ObservableCollection<MonitorPointSettingViewModel> MonitorPoints { get; } = [];
 
     public ObservableCollection<ConditionSettingViewModel> Conditions { get; } = [];
@@ -1040,6 +1049,7 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     private void OnMonitorPointPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (!string.IsNullOrWhiteSpace(MonitorPointSearch) || MonitorPointTypeFilter != "All Types") OnPropertyChanged(nameof(FilteredMonitorPoints));
         if (e.PropertyName is nameof(MonitorPointSettingViewModel.DisplayName) or nameof(MonitorPointSettingViewModel.MonitorPointId))
         {
             RefreshConditionTargets();
