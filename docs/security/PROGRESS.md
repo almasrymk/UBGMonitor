@@ -510,8 +510,9 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - غيرالمتحقق: DesktopUI/Windowsclipboardhistory/cloudsyncوالتوقيتالفعلية؛ لاclipboardالمستخدممعدلةمنالاختبارات.
 - جمع الخطوات لأنprefix/servicewriter/publiccontract/desktop/reveal/scannersأجزاءترحيلمشتركة؛ كلentryمنفصلة، ولاmaster/push/install. اختبارrelease-scanner9casesأعيدتشغيلهحسبoutputالتالي؛ لاادعاءحتىاكتماله.
 
-### R4-S01 — الوصول البعيد الآمن
+### R4-S01 — مفاتيح قراءة وإدارة قوية ومستقلة
 - الحالة: DONE-UNVERIFIED
+- ترتيب التنفيذ: توليد 32 random bytes لكل مفتاح، إعادة القيمة مرة واحدة فقط، SHA-256 داخل state، مقارنة ثابتة الزمن، ودوران وإلغاء مستقلان؛ Legacy key لا يحصل على دور Administrator.
 - التغيير: HTTPS فقط، مفاتيح قراءة وإدارة منفصلة محفوظة كـ hash، تفعيل وإلغاء ودوران من IPC Administrator فقط، شهادة محمية وبصمة pairing صريحة في Desktop، حدود طلبات ومحاولات ومهل. تفاصيل التشغيل في REMOTE_ACCESS.md.
 - الملفات: RemoteAccessManager.cs، RemoteTransport.cs، RemoteAbuseGuard.cs، LocalApiHost.cs، AgentApiClient.cs، CertificateTrust.cs، SettingsViewModel.cs وSettingsView.axaml.
 - التحقق: Release build نجح بلا تحذيرات أو أخطاء؛ 154 اختبارًا ناجحًا، 3 Unix-only متخطاة، 0 فشل. اختبار HTTPS فعلي على Windows ناجح بعد إصلاح تحميل مفتاح Schannel باستخدام UserKeySet مؤقت.
@@ -520,8 +521,9 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - غير المتحقق: جهاز ثانٍ وDesktop UI وLocalSystem وUnix والجدار الناري واستيراد شهادة إنتاج؛ لذلك لا ادعاء بجاهزية إنتاجية.
 - جمع الخطوات لأن transport/authentication/pairing عقد اتصال واحد؛ فصلها يكسر اتصال Desktop. R4-S06 موثق في commit مستقل سابقًا.
 
-### R4-S02 — الوصول البعيد الآمن
+### R4-S02 — تفعيل بعيد وجدار ناري بإجراء محلي صريح
 - الحالة: DONE-UNVERIFIED
+- ترتيب التنفيذ: إضافة GET/POST local-only لإدارة الوصول البعيد؛ remote admin لا يستطيع تغيير listen address/port أو مفاتيح الاتصال. Enabled وAllowAdministration وOpenFirewall اختيارات مستقلة، والخدمة لا تفتح منفذًا بوجود عنوان غير محلي وحده.
 - التغيير: HTTPS فقط، مفاتيح قراءة وإدارة منفصلة محفوظة كـ hash، تفعيل وإلغاء ودوران من IPC Administrator فقط، شهادة محمية وبصمة pairing صريحة في Desktop، حدود طلبات ومحاولات ومهل. تفاصيل التشغيل في REMOTE_ACCESS.md.
 - الملفات: RemoteAccessManager.cs، RemoteTransport.cs، RemoteAbuseGuard.cs، LocalApiHost.cs، AgentApiClient.cs، CertificateTrust.cs، SettingsViewModel.cs وSettingsView.axaml.
 - التحقق: Release build نجح بلا تحذيرات أو أخطاء؛ 154 اختبارًا ناجحًا، 3 Unix-only متخطاة، 0 فشل. اختبار HTTPS فعلي على Windows ناجح بعد إصلاح تحميل مفتاح Schannel باستخدام UserKeySet مؤقت.
@@ -530,8 +532,9 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - غير المتحقق: جهاز ثانٍ وDesktop UI وLocalSystem وUnix والجدار الناري واستيراد شهادة إنتاج؛ لذلك لا ادعاء بجاهزية إنتاجية.
 - جمع الخطوات لأن transport/authentication/pairing عقد اتصال واحد؛ فصلها يكسر اتصال Desktop. R4-S06 موثق في commit مستقل سابقًا.
 
-### R4-S03 — الوصول البعيد الآمن
+### R4-S03 — شهادة HTTPS محمية وتوليد واستيراد محلي
 - الحالة: DONE-UNVERIFIED
+- ترتيب التنفيذ: توليد ECDSA P-256 مع server-auth EKU، تشفير PKCS12 داخل state، استيراد PFX bounded من الواجهة؛ عدم قبول شهادة منتهية أو مستقبلية وعدم تبديل السليمة عند فشل الاستيراد.
 - التغيير: HTTPS فقط، مفاتيح قراءة وإدارة منفصلة محفوظة كـ hash، تفعيل وإلغاء ودوران من IPC Administrator فقط، شهادة محمية وبصمة pairing صريحة في Desktop، حدود طلبات ومحاولات ومهل. تفاصيل التشغيل في REMOTE_ACCESS.md.
 - الملفات: RemoteAccessManager.cs، RemoteTransport.cs، RemoteAbuseGuard.cs، LocalApiHost.cs، AgentApiClient.cs، CertificateTrust.cs، SettingsViewModel.cs وSettingsView.axaml.
 - التحقق: Release build نجح بلا تحذيرات أو أخطاء؛ 154 اختبارًا ناجحًا، 3 Unix-only متخطاة، 0 فشل. اختبار HTTPS فعلي على Windows ناجح بعد إصلاح تحميل مفتاح Schannel باستخدام UserKeySet مؤقت.
@@ -540,8 +543,9 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - غير المتحقق: جهاز ثانٍ وDesktop UI وLocalSystem وUnix والجدار الناري واستيراد شهادة إنتاج؛ لذلك لا ادعاء بجاهزية إنتاجية.
 - جمع الخطوات لأن transport/authentication/pairing عقد اتصال واحد؛ فصلها يكسر اتصال Desktop. R4-S06 موثق في commit مستقل سابقًا.
 
-### R4-S04 — الوصول البعيد الآمن
+### R4-S04 — حصر TCP في HTTPS وإزالة استثناء loopback
 - الحالة: DONE-UNVERIFIED
+- ترتيب التنفيذ: Kestrel Listen.UseHttps فقط لكل TCP، والتحقق من المفتاح يشمل loopback؛ نقل الاتصال المحلي إلى pipes/sockets يظل بلا credentials ملفات.
 - التغيير: HTTPS فقط، مفاتيح قراءة وإدارة منفصلة محفوظة كـ hash، تفعيل وإلغاء ودوران من IPC Administrator فقط، شهادة محمية وبصمة pairing صريحة في Desktop، حدود طلبات ومحاولات ومهل. تفاصيل التشغيل في REMOTE_ACCESS.md.
 - الملفات: RemoteAccessManager.cs، RemoteTransport.cs، RemoteAbuseGuard.cs، LocalApiHost.cs، AgentApiClient.cs، CertificateTrust.cs، SettingsViewModel.cs وSettingsView.axaml.
 - التحقق: Release build نجح بلا تحذيرات أو أخطاء؛ 154 اختبارًا ناجحًا، 3 Unix-only متخطاة، 0 فشل. اختبار HTTPS فعلي على Windows ناجح بعد إصلاح تحميل مفتاح Schannel باستخدام UserKeySet مؤقت.
@@ -550,8 +554,9 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - غير المتحقق: جهاز ثانٍ وDesktop UI وLocalSystem وUnix والجدار الناري واستيراد شهادة إنتاج؛ لذلك لا ادعاء بجاهزية إنتاجية.
 - جمع الخطوات لأن transport/authentication/pairing عقد اتصال واحد؛ فصلها يكسر اتصال Desktop. R4-S06 موثق في commit مستقل سابقًا.
 
-### R4-S05 — الوصول البعيد الآمن
+### R4-S05 — اعتماد بصمة الشهادة وتدوير pairing في Desktop
 - الحالة: DONE-UNVERIFIED
+- ترتيب التنفيذ: CertificateTrust لا يقبل self-signed بلا بصمة وافق عليها المستخدم؛ البصمة محفوظة مشفرة per-user. تغيرها يرفض تلقائيًا، Reset pairing صريح. remote HTTP قديم يرفض بلا fallback.
 - التغيير: HTTPS فقط، مفاتيح قراءة وإدارة منفصلة محفوظة كـ hash، تفعيل وإلغاء ودوران من IPC Administrator فقط، شهادة محمية وبصمة pairing صريحة في Desktop، حدود طلبات ومحاولات ومهل. تفاصيل التشغيل في REMOTE_ACCESS.md.
 - الملفات: RemoteAccessManager.cs، RemoteTransport.cs، RemoteAbuseGuard.cs، LocalApiHost.cs، AgentApiClient.cs، CertificateTrust.cs، SettingsViewModel.cs وSettingsView.axaml.
 - التحقق: Release build نجح بلا تحذيرات أو أخطاء؛ 154 اختبارًا ناجحًا، 3 Unix-only متخطاة، 0 فشل. اختبار HTTPS فعلي على Windows ناجح بعد إصلاح تحميل مفتاح Schannel باستخدام UserKeySet مؤقت.
@@ -560,8 +565,9 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - غير المتحقق: جهاز ثانٍ وDesktop UI وLocalSystem وUnix والجدار الناري واستيراد شهادة إنتاج؛ لذلك لا ادعاء بجاهزية إنتاجية.
 - جمع الخطوات لأن transport/authentication/pairing عقد اتصال واحد؛ فصلها يكسر اتصال Desktop. R4-S06 موثق في commit مستقل سابقًا.
 
-### R4-S07 — الوصول البعيد الآمن
+### R4-S07 — حدود الطلبات والمحاولات والمهل والتحقق من clients
 - الحالة: DONE-UNVERIFIED
+- ترتيب التنفيذ: 8 MiB body، 10 seconds headers، 30 seconds request timeout، 600 requests/minute/IP و5 failed keys/minute. CentralTimeout يلغى عبر CancellationToken واختباره fake بلا شبكة.
 - التغيير: HTTPS فقط، مفاتيح قراءة وإدارة منفصلة محفوظة كـ hash، تفعيل وإلغاء ودوران من IPC Administrator فقط، شهادة محمية وبصمة pairing صريحة في Desktop، حدود طلبات ومحاولات ومهل. تفاصيل التشغيل في REMOTE_ACCESS.md.
 - الملفات: RemoteAccessManager.cs، RemoteTransport.cs، RemoteAbuseGuard.cs، LocalApiHost.cs، AgentApiClient.cs، CertificateTrust.cs، SettingsViewModel.cs وSettingsView.axaml.
 - التحقق: Release build نجح بلا تحذيرات أو أخطاء؛ 154 اختبارًا ناجحًا، 3 Unix-only متخطاة، 0 فشل. اختبار HTTPS فعلي على Windows ناجح بعد إصلاح تحميل مفتاح Schannel باستخدام UserKeySet مؤقت.
@@ -617,3 +623,10 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الاختبارات: Invalid_certificate_import_does_not_replace_working_certificate يثبت رفض مستقبلية وبقاء الشهادة الصالحة وprivate key؛ pin expired/future رفض، وباقي real HTTPS/regressions ناجحة.
 - التحقق: Release build 0 warnings/errors؛ suite 159 نجاح/3 Unix skip/0 فشل. خدمة LocalSystem وUI stream provider وفشل cert أثناء runtime غير متحققة فعليًا.
 - لا تغييرات اعتماد أو شهادات إنتاج؛ لا master/push/install.
+
+### R7-S02 — إثبات SQLite المحمل وفحص المنصة
+- الحالة: DONE-VERIFIED
+- الاختبار Loaded_native_sqlite_is_patched_and_parameterized_storage_still_roundtrips يقرأ sqlite_version() من DLL المحملة ويشترط >=3.50.2، ثم يثبت roundtrip parameterized SQL دون تنفيذ قيمة fixture كأوامر.
+- التحقق: Release build 0 warnings/errors؛ 160 نجاح/3 Unix skip/0 فشل. منصة LicensingPlatform أعيد اختبارها: 136 نجاح/0 فشل/0 skip، مع CS0108 قائم في MediaController.User. Audit المنصة 7 مشاريع بلا vulnerabilities مبلغ عنها.
+- تحقق مصدر sensors: الإصدار الرسمي v0.9.6 يستخدم PawnIO device وembedded modules؛ لا تشغيل driver أو Defender test. تفاصيل ومصادر في DEPENDENCIES.md.
+- التوثيق: عناوين Run4 وترتيب كل خطوة أوضح دون تغيير الحالات أو ادعاء نجاح manual checks.

@@ -12,4 +12,6 @@
 
 فحص outdated أظهر إصدارات أحدث، منها Microsoft.Data.Sqlite 10.0.12 وSqlClient 7.1.1. لم تجرِ ترقيات major جماعية؛ إصدار أحدث وحده لا يثبت ضرورة تعديل آمن. الفحص النهائي لم يبلغ عن vulnerabilities في المشاريع الأربعة. CI يرفض High/Critical؛ لا يمثل ذلك ضمانًا لغياب ثغرات غير منشورة.
 
-LibreHardwareMonitorLib بقي 0.9.6. الـXML المرفق بالحزمة يشير إلى PawnIO. لا يمكن الجزم بتحميل driver بعينه أو قبول Microsoft Defender الحالي من metadata؛ لم تُشغل الخدمة أو hardware driver، ولم يُعطل Defender. يلزم فحص توزيع Windows النهائي على جهاز اختبار، وتسجيل driver/version/hash ونتيجة Defender بتاريخها. لا تغيير لمكتبة الحساسات.
+LibreHardwareMonitorLib بقي 0.9.6. [مصدر الإصدار الرسمي PawnIo.cs](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/blob/v0.9.6/LibreHardwareMonitorLib/PawnIo/PawnIo.cs) يفتح `GLOBALROOT\Device\PawnIO` المثبت على Windows ويرسل إليه embedded modules عبر DeviceIoControl، ويقرأ نسخة PawnIO من registry. لم تُشغل الخدمة أو driver، لذلك installed version/hash ونتيجة Microsoft Defender الحالية غير متحققين. يلزم فحص التوزيع النهائي على جهاز اختبار وتسجيل النتيجة بتاريخها؛ لا تغيير للمكتبة أو تعطيل Defender.
+
+فحص منصة LicensingPlatform المحلية الإضافي شمل 7 مشاريع ولم يبلغ عن vulnerabilities؛ نتائجها في TestResults/platform-vulnerabilities.json. regression/security suite للمنصة: 136 نجاح/0 فشل/0 skip، مع تحذير CS0108 قائم في MediaController.User خارج نطاق enrollment. لا إنتاج أو نشر.
