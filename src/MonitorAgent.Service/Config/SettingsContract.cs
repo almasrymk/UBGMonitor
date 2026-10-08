@@ -82,6 +82,7 @@ public static class SettingsContract
             }
             if (point["Database"] is not JsonObject login) continue;
             if (!Enum.TryParse<DatabaseEngine>(login["Engine"]!.GetValue<string>(), out var engine) || !Enum.IsDefined(engine)) throw new ArgumentException("Database.Engine is invalid.");
+            if (!Enum.TryParse<DatabaseTlsMode>(login["TlsMode"]!.GetValue<string>(), out var tls) || !Enum.IsDefined(tls)) throw new ArgumentException("Database.TlsMode is invalid.");
             if (login["Port"]!.GetValue<int>() is < 1 or > 65535) throw new ArgumentException("Database.Port must be 1-65535.");
             var rawPoint = incoming.First(p => Field(p, "MonitorPointId")?.GetValue<string>() == id);
             var rawLogin = Field(rawPoint, "Database") as JsonObject;

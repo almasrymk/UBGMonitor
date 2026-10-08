@@ -453,3 +453,14 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 
 ## Run 4 — خطة التنفيذ
 تنفيذ مستقل محليًا: TLS-mode perDB أولًا معlegacyCompatibility وnewVerify وتحذيرظاهروtest-withverification؛ ثمremoteHTTPS/cert/keyhash/localadminenable/firewallopt-in/limits وDesktoppairing. certificates self-generatedper-install لاproductionlicensinganchors؛ لاكتابةPFX/secretللمصدر؛ اختباراتTLSconnectionbuilders/httpfakes/tempstate، liveDB/remotePCوتأكيدfingerprint الحقيقيowner-verification. Run5D2/D3 يبقيانBLOCKED لحيناعتمادإداري.
+
+### R4-S06 — TLS لكل نقطة قاعدة بيانات
+- الحالة: DONE-UNVERIFIED
+- التغيير: TlsMode absent=Compatibility، new UI connection=Verify؛ SQLMandatory/TrustServerCertificatefalse وNpgsql/MySqlVerifyFull. Compatibility يحافظ علىdriverdefaults السابقة بلاauto downgrade؛ settings summary/list target/dashboard label وتحذيرWarning واحد أسماءالنقاط يتحدث فقط عندتغيرالقائمة. DTOيعرضTlsMode. اختيارCompatibility يحذر؛ Test with verification يستعملstored loginداخلservice ولايغيرالمحفوظ، ويعرضاختيارVerifyبعدالنجاح. low-privilege hint وDATABASE_TLS.md.
+- الملفات: DatabaseLogin/TestRequest/Resolver/Monitor/SettingsContract/StatusDto/StatusBuilder/MonitorPointText؛ Desktopwindow/client/rows/dashboard؛ DatabaseTlsTests.
+- التحقق: buildRelease0أخطاء/0تحذيرات؛ suite138pass/2skip/0fail. TLSbuilder3enginesيثبتverifyوالـlegacydefaults؛ verifytestيحفظstoredmode/password؛ Warningrecordonce/clearبعداختيارVerify ناجح؛ unsafeinput tests مستمرة. أولfixtureNpgsqlبلاhostرفضهاdriverقبلفتحأيconnection؛ أضيفhostfixture.test ثمsuiteنجحت.
+- غيرالمتحقق: شهادةDBحية وUI/dialog/card علىالأجهزة؛ لذلكلاتوصفنقاطCompatibilityFixed. No customer/network DBconnections.
+- اختلاف: trusted-root-fileاختياراختياري لمينفذ؛ systemtruststoreموثقومشتركبينdrivers.
+
+## Run 6 — خطة التنفيذ
+سننجز scope/key/state foundations قبلremotecert storage لأنRun2/3متوفران: WindowsCurrentUsernewprefixمعlegacyread/backup-on-migration، Desktopownprefsفقط، Unixkeyowner/mode/parent/no-symlink/create-new، owner-onlystatewrites/SQLitepermissions؛ سپسredaction/audit/reveal-explicitclipboard. لا تغييرserviceaccountولاproductionstate؛ testsWindowsprofileفقطلاتثبتLocalSystemcross-account. لاDBencryptiondependency؛ توثيقschemasوالقرار.

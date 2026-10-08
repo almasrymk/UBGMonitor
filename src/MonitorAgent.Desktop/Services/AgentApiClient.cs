@@ -193,11 +193,11 @@ public sealed class AgentApiClient
     }
 
     /// <summary>Tries the connection from the service's computer, the same way the monitor point will.</summary>
-    public async Task<DatabaseTestResultDto> TestDatabaseAsync(DatabaseLogin login, CancellationToken ct = default, string? monitorPointId = null)
+    public async Task<DatabaseTestResultDto> TestDatabaseAsync(DatabaseLogin login, CancellationToken ct = default, string? monitorPointId = null, bool verify = false)
     {
         try
         {
-            using var response = await _http.PostAsJsonAsync(ApiRoutes.DatabaseTest, new DatabaseTestRequest(monitorPointId, login), ct);
+            using var response = await _http.PostAsJsonAsync(ApiRoutes.DatabaseTest, new DatabaseTestRequest(monitorPointId, login, verify), ct);
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
                 return new DatabaseTestResultDto(false, "The Agent service is too old for this test; reinstall it.");

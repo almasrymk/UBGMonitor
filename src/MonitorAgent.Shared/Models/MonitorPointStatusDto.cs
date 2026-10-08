@@ -44,4 +44,5 @@ public sealed class MonitorPointStatusDto
 
     /// <summary>What is checked: the address, or the database engine, server and name.</summary>
     public string Target { get; init; } = string.Empty;
+    public DatabaseTlsMode? TlsMode { get; init; }
 }

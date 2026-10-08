@@ -20,7 +20,12 @@ public static class DatabaseTestResolver
             saved = points.FirstOrDefault(p => p.MonitorPointId == request.MonitorPointId)?.Database;
             if (saved is null) throw new ArgumentException("The stored database monitor point does not exist.");
         }
-        if (request.Login is null) return saved?.Copy() ?? throw new ArgumentException("A monitorPointId or login is required.");
+        if (request.Login is null)
+        {
+            var resolved = saved?.Copy() ?? throw new ArgumentException("A monitorPointId or login is required.");
+            if (request.Verify) resolved.TlsMode = DatabaseTlsMode.Verify;
+            return resolved;
+        }
         var login = request.Login.Copy();
         if (string.IsNullOrEmpty(login.Password) && saved is not null)
         {
@@ -30,6 +35,8 @@ public static class DatabaseTestResolver
             login.Password = saved.Password;
         }
         else if (login.HasPassword && string.IsNullOrEmpty(login.Password)) throw new ArgumentException("Select the saved monitor point or enter a password.");
+        if (!Enum.IsDefined(login.TlsMode) || !Enum.IsDefined(login.Engine) || login.Port is < 1 or > 65535) throw new ArgumentException("Database engine, TLS mode or port is invalid.");
+        if (request.Verify) login.TlsMode = DatabaseTlsMode.Verify;
         return login;
     }
 }

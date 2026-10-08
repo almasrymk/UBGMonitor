@@ -43,7 +43,7 @@ public static class MonitorPointText
             var login = point.Database;
             return login is null || string.IsNullOrWhiteSpace(login.Server)
                 ? "Not configured"
-                : $"{Engine(login.Engine)} - {login.Server}{(login.Port > 0 ? $":{login.Port}" : string.Empty)} / {login.Database}";
+                : $"{Engine(login.Engine)} - {login.Server}{(login.Port > 0 ? $":{login.Port}" : string.Empty)} / {login.Database}" + (login.TlsMode == DatabaseTlsMode.Compatibility ? " · server identity not verified" : "");
         }
 
         return point.Address;

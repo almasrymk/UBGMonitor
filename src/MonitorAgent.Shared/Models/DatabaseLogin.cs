@@ -6,6 +6,7 @@ public enum DatabaseEngine
     PostgreSql = 1,
     MySql = 2
 }
+public enum DatabaseTlsMode { Compatibility = 0, Verify = 1 }
 
 public sealed class DatabaseLogin
 {
@@ -23,6 +24,8 @@ public sealed class DatabaseLogin
     public bool HasPassword { get; set; }
 
     public bool IntegratedSecurity { get; set; }
+    // Absent in legacy files means Compatibility, preserving their connection behavior.
+    public DatabaseTlsMode TlsMode { get; set; } = DatabaseTlsMode.Compatibility;
 
     public DatabaseLogin Copy()
         => new()
@@ -34,6 +37,7 @@ public sealed class DatabaseLogin
             Username = Username,
             Password = Password,
             HasPassword = HasPassword,
+            TlsMode = TlsMode,
             IntegratedSecurity = IntegratedSecurity
         };
 }

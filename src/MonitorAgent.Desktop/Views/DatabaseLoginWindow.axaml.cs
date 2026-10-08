@@ -38,6 +38,7 @@ public partial class DatabaseLoginWindow : Window
         _client = client;
         _monitorPointId = monitorPointId;
         TestButton.IsVisible = client is not null;
+        VerifyButton.IsVisible = client is not null;
         EngineBox.ItemsSource = _engines;
         Load(current);
     }
@@ -52,6 +53,7 @@ public partial class DatabaseLoginWindow : Window
         DatabaseBox.Text = current?.Database ?? string.Empty;
         UserBox.Text = current?.Username ?? string.Empty;
         IntegratedBox.IsChecked = current?.IntegratedSecurity == true;
+        TlsModeBox.SelectedIndex = current is null || string.IsNullOrWhiteSpace(current.Server) || current.TlsMode == DatabaseTlsMode.Verify ? 0 : 1;
         _storedPassword = current?.Password ?? string.Empty;
         _hasSavedPassword = current?.HasPassword == true;
         _shownPassword = string.Empty;
@@ -145,6 +147,7 @@ public partial class DatabaseLoginWindow : Window
             Password = integrated ? string.Empty : Password(),
             HasPassword = !integrated && _hasSavedPassword,
             IntegratedSecurity = integrated
+            ,TlsMode = TlsModeBox.SelectedIndex == 0 ? DatabaseTlsMode.Verify : DatabaseTlsMode.Compatibility
         };
     }
 
@@ -182,6 +185,25 @@ public partial class DatabaseLoginWindow : Window
         {
             TestButton.IsEnabled = true;
         }
+    }
+    private async void TlsMode_Changed(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_loading || TlsModeBox.SelectedIndex != 1) return;
+        if (await ThemedDialog.ShowAsync(this, "Server identity not verified", "Compatibility does not verify the database server's identity. Use it only as an explicit exception; fixing the server certificate is recommended.", DialogKind.Warning,
+            [new DialogButton("Use compatibility", DialogResult.Yes), new DialogButton("Cancel", DialogResult.Cancel, IsPrimary: true)]) != DialogResult.Yes) TlsModeBox.SelectedIndex = 0;
+    }
+    private async void Verify_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_client is null || ReadLogin() is not { } login) return;
+        VerifyButton.IsEnabled = false;
+        try
+        {
+            var result = await _client.TestDatabaseAsync(login, monitorPointId: _monitorPointId, verify: true);
+            SetMessage(result.Message, result.Success ? "AccentGreenBrush" : "AccentRedBrush");
+            if (result.Success && await ThemedDialog.ShowAsync(this, "Verification succeeded", "Use Verify for this connection? The change is stored only when you save the settings.", DialogKind.Question,
+                [new DialogButton("Use Verify", DialogResult.Yes), new DialogButton("Keep current mode", DialogResult.Cancel, IsPrimary: true)]) == DialogResult.Yes) TlsModeBox.SelectedIndex = 0;
+        }
+        finally { VerifyButton.IsEnabled = true; }
     }
 
     private void Ok_Click(object? sender, RoutedEventArgs e)
