@@ -679,3 +679,10 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - التغيير: نقل Service port إلى العمود الثاني في Grid نفسها بجوار Service listens on، مع الحفاظ على bindings والتصميم الحالي.
 - التحقق: Release build بلا تحذيرات/أخطاء؛ 160 اختبار نجاح، 3 Unix-only متخطاة، 0 فشل. التحقق بصريًا أثناء تشغيل الواجهة لم يُنفذ؛ لا نشر.
+
+### R4-S02/R4-S05 — ربط HTTPS والجدار الناري بعنوان الاستماع بطلب المالك
+- الحالة: DONE-UNVERIFIED
+- التغيير: عنوان غير 127.0.0.1 يحدد RemoteEnabled/OpenFirewallPort ويعطل تعديل checkboxs، ويعرض رسالة عربية توضح HTTPS وفتح المنفذ عند Apply remote access بعد إنشاء Viewer key. Cancel يعيد العنوان السابق، ولا رسالة أثناء تحميل الإعدادات. الرجوع إلى 127 يلغي العلامتين ويتيح التعديل حسب الدور المحلي.
+- خيار فتح البورت نُقل فوق Allow remote administration؛ خانة رقم البورت تبقى بجوار Service listens on حسب الطلب السابق. لا فتح firewall أو تفعيل تلقائي بمجرد اختيار العنوان، ولا تجاوز شرط المفتاح أو صلاحيات IPC.
+- الملفات: SettingsViewModel.cs وSettingsView.axaml. بعد إصلاح nullable warning: Release build 0 warnings/errors، tests 160 نجاح/3 Unix-only skip/0 فشل.
+- غير المتحقق: الرسالة وتسلسل الاختيار/Cancel وتفعيل checkboxs لم تُختبر تفاعليًا في Desktop؛ لا تغيير master أو نشر.

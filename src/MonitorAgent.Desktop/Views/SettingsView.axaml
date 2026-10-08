@@ -310,9 +310,9 @@
                         </StackPanel>
                     </Grid>
                     <StackPanel IsEnabled="{Binding CanManageRemoteAccess}">
-                        <CheckBox Content="Enable remote HTTPS access" IsChecked="{Binding RemoteEnabled}"/>
+                        <CheckBox Content="Enable remote HTTPS access" IsChecked="{Binding RemoteEnabled}" IsEnabled="{Binding CanEditNetworkOptions}"/>
+                        <CheckBox Content="Open this port in this computer's firewall" IsChecked="{Binding OpenFirewallPort}" IsEnabled="{Binding CanEditNetworkOptions}"/>
                         <CheckBox Content="Allow remote administration with a separate admin key" IsChecked="{Binding RemoteAdministration}"/>
-                        <CheckBox Content="Open this port in this computer's firewall" IsChecked="{Binding OpenFirewallPort}"/>
                         <WrapPanel>
                             <Button Content="Apply remote access" Command="{Binding ManageRemoteAccessCommand}" CommandParameter="configure" Classes="footer"/>
                             <Button Content="Create / rotate viewer key" Command="{Binding ManageRemoteAccessCommand}" CommandParameter="create-viewer-key" Classes="footer"/>

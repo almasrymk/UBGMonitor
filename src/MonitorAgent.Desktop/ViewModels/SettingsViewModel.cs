@@ -116,6 +116,30 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string _remoteFingerprint = "Remote access has not been configured.";
     [ObservableProperty] private string _newRemoteKey = string.Empty;
     public bool CanManageRemoteAccess => _client.CanAdminister && _client.IsLocalTransport;
+    public bool CanEditNetworkOptions => ServiceListenAddress.Trim() == LocalOnlyAddress;
+    private bool _loadingListenAddress;
+    partial void OnServiceListenAddressChanged(string? oldValue, string newValue)
+    {
+        OnPropertyChanged(nameof(CanEditNetworkOptions));
+        if (_loadingListenAddress) return;
+        RemoteEnabled = !CanEditNetworkOptions;
+        OpenFirewallPort = !CanEditNetworkOptions;
+        if (!CanEditNetworkOptions && IsLoaded)
+            _ = ConfirmNetworkSelectionAsync(oldValue ?? LocalOnlyAddress, newValue);
+    }
+    private async Task ConfirmNetworkSelectionAsync(string previous, string selected)
+    {
+        if (ConfirmWarning is null) return;
+        var accepted = await ConfirmWarning("اختيار عنوان شبكة يعني أن اتصال الأجهزة الأخرى سيكون مشفرًا باستخدام HTTPS، وسيتم السماح بالبورت في جدار الحماية عند الضغط على Apply remote access. يجب إنشاء Viewer key أولًا. هل تريد المتابعة؟");
+        if (!accepted && ServiceListenAddress == selected)
+        {
+            _loadingListenAddress = true;
+            try { ServiceListenAddress = previous; }
+            finally { _loadingListenAddress = false; }
+            RemoteEnabled = !CanEditNetworkOptions;
+            OpenFirewallPort = !CanEditNetworkOptions;
+        }
+    }
     [RelayCommand]
     private async Task ManageRemoteAccessAsync(string action)
     {
@@ -131,6 +155,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     private void ApplyRemoteStatus(RemoteAccessStatus status)
     {
         RemoteEnabled = status.Enabled; RemoteAdministration = status.AllowAdministration; OpenFirewallPort = status.OpenFirewall;
+        if (!CanEditNetworkOptions) { RemoteEnabled = true; OpenFirewallPort = true; }
         RemoteFingerprint = status.Fingerprint is null ? "No remote certificate yet." : "Certificate SHA-256: " + status.Fingerprint;
         OnPropertyChanged(nameof(CanManageRemoteAccess));
     }
@@ -894,7 +919,11 @@ public sealed partial class SettingsViewModel : ObservableObject
             DataRetentionDays = DefaultRetentionDays;
         }
 
-        ServiceListenAddress = string.IsNullOrWhiteSpace(general.ServiceListenAddress) ? LocalOnlyAddress : general.ServiceListenAddress.Trim();
+        _loadingListenAddress = true;
+        try { ServiceListenAddress = string.IsNullOrWhiteSpace(general.ServiceListenAddress) ? LocalOnlyAddress : general.ServiceListenAddress.Trim(); }
+        finally { _loadingListenAddress = false; }
+        RemoteEnabled = !CanEditNetworkOptions;
+        OpenFirewallPort = !CanEditNetworkOptions;
         AddListenOption(ServiceListenAddress);
 
         // 0 = the service's own default port, which is the one this app reached it on.
