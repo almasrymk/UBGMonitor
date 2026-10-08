@@ -61,18 +61,17 @@ public partial class SettingsView : UserControl
         if (password is null) { MonitorAgent.UI.Services.UiPlatform.ShowMessage("Copy password", "No saved password could be read. Save this monitor point first."); return; }
         await MonitorAgent.UI.Services.UiPlatform.CopySensitiveTextAsync(password);
     }
-    private async void RemoteKey_PointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e)
+    private async void RemoteKey_PointerReleased(object? sender, Avalonia.Input.PointerReleasedEventArgs e)
     {
-        if (sender is not SelectableTextBlock label) return;
-        var pointer = e.GetCurrentPoint(label).Properties;
-        if (!pointer.IsLeftButtonPressed && !pointer.IsRightButtonPressed) return;
+        if (sender is not TextBlock label || e.InitialPressMouseButton is not
+            (Avalonia.Input.MouseButton.Left or Avalonia.Input.MouseButton.Right)) return;
         var settings = (DataContext as MainViewModel)?.Settings ?? DataContext as SettingsViewModel;
         if (settings?.CanManageRemoteAccess != true || label.Tag is not string role) return;
         e.Handled = true;
         void Copied(string copiedRole)
         {
             if (copiedRole != role) return;
-            var hint = new TextBlock { Text = "Copied", FontWeight = Avalonia.Media.FontWeight.Bold };
+            var hint = new TextBlock { Text = "Copied", FontWeight = Avalonia.Media.FontWeight.Bold, FontSize = 12 };
             hint.Foreground = Avalonia.Media.Brushes.LimeGreen;
             ToolTip.SetTip(label, hint);
             ToolTip.SetIsOpen(label, true);

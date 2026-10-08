@@ -815,3 +815,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - Allow remote administration وصفوف Viewer key/Admin key ومفاتيحها وأزرارها تتبع NetworkIndicatorsVisible نفسها لعلامتي HTTPS والبورت؛ لا تظهر قبل الموافقة وتختفي عند 127. لا تغيير checkboxs نقاط المراقبة أو وظائف الصلاحيات.
 - Release build ناجح صفر أخطاء وتحذيرا SYSLIB0057 قائمان؛ 196 نجاح/4 SKIPPED/0 فشل. العرض تفاعليًا غير متحقق؛ لا master/push/install.
+
+### R4-S05 — مطابقة تفاعل Public IP عند نسخ المفاتيح
+- الحالة: DONE-VERIFIED
+- استبدال SelectableTextBlock بـTextBlock مثل قيمة Public IP وربط PointerReleased بدل PointerPressed لتفادي تفاعل تحديد النص. الضغط اليسار/اليمين ينسخ بعد تحقق hash وصلاحية المسؤول؛ تلميح Copied يظهر بعد نجاح الكتابة بالخط 12 وBold ولمدة 1200ms مثل Dashboard مع اللون الأخضر المطلوب سابقًا. حماية clipboard ومسحه تبقى موجودة.
+- Release build ناجح صفر أخطاء وتحذيرا SYSLIB0057 قائمان؛ 196 نجاح/4 SKIPPED/0 فشل. الفحص التفاعلي للتلميح لم يُنفذ؛ لا master/push/install.
