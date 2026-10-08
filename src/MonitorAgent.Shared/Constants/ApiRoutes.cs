@@ -26,6 +26,7 @@ public static class ApiRoutes
     public const string AgentConfig = "/api/agent/config";
     public const string Settings = "/api/settings";
     public const string DatabaseTest = "/api/database/test";
+    public const string PasswordReveal = "/api/database/password/reveal";
 
     /// <summary>Header with the remote access key, needed from other computers when the service has one.</summary>
     public const string AccessKeyHeader = "X-Agent-Key";

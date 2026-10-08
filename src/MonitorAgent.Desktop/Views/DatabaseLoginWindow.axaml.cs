@@ -18,7 +18,7 @@ public partial class DatabaseLoginWindow : Window
     private readonly AgentApiClient? _client;
     private bool _loading;
 
-    /// <summary>The password as saved; kept when the user does not type a new one.</summary>
+    /// <summary>A newly typed password not saved yet; service-saved credentials arrive only as HasPassword.</summary>
     private string _storedPassword = string.Empty;
 
     /// <summary>What the password box showed on opening (empty when the saved password is encrypted for another computer).</summary>
@@ -54,7 +54,7 @@ public partial class DatabaseLoginWindow : Window
         UserBox.Text = current?.Username ?? string.Empty;
         IntegratedBox.IsChecked = current?.IntegratedSecurity == true;
         TlsModeBox.SelectedIndex = current is null || string.IsNullOrWhiteSpace(current.Server) || current.TlsMode == DatabaseTlsMode.Verify ? 0 : 1;
-        _storedPassword = current?.Password ?? string.Empty;
+        _storedPassword = current?.HasPassword == true ? string.Empty : current?.Password ?? string.Empty;
         _hasSavedPassword = current?.HasPassword == true;
         _shownPassword = string.Empty;
         PasswordInput.Text = string.Empty;
@@ -161,7 +161,7 @@ public partial class DatabaseLoginWindow : Window
         var typed = PasswordInput.Text ?? string.Empty;
         if (typed == _shownPassword && _storedPassword.Length > 0)
         {
-            return string.Empty;
+            return _storedPassword;
         }
 
         return typed;

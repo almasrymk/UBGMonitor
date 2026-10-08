@@ -4,6 +4,8 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
+using Avalonia.Input;
+using Avalonia.Input.Platform;
 
 namespace MonitorAgent.UI.Services;
 
@@ -22,6 +24,26 @@ public static class UiPlatform
 
         _ = clipboard.SetTextAsync(text);
         return true;
+    }
+    public static async Task CopySensitiveTextAsync(string text)
+    {
+        if (Main?.Clipboard is not { } clipboard) return;
+        try
+        {
+            await SensitiveClipboard.CopyAsync(text, async value =>
+            {
+                var data = new DataTransfer();
+                var item = DataTransferItem.CreateText(value);
+                if (OperatingSystem.IsWindows())
+                {
+                    item.Set(DataFormat.CreateBytesPlatformFormat("CanIncludeInClipboardHistory"), new byte[4]);
+                    item.Set(DataFormat.CreateBytesPlatformFormat("CanUploadToCloudClipboard"), new byte[4]);
+                }
+                data.Add(item);
+                await clipboard.SetDataAsync(data);
+            }, () => clipboard.TryGetTextAsync(), () => clipboard.ClearAsync());
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.Runtime.InteropServices.COMException) { }
     }
 
     public static void ShowMessage(string title, string text)

@@ -50,4 +50,15 @@ public partial class SettingsView : UserControl
             row.DatabaseLogin = dialog.Result;
         }
     }
+    private async void CopyPassword_Click(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.DataContext is not MonitorPointSettingViewModel row || TopLevel.GetTopLevel(this) is not Window owner) return;
+        var client = ((DataContext as MainViewModel)?.Settings ?? DataContext as SettingsViewModel)?.Client;
+        if (client?.CanAdminister != true) return;
+        if (await ThemedDialog.ShowAsync(owner, "Copy saved password", "Other applications can read the clipboard. Copy the service-saved password explicitly? MonitorAgent clears it after 30 seconds if it has not changed.", DialogKind.Warning,
+            [new DialogButton("Copy password", DialogResult.Yes), new DialogButton("Cancel", DialogResult.Cancel, IsPrimary: true)]) != DialogResult.Yes) return;
+        var password = await client.RevealPasswordAsync(row.MonitorPointId);
+        if (password is null) { MonitorAgent.UI.Services.UiPlatform.ShowMessage("Copy password", "No saved password could be read. Save this monitor point first."); return; }
+        await MonitorAgent.UI.Services.UiPlatform.CopySensitiveTextAsync(password);
+    }
 }

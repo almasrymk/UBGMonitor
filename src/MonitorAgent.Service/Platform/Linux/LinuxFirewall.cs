@@ -81,7 +81,7 @@ public sealed class LinuxFirewall : IFirewall
             else
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(PortFile)!);
-                File.WriteAllText(PortFile, port.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                MonitorAgent.Shared.Security.PrivateFile.WriteAllText(PortFile, port.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

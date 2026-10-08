@@ -73,7 +73,7 @@ public static partial class DeviceFingerprint
 
             Directory.CreateDirectory(AgentPaths.StateFolder);
             var created = Guid.NewGuid().ToString("N");
-            File.WriteAllText(path, created);
+            MonitorAgent.Shared.Security.PrivateFile.WriteAllText(path, created);
             return created;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

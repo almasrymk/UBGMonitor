@@ -29,3 +29,12 @@
 ## حالة الثغرات الحرجة
 
 F-01: Pending حتى تأكيد الإلغاء/الانتقال؛ اختبارات defaults النظيفة لا تكفي لإغلاقه. F-18/F-19: Pending لاعتماد trust anchors/domain. باقي C/H لا تُعد مغلقة بمجرد نجاح Run1.
+
+## Run 2/3/4/6 — تحقق الجهاز والترقية
+- [ ] VM fresh/upgrade: standard user خارجgroups مرفوض؛ Viewer read-only؛ Admin يعدل دونelevation؛ pipeownerSYSTEM، userpipefakeمرفوض؛ no localTCP.
+- [ ] Windows/Unix verify-permissions بعدfresh/upgrade؛ البياناتوالترخيصوالتاريخوالـpasswordsباقية؛ backupfolderمحمية.
+- [ ] Run6DPAPI: انسخblobجديدمنLocalSystemوجربفكهبحسابstandarduserمستقل؛ يجبأنيرفض. اختبارالحسابالحالي لايثبتcross-account.
+- [ ] تغييرserviceaccountلاحقًايحتاجإعادةإدخالpassword/licensekey/remotecert المحمية؛ لا تغيره أثناءالترقيةدونخطةانتقال.
+- [ ] Unixmode/owner/symlink/SQLitewal-shmبعدالتشغيلوإعادةالحفظ؛ wrongkeypermissionsيرفضقبلrepair.
+- [ ] Copy saved passwordيحذرولاينسخبفتحDBtool؛ clipboardيمسح30ثانيةولايمسحمحتوىجديدًا؛ تحققWindowshistory/cloudsync flags.
+- [ ] DBVerifyضدشهادةصحيحة/غيرموثوقة؛ legacyCompatibilityتعملوتظهرWarningواحدًا؛ noautomaticdowngrade.

@@ -44,7 +44,7 @@ public sealed class DatabaseMonitor : BackgroundService, IMonitoringModule
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Database monitor cycle failed");
+                _logger.LogError("Database monitor cycle failed: {ErrorType}", ex.GetType().Name);
             }
 
             await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);
@@ -151,17 +151,11 @@ public sealed class DatabaseMonitor : BackgroundService, IMonitoringModule
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
-            var message = ex.Message.ReplaceLineEndings(" ").Trim();
-            var hint = Hint(login, ex);
-            if (hint is not null && message.IndexOf(". ", StringComparison.Ordinal) is > 0 and var end)
-            {
-                message = message[..(end + 1)];
-            }
-
-            message = message.Length > 240 ? message[..240] + "..." : message;
-            return hint is null ? message : $"{message} {hint}";
+            return DescribeFailure(login, ex);
         }
     }
+    public static string DescribeFailure(DatabaseLogin login, Exception failure)
+        => "Database connection failed. Check the target, credentials and certificate configuration. " + Hint(login, failure);
 
     private static string? Hint(DatabaseLogin login, Exception ex)
     {
@@ -280,6 +274,11 @@ public sealed class DatabaseMonitor : BackgroundService, IMonitoringModule
     {
         try
         {
+            var path = new SqliteConnectionStringBuilder(connectionString).DataSource;
+            if (!string.IsNullOrEmpty(path) && path != ":memory:")
+            {
+                if (!File.Exists(path)) PrivateFile.WriteAllBytes(path, []); else PrivateFile.Secure(path);
+            }
             await using var connection = new SqliteConnection(connectionString);
             await connection.OpenAsync(cancellationToken);
             await using var command = connection.CreateCommand();

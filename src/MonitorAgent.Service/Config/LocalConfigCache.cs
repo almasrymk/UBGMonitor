@@ -4,6 +4,7 @@ using MonitorAgent.Service.Platform;
 using MonitorAgent.Service.Runtime;
 using MonitorAgent.Shared.Models;
 using Microsoft.Extensions.Configuration;
+using MonitorAgent.Shared.Security;
 
 namespace MonitorAgent.Service.Config;
 
@@ -135,7 +136,9 @@ public sealed class LocalConfigCache : ILocalConfigCache
     private async Task SaveUnlockedAsync(AgentRuntimeConfig config, CancellationToken cancellationToken)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
-        await File.WriteAllTextAsync(_path, JsonSerializer.Serialize(config, JsonOptions), cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        PrivateFile.WriteAllText(_path, JsonSerializer.Serialize(config, JsonOptions));
+        await Task.CompletedTask;
         _current = config;
     }
 
@@ -187,7 +190,7 @@ public sealed class LocalConfigCache : ILocalConfigCache
                 return true;
             }
 
-            using var document = JsonDocument.Parse(File.ReadAllText(path));
+            using var document = JsonDocument.Parse(path == ServiceSettingsFile.PrimaryPath ? ServiceSettingsFile.ReadSection().ToJsonString() : File.ReadAllText(path));
             var settingsRoot = document.RootElement;
             var setting = TryGetProperty(settingsRoot, "Setting", out var nested) ? nested : settingsRoot;
             if (!TryGetProperty(setting, "MonitorPoints", out var monitorPoints))

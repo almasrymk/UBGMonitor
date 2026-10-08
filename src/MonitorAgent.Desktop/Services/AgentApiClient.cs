@@ -130,6 +130,16 @@ public sealed class AgentApiClient
     /// <summary>The "Setting" section of the service's appsettings.json.</summary>
     public Task<System.Text.Json.Nodes.JsonObject?> GetSettingsAsync(CancellationToken ct = default)
         => GetAsync<System.Text.Json.Nodes.JsonObject>(ApiRoutes.Settings, "settings", ct);
+    public async Task<string?> RevealPasswordAsync(string pointId, CancellationToken ct = default)
+    {
+        if (!CanAdminister) return null;
+        try
+        {
+            using var response = await _http.PostAsJsonAsync(ApiRoutes.PasswordReveal, new PasswordRevealRequest(pointId), ct);
+            return response.IsSuccessStatusCode ? (await response.Content.ReadFromJsonAsync<PasswordRevealResult>(JsonOptions, ct))?.Password : null;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException) { return null; }
+    }
 
     /// <summary>Asks the service to save its settings; returns null on success, otherwise why it failed.</summary>
     public async Task<string?> SaveSettingsAsync(System.Text.Json.Nodes.JsonObject section, CancellationToken ct = default)

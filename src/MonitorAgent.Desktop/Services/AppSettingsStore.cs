@@ -111,9 +111,15 @@ public sealed class ClientPreferences
     {
         try
         {
-            return File.Exists(FilePath)
-                ? JsonSerializer.Deserialize<ClientPreferences>(File.ReadAllText(FilePath)) ?? new ClientPreferences()
-                : new ClientPreferences();
+            if (!File.Exists(FilePath)) return new ClientPreferences();
+            var text = File.ReadAllText(FilePath);
+            var preferences = JsonSerializer.Deserialize<ClientPreferences>(text) ?? new ClientPreferences();
+            if (text.Contains("dpapi:", StringComparison.Ordinal) && preferences.AccessKey.Length > 0)
+            {
+                PrivateFile.Backup(FilePath, Path.Combine(Path.GetDirectoryName(FilePath)!, "backups"));
+                preferences.Save();
+            }
+            return preferences;
         }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
         {
@@ -126,7 +132,7 @@ public sealed class ClientPreferences
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(this));
+            PrivateFile.WriteAllText(FilePath, JsonSerializer.Serialize(this));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

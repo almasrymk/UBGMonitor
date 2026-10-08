@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MonitorAgent.Service.Config;
 using MonitorAgent.Service.Connectivity;
@@ -24,6 +25,13 @@ namespace MonitorAgent.Tests;
 [Collection("ServiceSettings")]
 public sealed class LocalApiSecurityTests
 {
+    private sealed class AuditLog : ILogger<LocalApiHost>
+    {
+        public List<string> Lines { get; } = [];
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+        public void Log<TState>(LogLevel level, EventId id, TState state, Exception? exception, Func<TState, Exception?, string> formatter) => Lines.Add(formatter(state, exception));
+    }
     private sealed class Notifications : INotificationStore
     {
         public IReadOnlyList<AgentIssueDto> GetNotifications() => [];
@@ -48,7 +56,8 @@ public sealed class LocalApiSecurityTests
         public WebApplication Host { get; }
         public ServiceProvider Services { get; }
         public HttpClient Client => Host.GetTestClient();
-        private App(WebApplication host, ServiceProvider services) { Host = host; Services = services; }
+        public AuditLog Log { get; }
+        private App(WebApplication host, ServiceProvider services, AuditLog log) { Host = host; Services = services; Log = log; }
         public static async Task<App> Start(bool licensed, AgentAccessRole role = AgentAccessRole.Administrator, bool tcp = false, string key = "")
         {
             var cache = new FakeLocalConfigCache();
@@ -64,11 +73,36 @@ public sealed class LocalApiSecurityTests
             builder.WebHost.UseTestServer();
             LocalApiHost.ConfigureServices(builder.Services);
             var host = builder.Build();
-            new LocalApiHost(services, Options.Create(new LocalApiOptions()), NullLogger<LocalApiHost>.Instance).ConfigureApplication(host, role, tcp, "127.0.0.1");
+            var log = new AuditLog();
+            new LocalApiHost(services, Options.Create(new LocalApiOptions()), log).ConfigureApplication(host, role, tcp, "127.0.0.1");
             await host.StartAsync();
-            return new App(host, services);
+            return new App(host, services, log);
         }
         public async ValueTask DisposeAsync() { await Host.DisposeAsync(); await Services.DisposeAsync(); }
+    }
+
+    [Fact]
+    public async Task Explicit_password_reveal_is_administrative_audited_and_absent_from_public_settings()
+    {
+        var path = ServiceSettingsFile.PrimaryPath;
+        var original = File.Exists(path) ? File.ReadAllBytes(path) : null;
+        try
+        {
+            ServiceSettingsFile.WriteSection(System.Text.Json.Nodes.JsonNode.Parse("""{"MonitorPoints":[{"MonitorPointId":"fixture-db","Type":"Database","Database":{"Server":"fixture.test","Password":"TEST-ONLY-reveal"}}]}""")!.AsObject());
+            await using var viewer = await App.Start(true, AgentAccessRole.Viewer);
+            using var viewerClient = viewer.Client;
+            Assert.Equal(HttpStatusCode.Forbidden, (await viewerClient.PostAsJsonAsync(ApiRoutes.PasswordReveal, new PasswordRevealRequest("fixture-db"))).StatusCode);
+            Assert.DoesNotContain("TEST-ONLY-reveal", await viewerClient.GetStringAsync(ApiRoutes.Settings));
+            await using var admin = await App.Start(true);
+            using var client = admin.Client;
+            using var response = await client.PostAsJsonAsync(ApiRoutes.PasswordReveal, new PasswordRevealRequest("fixture-db"));
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.True(response.Headers.CacheControl?.NoStore);
+            Assert.Equal("TEST-ONLY-reveal", (await response.Content.ReadFromJsonAsync<PasswordRevealResult>())!.Password);
+            Assert.Contains(admin.Log.Lines, l => l.Contains("[Audit]") && l.Contains("Administrator") && l.Contains("IPC"));
+            Assert.DoesNotContain(admin.Log.Lines, l => l.Contains("TEST-ONLY-reveal"));
+        }
+        finally { if (original is null) File.Delete(path); else PrivateFile.WriteAllBytes(path, original); }
     }
 
     [Fact]

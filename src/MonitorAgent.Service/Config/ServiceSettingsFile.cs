@@ -28,7 +28,20 @@ public static class ServiceSettingsFile
 
             var root = JsonNode.Parse(File.ReadAllText(PrimaryPath)) as JsonObject;
             var section = root?[SectionName] ?? root?["Ui"] ?? root;
-            return section?.DeepClone() as JsonObject ?? [];
+            var result = section?.DeepClone() as JsonObject ?? [];
+            var changed = false;
+            foreach (var database in (result["MonitorPoints"] as JsonArray ?? []).OfType<JsonObject>().Select(p => p["Database"]).OfType<JsonObject>())
+                if (database["Password"]?.GetValue<string>() is { } password && SecretProtector.IsLegacy(password))
+                {
+                    var replacement = SecretProtector.ReprotectLegacy(password);
+                    if (replacement != password) { database["Password"] = replacement; changed = true; }
+                }
+            if (changed)
+            {
+                PrivateFile.Backup(PrimaryPath, Path.Combine(AgentPaths.StateFolder, "backups"));
+                Write(PrimaryPath, result);
+            }
+            return result;
         }
     }
 

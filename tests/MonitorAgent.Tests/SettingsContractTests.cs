@@ -53,6 +53,7 @@ public sealed class SettingsContractTests
 
     [Theory]
     [InlineData("dpapi:TEST-ONLY")]
+    [InlineData("dpapi2:TEST-ONLY")]
     [InlineData("aes:TEST-ONLY")]
     public void Protected_client_password_is_refused_by_both_boundaries(string password)
     {

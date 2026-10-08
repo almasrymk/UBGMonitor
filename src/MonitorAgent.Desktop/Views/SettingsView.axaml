@@ -410,6 +410,7 @@
                         <DataGridTemplateColumn Header="Database" Width="170">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
+                                    <StackPanel>
                                     <Button Click="ConfigureDatabase_Click" Classes="footer" Margin="4,0" Padding="8,4"
                                             HorizontalAlignment="Left" IsVisible="{Binding IsDatabase}">
                                         <StackPanel Orientation="Horizontal">
@@ -418,6 +419,8 @@
                                             <TextBlock Text="{Binding DatabaseSummary}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
+                                    <Button Click="CopyPassword_Click" Content="Copy saved password" IsVisible="{Binding IsDatabase}" Classes="footer" Margin="4,0" Padding="8,4"/>
+                                    </StackPanel>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>

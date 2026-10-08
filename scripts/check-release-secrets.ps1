@@ -21,7 +21,7 @@ function Test-SettingsNode($Node, [string]$FieldPath, [string]$FileName) {
                 $null -ne $value -and -not [string]::IsNullOrWhiteSpace([string]$value)) {
                 $violations.Add("${FileName}:$field (non-empty credential field)")
             }
-            if ($value -is [string] -and $value -match '(?:\b(?:lcs|lc)_[A-Za-z0-9_-]{16,}|(?:dpapi|aes):[A-Za-z0-9+/=_-]{16,})') {
+            if ($value -is [string] -and $value -match '(?:\b(?:lcs|lc)_[A-Za-z0-9_-]{16,}|(?:dpapi2?|aes):[A-Za-z0-9+/=_-]{16,})') {
                 $violations.Add("${FileName}:$field (credential blob)")
             }
             Test-SettingsNode $value "$field." $FileName

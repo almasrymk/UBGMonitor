@@ -464,3 +464,48 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 
 ## Run 6 — خطة التنفيذ
 سننجز scope/key/state foundations قبلremotecert storage لأنRun2/3متوفران: WindowsCurrentUsernewprefixمعlegacyread/backup-on-migration، Desktopownprefsفقط، Unixkeyowner/mode/parent/no-symlink/create-new، owner-onlystatewrites/SQLitepermissions؛ سپسredaction/audit/reveal-explicitclipboard. لا تغييرserviceaccountولاproductionstate؛ testsWindowsprofileفقطلاتثبتLocalSystemcross-account. لاDBencryptiondependency؛ توثيقschemasوالقرار.
+
+### R6-S01 — أسرار الخدمة بحساب الخدمة
+- الحالة: DONE-UNVERIFIED
+- التغيير: newdpapi2CurrentUser؛ LocalSystemعندتشغيلالخدمةفعليًا. legacydpapiReadableثمReprotectعلىsettings/licensefirstreadبـbackup، إعادةالقراءةidempotent، غيرالقابللفكهمحفوظدونerase. scannersوعقدPUTيعرفانprefixالجديد.
+- الملفات: SecretProtector/ServiceSettingsFile/LocalConfigCache/LicenseStore/scanners/tests/OWNER_ACTIONS.
+- التحقق: Windowsprofiletestlegacyread/reprotect/current-userroundtripنجح؛ build0/0وسuite144pass/3skip. اختبارافترضUnprotectLocalMachineيرفضCurrentUserblobلميرفضلأنsameaccountوUnprotectيقرأblobscope؛ صُححالاختبارليثبتroundtripوالترحيل، ولايدعيcross-accountisolation.
+- غيرالمتحقق: LocalSystem↔standarduserisolatedVM؛ تغييرserviceaccountيتطلبإعادةإدخالالمحميةوموثق.
+
+### R6-S02 — أسرار Desktop الخاصة بالمستخدم
+- الحالة: DONE-UNVERIFIED
+- التغيير: WindowsCurrentUserوالـUnixKeyFileper-userالقائم؛ legacyclientkeyتُقرأثمbackup/saveللنطاقالجديد، client.jsonowner-onlyatomic. لاservicepassworddecryptفيDesktop.
+- التحقق: scope/keyroundtriptestsوعملياتbuild/suiteأعلاه؛ لاclient.jsonحقيقيةمعدلة.
+- غيرالمتحقق: preferenceupgradeUIعلىUnixوprofileمستقل؛ failreadيحفظlegacybackupولايدعيإلغاءالسرالقديم.
+
+### R6-S03 — لا أسرار محفوظة تصل للواجهة
+- الحالة: DONE-VERIFIED
+- التحقق: rg SecretProtector.Unprotect DesktopأظهرنداءواحدًاClientPreferences.StoredAccessKeyفقط؛ publicsettingssecret-exclusionوالـprotectedclientrejectناجحان. newlytypedunsavedpasswordفقطيمكنأنيبقىداخلdialogحتىالحفظ؛ noUnprotectمنserviceDTO. openingDBtoolلاdecrypt/copy.
+
+### R6-S04 — Unixkeyowner/mode/create-new
+- الحالة: DONE-UNVERIFIED
+- التغيير: ownershipgeteuid/stat، key0600exact، parentغيرgroup/otherwritable، symlinkrefusal، create-newحتىالملفغيرالصالحلايستبدل. cachedkeyلاتتجاوزpermissioncheck؛ تغيرKeyFileيمسحcache. startيتحقققبلstatepermissionrepairحتىلايخفيwrongmode.
+- التحقق: Unixtestmode/symlink/parentوثّقومتخطىWindows؛ build/suiteأعلاه. لاclaimsعنUnixlive.
+
+### R6-S05 — حمايةstateوقتwrite
+- الحالة: DONE-UNVERIFIED
+- التغيير: atomicPrivateFileلملفاتsettings/config/license/device.id/firewall/reportHTML/issueJSON؛ Unixcreation600/parent700؛ startuprepairموجودومنعlinks، umask0077قبلnativecreation. WinACLمنRun3installer.
+- الملفات: statewriters/StatePermissions/Program/PrivateFile.
+- التحقق: settings/migration/regressionWindowsنجح؛ Unixatomicmigrationtestمتخطى؛ لاinstaller/Unixruntime.
+
+### R6-S06 — SQLite وقرارالتشفير
+- الحالة: DONE-UNVERIFIED
+- التغيير: reports/localDBprecreate600؛ reportsDB/wal/shmrepairبعدwrite، stateparentمحميوstartupmaskلـnativeSQLite. DATA_AT_RESTموثقمنReportStoreschema؛ لاencryptiondependencyلغياباعتمادوعدممنعrootmemoryaccess.
+- التحقق: ReportStoreيعملبـtesthostالمؤقتوsettingschangesناجحة؛ Unixwal/shmactualpermissionverificationمازالتPending.
+
+### R6-S07 — redaction/audit
+- الحالة: DONE-UNVERIFIED
+- التغيير: Databasefailureلاechodrivertext، يحافظعلىhintsثابتةبلاcredentials؛ LogRedactionللـconnectionfields/URLuserinfoفيsettingschangevalues؛ databasecycleerrorنوعفقط. administrativepipelineيسجلrole/IPC-or-TCP/route/statusبلاbody/key/passwordوبنفسlogretention؛ exceptionيسجل500وليس200. settingsIOerrorعام.
+- التحقق: driverexceptionfixturepassword/tokenغائبانعنresult، redactionناجح؛ revealLogSinkيثبتauditrole/IPCوبلاقيمة؛ suite144pass/3skip/build0/0. لمتُراجعكلpossiblethird-partylogtextعنplatformlicensing؛ هذهالجزئيةتظلغيرمتحققة.
+
+### R6-S08 — نسخPasswordبإجراءصريح
+- الحالة: DONE-UNVERIFIED
+- التغيير: POSTpassword/revealAdministrator-only/no-store/resolveinside، زرCopyبعدwarning؛ clear30ثانيةإذاالقيمةلمتتغير، WindowsnativeformatsDWORD0لـhistory/cloudsyncعبرAvaloniaDataTransferAPI. Integratedsecurityلاreveal؛ noautomaticcopy.
+- التحقق: Viewer403/admin200/auditبلاقيمة/publicsettingsلاpassword؛ clipboardunchangedclear/changedpreserveunit2حالات؛ build0/0وسuite144pass/3skip.
+- غيرالمتحقق: DesktopUI/Windowsclipboardhistory/cloudsyncوالتوقيتالفعلية؛ لاclipboardالمستخدممعدلةمنالاختبارات.
+- جمع الخطوات لأنprefix/servicewriter/publiccontract/desktop/reveal/scannersأجزاءترحيلمشتركة؛ كلentryمنفصلة، ولاmaster/push/install. اختبارrelease-scanner9casesأعيدتشغيلهحسبoutputالتالي؛ لاادعاءحتىاكتماله.

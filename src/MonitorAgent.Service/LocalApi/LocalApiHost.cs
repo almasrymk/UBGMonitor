@@ -129,7 +129,14 @@ public sealed class LocalApiHost : BackgroundService
                 context.Response.StatusCode = StatusCodes.Status403Forbidden;
                 return;
             }
-            await next();
+            var failed = false;
+            try { await next(); }
+            catch { failed = true; throw; }
+            finally
+            {
+                if (required.Role == AgentAccessRole.Administrator)
+                    _logger.LogInformation("[Audit] Role={Role} Transport={Transport} Action={Action} Result={Result}", transportRole, tcp ? "TCP" : "IPC", context.GetEndpoint()?.DisplayName, failed ? 500 : context.Response.StatusCode);
+            }
         });
         app.Use(async (context, next) =>
         {
@@ -294,6 +301,18 @@ public sealed class LocalApiHost : BackgroundService
             _logger.LogInformation("[Database] Administrator connection test: {Success}", failure is null);
             return Results.Ok(new DatabaseTestResultDto(failure is null, failure is null ? $"Connected in {watch.ElapsedMilliseconds} ms." : "Connection failed. Check the target, credentials and certificate configuration."));
         });
+        admin.MapPost(ApiRoutes.PasswordReveal, (PasswordRevealRequest request, HttpContext context) =>
+        {
+            context.Response.Headers.CacheControl = "no-store";
+            try
+            {
+                var login = DatabaseTestResolver.Resolve(new(request.MonitorPointId), ServiceSettingsFile.ReadSection());
+                if (login.IntegratedSecurity) return Results.BadRequest(new { error = "Integrated authentication has no saved password." });
+                var password = SecretProtector.Unprotect(login.Password);
+                return password.Length == 0 ? Results.NotFound() : Results.Ok(new PasswordRevealResult(password));
+            }
+            catch (ArgumentException) { return Results.NotFound(); }
+        });
 
         viewer.MapGet(ApiRoutes.Snapshot, async (CancellationToken ct) =>
             Results.Ok(await _rootProvider.GetRequiredService<ISystemInfoService>().GetSnapshotAsync(ct)));
@@ -332,8 +351,8 @@ public sealed class LocalApiHost : BackgroundService
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                _logger.LogWarning(ex, "[Settings] Saving failed");
-                return Results.Problem($"The service could not save its settings file: {ex.Message}");
+                _logger.LogWarning("[Settings] Saving failed: {ErrorType}", ex.GetType().Name);
+                return Results.Problem("The service could not save its settings file. Check service permissions and available disk space.");
             }
         });
 
