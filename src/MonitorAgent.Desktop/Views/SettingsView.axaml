@@ -307,8 +307,6 @@
                             <TextBox Classes="field wide" Text="{Binding ServicePort}"/>
                         </StackPanel>
                         <StackPanel Grid.Column="2">
-                            <TextBlock Classes="flabel" Text="Access key for other computers"/>
-                            <TextBox Classes="field wide" Text="{Binding RemoteAccessKey}" IsEnabled="False" ToolTip.Tip="Remote keys are managed by a separate administrator action."/>
                             <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Text="Remote access stays closed until enabled with a viewer key."/>
                         </StackPanel>
                     </Grid>

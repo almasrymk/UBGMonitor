@@ -663,3 +663,9 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - تحقق محلي فعلي: self-contained publish Service وDesktop لكل runtimes الخمسة وsecret scans ناجحة؛ bash -n ناجح؛ Release build 0 warnings/errors، tests 160 نجاح/3 Unix-only skip/0 فشل. Gitleaks قبل هذا commit: 27 commit/no leaks، vulnerable checker PASS؛ master ثابت عند 62ee696fc38f5fb1d879f42727fd860371019595 والبرانش المحلي نظيف قبل تحديث CI الأخير.
 - الحدود: cross-publish لا يثبت Unix execution؛ CI Linux permission fixture لم تُشغل لعدم نشر workflow؛ التحقق live/signing/domain/JWK/revoke ما زال حسب RELEASE_READINESS.
 - تحديث تقارير التنفيذ والجاهزية ليشمل runtimes الخمسة؛ لا master/push/deploy.
+
+### R4-S05 — حذف خانة المفتاح القديمة بطلب المالك
+- الحالة: DONE-VERIFIED
+- التغيير: حذف عنوان Access key for other computers وخانته المعطلة من SettingsView.axaml لأنها من طريقة إدارة المفتاح القديمة وتسبب التباسًا. إنشاء ودوران المفاتيح يظل من الأزرار الحالية، وخانة اتصال This app مستقلة.
+- التحقق: dotnet build MonitorAgent.sln -c Release --no-restore نجح بلا تحذيرات/أخطاء؛ dotnet test MonitorAgent.sln -c Release --no-build --no-restore: 160 نجاح/3 Unix-only skip/0 فشل.
+- التغيير محدود بالواجهة، بلا تغيير JSON أو compatibility؛ لم تُختبر الشاشة تفاعليًا ولم تُنشر أو تُثبّت نسخة جديدة.
