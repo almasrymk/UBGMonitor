@@ -630,3 +630,9 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - التحقق: Release build 0 warnings/errors؛ 160 نجاح/3 Unix skip/0 فشل. منصة LicensingPlatform أعيد اختبارها: 136 نجاح/0 فشل/0 skip، مع CS0108 قائم في MediaController.User. Audit المنصة 7 مشاريع بلا vulnerabilities مبلغ عنها.
 - تحقق مصدر sensors: الإصدار الرسمي v0.9.6 يستخدم PawnIO device وembedded modules؛ لا تشغيل driver أو Defender test. تفاصيل ومصادر في DEPENDENCIES.md.
 - التوثيق: عناوين Run4 وترتيب كل خطوة أوضح دون تغيير الحالات أو ادعاء نجاح manual checks.
+
+### R7-S01 — مصفوفة 32 finding
+- الحالة: DONE-VERIFIED
+- SECURITY_MATRIX.md يحتوي صفًا لكل F-01 إلى F-32 مع الشدة والضعف والمعالجة والمصدر ودليل الأمان/regression والحد المتبقي. تحقق محلي من 32 ID فريدًا ولا missing ID.
+- لا تُرفع C/H ذات owner/runtime proof ناقص إلى Fixed. F-01/F-18/F-19/F-29/F-32 Pending. تفاصيل each-step verification تبقى في سجلها.
+- آخر build/tests للكود: 0 warnings/errors، 160 نجاح/3 Unix skip/0 فشل؛ الوثيقة لا تغير runtime.
