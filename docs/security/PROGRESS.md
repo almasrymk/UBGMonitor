@@ -884,3 +884,9 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - تصحيح التكوين السابق الذي ترك TextBox بإطار منفصل: قالب NumericUpDown محلي بإطار واحد مستدير 1px وخلفية InputBrush، يضم PART_Spinner وPART_TextBox الأصليين. إزالة إطار وخلفية TextBox الداخلية في الحالات العادية والمرور والتركيز؛ الرقم يسار ووسط رأسيًا، بخط 13 وpadding 12,0.
 - قياس ارتفاع الحقول من المرجع 38 بدل 34؛ مربع الأسهم 20×28 بلون داكن وزوايا 4، وبُعد 5 عن اليمين، ChevronUp/Down 12 مع RepeatButtons الأصلية. العناوين والقيم والسلوك خارج القالب محفوظة.
 - Release build ناجح مع تحذيري الشهادة القائمين، والاختبارات 196 نجاح/4 SKIPPED/صفر فشل. المعاينة البصرية ومطابقة البكسلات وتشغيل القالب تفاعليًا DONE-UNVERIFIED؛ اختبارات المشروع لا تثبت مطابقة الصورة. لا master/push/install.
+
+### R4-S05 — تصميم Device Specifications & Alerts حسب المرجعين
+- الحالة: DONE-VERIFIED
+- استبدال الترتيب القديم ببطاقة Threshold Configuration: أعمدة Metric/Minimum/Warning Threshold/Problem Threshold/Alert Level مع نقاط التحذير والمشكلة، وأيقونات خضراء ووصف وفواصل لكل CPU/RAM/Disk/Internet/Download/Upload/Operating system. حقول الحد الأدنى بوحدات ملحقة وحدود رقمية بأسهم، وقوائم Alert/YesNo بنفس bindings الحالية.
+- العنوان الرئيسي وأيقونة المستند وكارت How alerts work من المرجع الثاني؛ القيم حقيقية من الإعدادات، ولا نسخ لمشكلة الخدمة الوهمية من الصورة الأولى. دعم وحدات Remaining disk الموجودة محفوظ بدل إجبار Percent وحذف دعم GB. نظام التشغيل بقي متاحًا مثل المرجع الأول.
+- بناء Release ناجح مع تحذيري الشهادة القائمين؛ الاختبارات 196 نجاح و4 SKIPPED وصفر فشل. مطابقة المظهر تفاعليًا على شاشة المالك DONE-UNVERIFIED، ولا ادعاء pixel-perfect من البناء. لا master/push/install.
