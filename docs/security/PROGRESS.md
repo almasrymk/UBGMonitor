@@ -648,3 +648,11 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - DATA_FLOWS.md مأخوذ من NetworkService/InternetMonitor/InternetSpeedTester/LicensePlatformClient/ConfigPuller/MadkhalMonitor/WebsiteMonitor/SiteLogoCache/AgentApiClient؛ كل host ثابت والغرض وما يرسل والتعطيل الموجود أو عدم وجوده.
 - لا ادعاء بإيقاف public IP/connectivity ولا telemetry controls غير موجودة؛ default routing فارغة وspeedtest 0 يوقف التلقائي فقط. deviceName في activation موثق.
 - التحقق: rg/source review بدون تشغيل اتصالات؛ last suite 160 نجاح/3 skip/0 فشل. لا وثيقة تستبدل runtime consent controls؛ step document-only حسب الخطة.
+
+### R7-S06 — تقارير التنفيذ والترحيل والجاهزية
+- الحالة: DONE-VERIFIED
+- IMPLEMENTATION_REPORT.md وMIGRATION_REPORT.md وRELEASE_READINESS.md تعتمد على هذا السجل وتفصل build/proof عن التشغيل غير المتحقق، البيانات المحفوظة وتعارضات الترحيل، compatibility وإجراءات المالك.
+- تحقق build/tests: 160 نجاح/3 Unix skip/0 فشل، 0 warnings/errors للـAgent. المنصة 136 نجاح مع CS0108 قائم. Vulnerability audit: Agent 4 مشاريع/Platform 7 بلا vulnerabilities مبلغ عنها.
+- publish/scans: Service/Desktop win-x64/linux-x64/osx-arm64 ناجحة من Windows؛ ليس إثبات Unix runtime. Release scanner 9 حالات ناجحة. Gitleaks السابق no leaks، والفحص النهائي بعد commits سيضاف كسجل منفصل إن استدعى تعديلًا.
+- خطة الكود الممكنة محليًا مكتملة بهذا السجل؛ D2/D3 وإلغاء السر القديم والتوقيع والتحقق OS/customer ما زالت مطلوبات مسماة. لا customer install ولا master edit/push/deploy؛ F-32 مؤجل صراحةً.
+- Definition of done لا تعني ready for production مع Pending C/H أو manual verification ناقص.
