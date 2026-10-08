@@ -731,3 +731,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - تفعيل الوصول ينشئ المفاتيح الناقصة فقط عند اتصال المسؤول المحلي وتحميل الإعدادات؛ تحميل حالة الخدمة لا ينشئ مفاتيح ولا يمنح Admin تلقائيًا. المفاتيح الموجودة لا تتغير إلا بإعادة الإنشاء وتأكيد المالك؛ Save يطبق صلاحيات الوصول.
 - اختبار Access_toggle_does_not_implicitly_enable_admin يثبت بقاء Admin مغلقًا عند تفعيل الوصول؛ باقي cache/dirty/network/security regressions محفوظة.
 - التحقق: Release build ناجح مع تحذيري SYSLIB0057 القائمين من .NET 10، صفر أخطاء؛ 189 نجاح/4 SKIPPED/0 فشل. الواجهة تفاعليًا غير متحققة. لا master/push/install أو تغيير إعدادات الخدمة الجارية.
+
+### R4-S05 — إظهار خيارات الوصول حسب عنوان الاستماع
+- الحالة: DONE-VERIFIED
+- بطلب المالك: Allow access وViewer وAdmin ومفاتيحهما وأزرار إعادة الإنشاء تختفي عند 127.0.0.1 وتظهر عند اختيار أي عنوان شبكة آخر، باستخدام binding المعكوس لـCanEditNetworkOptions الذي يُحدّث مع اختيار العنوان. تغيير عرض فقط دون حذف المفاتيح.
+- التحقق: Release build ناجح، صفر أخطاء وتحذيرا SYSLIB0057 قائمان؛ 189 نجاح/4 SKIPPED/0 فشل. لم تُختبر الشاشة تفاعليًا؛ لا تعديل master أو نشر.

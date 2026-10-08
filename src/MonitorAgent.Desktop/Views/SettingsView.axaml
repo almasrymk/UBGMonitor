@@ -310,8 +310,8 @@
                         </StackPanel>
                     </Grid>
                     <StackPanel IsEnabled="{Binding CanManageRemoteAccess}">
-                        <CheckBox Content="Allow access (HTTPS)" IsChecked="{Binding RemoteEnabled}" IsEnabled="{Binding CanEditNetworkOptions}"/>
-                        <StackPanel Spacing="6" Margin="16,0,0,6">
+                        <CheckBox IsVisible="{Binding !CanEditNetworkOptions}" Content="Allow access (HTTPS)" IsChecked="{Binding RemoteEnabled}" IsEnabled="{Binding CanEditNetworkOptions}"/>
+                        <StackPanel IsVisible="{Binding !CanEditNetworkOptions}" Spacing="6" Margin="16,0,0,6">
                             <Grid ColumnDefinitions="100,*,Auto">
                                 <CheckBox Content="Viewer" IsChecked="True" IsEnabled="False"/>
                                 <SelectableTextBlock Grid.Column="1" Tag="viewer" PointerPressed="RemoteKey_PointerPressed" Text="{Binding ViewerKeyDisplay}" VerticalAlignment="Center" TextWrapping="Wrap">
