@@ -760,3 +760,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الصورة توضح IOException من WriteAsync عند إلغاء socket. ProgressContent يربط request token مع serialization token حتى عند استخدام overload بلا token؛ يفحص الإلغاء قبل كل chunk ويحوّل IOException عند إلغاء فعلي فقط إلى OperationCanceledException في موضع الكتابة. RunStreamAsync يعالج إلغاء مرحلة القياس كما سابقًا. أخطاء الاتصال دون إلغاء لا تُبتلع ولا تُحسب bytes فاشلة.
 - SpeedTestUploadTests يحاكي stream يلغي token ثم يرمي IOException: إثبات cancellation وعدم عد البيانات؛ اختبار فشل حقيقي يظل HttpRequestException واختبار نجاح 100000 byte يستمر ويحسب الحجم كاملًا. جميعها offline دون speed-test traffic.
 - التحقق: Release build ناجح صفر أخطاء مع تحذيري SYSLIB0057 القائمين؛ 195 نجاح/4 SKIPPED/0 فشل. الإلغاء داخل Visual Studio واختبار سرعة حقيقي غير متحققين؛ لا تغيير debugger settings ولا master/push/install.
+
+### R4-S05 — ربط علامة Viewer بخيار Allow الرئيسي
+- الحالة: DONE-VERIFIED
+- بطلب المالك: IsChecked لصف Viewer يتبع RemoteKeyPanelOpen بـOneWay؛ اختيار Allow remote administration يحدد Viewer وإلغاء الخيار يلغي علامته. Viewer يظل IsEnabled=false ولا يغيره المستخدم مباشرة. تغيير عرض فقط، دون تغيير صحة المفاتيح أو قواعد مصادقة الخدمة.
+- التحقق: Release build ناجح صفر أخطاء مع تحذيري SYSLIB0057 القائمين؛ 195 نجاح/4 SKIPPED/0 فشل. لم تُختبر الشاشة تفاعليًا؛ لا master أو نشر.

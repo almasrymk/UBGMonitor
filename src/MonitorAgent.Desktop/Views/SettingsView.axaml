@@ -314,7 +314,7 @@
                         <CheckBox IsVisible="{Binding !CanEditNetworkOptions}" Content="Allow remote administration with a separate admin key" IsChecked="{Binding RemoteKeyPanelOpen}"/>
                         <StackPanel IsVisible="{Binding !CanEditNetworkOptions}" Spacing="6" Margin="16,0,0,6">
                             <Grid ColumnDefinitions="100,Auto,Auto" HorizontalAlignment="Left">
-                                <CheckBox Content="Viewer" IsChecked="True" IsEnabled="False"/>
+                                <CheckBox Content="Viewer" IsChecked="{Binding RemoteKeyPanelOpen, Mode=OneWay}" IsEnabled="False"/>
                                 <SelectableTextBlock Grid.Column="1" Tag="viewer" PointerPressed="RemoteKey_PointerPressed" Text="{Binding ViewerKeyDisplay}" VerticalAlignment="Center" TextWrapping="Wrap">
                                 </SelectableTextBlock>
                                 <Button Grid.Column="2" Content="↻" ToolTip.Tip="Regenerate viewer key" Command="{Binding ManageRemoteAccessCommand}" CommandParameter="create-viewer-key" Classes="footer"/>
