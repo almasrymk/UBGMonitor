@@ -656,3 +656,10 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - publish/scans: Service/Desktop win-x64/linux-x64/osx-arm64 ناجحة من Windows؛ ليس إثبات Unix runtime. Release scanner 9 حالات ناجحة. Gitleaks السابق no leaks، والفحص النهائي بعد commits سيضاف كسجل منفصل إن استدعى تعديلًا.
 - خطة الكود الممكنة محليًا مكتملة بهذا السجل؛ D2/D3 وإلغاء السر القديم والتوقيع والتحقق OS/customer ما زالت مطلوبات مسماة. لا customer install ولا master edit/push/deploy؛ F-32 مؤجل صراحةً.
 - Definition of done لا تعني ready for production مع Pending C/H أو manual verification ناقص.
+
+### R7-S03 — استكمال جميع runtimes والتحقق النهائي
+- الحالة: DONE-UNVERIFIED
+- CI يشمل win-x64/linux-x64/linux-arm64/osx-x64/osx-arm64 المطابقة لسكربتات التوزيع؛ artifact names فريدة لكل runtime لمنع تصادم upload. verifier يرفض world-readable Unix logs بالإضافة إلى state؛ fixture موجب ثم world-readable logs وunsafe state كحالتين سالبتين.
+- تحقق محلي فعلي: self-contained publish Service وDesktop لكل runtimes الخمسة وsecret scans ناجحة؛ bash -n ناجح؛ Release build 0 warnings/errors، tests 160 نجاح/3 Unix-only skip/0 فشل. Gitleaks قبل هذا commit: 27 commit/no leaks، vulnerable checker PASS؛ master ثابت عند 62ee696fc38f5fb1d879f42727fd860371019595 والبرانش المحلي نظيف قبل تحديث CI الأخير.
+- الحدود: cross-publish لا يثبت Unix execution؛ CI Linux permission fixture لم تُشغل لعدم نشر workflow؛ التحقق live/signing/domain/JWK/revoke ما زال حسب RELEASE_READINESS.
+- تحديث تقارير التنفيذ والجاهزية ليشمل runtimes الخمسة؛ لا master/push/deploy.

@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   build-and-test:
-    name: Build and test (${{ matrix.os }})
+    name: Build and test (${{ matrix.os }}, ${{ matrix.runtime }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
@@ -25,6 +25,10 @@ jobs:
             runtime: win-x64
           - os: ubuntu-latest
             runtime: linux-x64
+          - os: ubuntu-latest
+            runtime: linux-arm64
+          - os: macos-latest
+            runtime: osx-x64
           - os: macos-latest
             runtime: osx-arm64
     steps:
@@ -68,8 +72,14 @@ jobs:
           sudo chown -R root:root "$root"
           sudo chmod -R go-w "$root"
           sudo chmod 700 "$root/state"
+          sudo chmod 750 "$root/logs"
           sudo chmod 600 "$root/state/settings.json" "$root/state/reports.db"
           sudo bash scripts/verify-permissions.sh "$root/service" "$root/desktop" "$root/state" "$root/logs"
+          sudo chmod 755 "$root/logs"
+          if sudo bash scripts/verify-permissions.sh "$root/service" "$root/desktop" "$root/state" "$root/logs"; then
+            echo 'Verifier accepted world-readable logs'; exit 1
+          fi
+          sudo chmod 750 "$root/logs"
           sudo chmod 666 "$root/state/settings.json"
           if sudo bash scripts/verify-permissions.sh "$root/service" "$root/desktop" "$root/state" "$root/logs"; then
             echo 'Verifier accepted unsafe permissions'; exit 1
@@ -78,7 +88,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-${{ matrix.os }}
+          name: test-results-${{ matrix.runtime }}
           path: TestResults/*
           if-no-files-found: warn
           retention-days: 14

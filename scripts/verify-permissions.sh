@@ -15,6 +15,7 @@ if [ "$#" -gt 0 ]; then
         if [[ "$root" != /* || "$root" = / ]]; then echo 'FAIL roots must be absolute directories below /'; exit 2; fi
     done
 fi
+logs="${roots[3]}"
 for root in "${roots[@]}"; do
     if [ ! -d "$root" ]; then echo "FAIL missing $root"; failed=1; continue; fi
     while IFS= read -r -d '' path; do
@@ -25,7 +26,7 @@ for root in "${roots[@]}"; do
             uid=$(stat -c '%u' "$path"); mode=$(stat -c '%a' "$path")
         fi
         mask=$((8#$mode))
-        if [ "$uid" != 0 ] || ((mask & 0022)) || { [[ "$path" = "$state" || "$path" = "$state/"* ]] && ((mask & 0077)); }; then
+        if [ "$uid" != 0 ] || ((mask & 0022)) || { [[ "$path" = "$state" || "$path" = "$state/"* ]] && ((mask & 0077)); } || { [[ "$path" = "$logs" || "$path" = "$logs/"* ]] && ((mask & 0007)); }; then
             echo "FAIL $path"; failed=1
         else echo "PASS $path"; fi
     done < <(find "$root" -print0)
