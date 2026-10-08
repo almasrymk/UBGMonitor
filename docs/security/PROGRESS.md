@@ -873,3 +873,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - عنوان General Monitoring Settings وأيقونة CogOutline كبيرة؛ بطاقة Monitoring Intervals بأيقونة ClockOutline وعمودين وصفوف ذات فواصل ووصف لكل إعداد. الحقول الرقمية NumericUpDown بقيم مرتبطة بنفس خصائص الإعدادات وحد أدنى 1، واختبار السرعة يسمح بصفر لتعطيله؛ لا نسخ لقيم المرجع الثابتة.
 - Data Retention وPreferences جنبًا إلى جنب مع أيقونات DatabaseOutline وTune؛ قائمة الاحتفاظ والشرح والتنبيه، واختيار Dark/Light مربوط بـ IsLightTheme، وإشعارات بنفس toggle الحالي. إعدادات الوصول البعيد السابقة محفوظة تحتها.
 - بناء Release ناجح بصفر أخطاء وتحذيري SYSLIB0057 القائمين؛ 196 نجاح و4 SKIPPED وصفر فشل. المطابقة البصرية التفاعلية DONE-UNVERIFIED. Service Status وMessages board العامة خارج هذه الشاشة لم تُنقل أو تُنسخ بيانات مشاكل وهمية من المرجع. لا master/push/install.
+
+### R4-S05 — تصغير حقول المراقبة وتنسيق أسهم الزيادة والنقصان
+- الحالة: DONE-VERIFIED
+- بطلب المالك تصغير الحقول دون تغيير العناوين: ارتفاع الحقول 34 وخط القيمة 13. قالب ButtonSpinner محلي لـ monitorcompact، سهمان ChevronUp/ChevronDown فوق بعض في حاوية مستديرة 20×28 على يمين الحقل؛ RepeatButton بالأسماء الأصلية للحفاظ على وظائف الزيادة والنقصان. اسم الجهاز بنفس ارتفاع الحقول وpadding 10,5.
+- بناء Release ناجح صفر أخطاء وتحذيرات؛ الاختبارات 196 نجاح و4 SKIPPED وصفر فشل. المظهر وتشغيل الأسهم تفاعليًا DONE-UNVERIFIED؛ لا ادعاء مطابقة حرفية قبل تشغيل الواجهة. لا master/push/install.
