@@ -12,6 +12,18 @@ public sealed class SettingsContractTests
         """)!.AsObject();
 
     [Fact]
+    public void Ordinary_edit_preserves_non_database_metadata_and_rejects_malformed_conditions()
+    {
+        var stored = Stored();
+        stored["MonitorPoints"]!.AsArray().Add(JsonNode.Parse("""{"MonitorPointId":"device","Type":"Device","Metadata":{"Tag":"private-fixture"}}"""));
+        var edit = SettingsContract.PublicSettings(stored);
+        Assert.Equal("private-fixture", SettingsContract.Merge(edit, stored)["MonitorPoints"]![1]!["Metadata"]!["Tag"]!.GetValue<string>());
+        edit["Conditions"] = new JsonArray("invalid");
+        Assert.Throws<ArgumentException>(() => SettingsContract.Merge(edit, stored));
+        Assert.Equal("private-fixture", stored["MonitorPoints"]![1]!["Metadata"]!["Tag"]!.GetValue<string>());
+    }
+
+    [Fact]
     public void Public_settings_exclude_secrets_blobs_and_unknown_sections_and_keep_editable_fields()
     {
         var result = SettingsContract.PublicSettings(Stored());

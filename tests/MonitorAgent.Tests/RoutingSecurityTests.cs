@@ -19,16 +19,18 @@ public sealed class RoutingSecurityTests
     {
         public int Calls;
         public Uri? LastUri;
+        public bool WaitForCancellation;
         public HttpClient CreateClient(string name) => new(this, false);
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
             Calls++;
             LastUri = request.RequestUri;
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new AgentRuntimeConfig
+            if (WaitForCancellation) await Task.Delay(Timeout.Infinite, ct);
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new AgentRuntimeConfig
             {
                 ConfigVersion = "9", AgentId = "configured", DatabaseConnectionString = "Data Source=/untrusted/network.db",
                 CpuCriticalThreshold = 75, MonitorPoints = [new MonitorPoint { MonitorPointId = "configured-point" }]
-            }) });
+            }) };
         }
     }
     private sealed class RecordingLogger<T> : ILogger<T>
@@ -39,6 +41,19 @@ public sealed class RoutingSecurityTests
         public void Log<TState>(LogLevel level, EventId id, TState state, Exception? ex, Func<TState, Exception?, string> format) => Count++;
     }
     private static IAgentIdentity Identity() => new AgentIdentity(Options.Create(new AgentOptions()));
+
+    [Fact]
+    public async Task Central_request_timeout_cancels_transport_and_preserves_cached_configuration()
+    {
+        using var transport = new Transport { WaitForCancellation = true };
+        var cache = new FakeLocalConfigCache();
+        var before = (await cache.GetConfigAsync()).ConfigVersion;
+        using var puller = new ConfigPuller(transport, cache, Identity(), new ConnectivityTracker(),
+            Options.Create(new RoutingOptions { CentralApiUrl = "https://central.test", CentralTimeoutSeconds = 1 }), new RecordingLogger<ConfigPuller>());
+        await puller.PullAsync(default).WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(1, transport.Calls);
+        Assert.Equal(before, (await cache.GetConfigAsync()).ConfigVersion);
+    }
 
     [Fact]
     public async Task Empty_routing_is_silent_and_does_not_create_health_issues()

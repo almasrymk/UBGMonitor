@@ -44,6 +44,9 @@ public static class SettingsContract
 
     public static JsonObject Merge(JsonObject submitted, JsonObject stored)
     {
+        if (Field(submitted, "Conditions") is JsonNode conditions &&
+            (conditions is not JsonArray array || array.Any(c => c is not JsonObject)))
+            throw new ArgumentException("Conditions must contain objects only.");
         var result = Normalize(submitted);
         var before = Normalize(stored);
         var general = result["General"]!.AsObject();
@@ -80,11 +83,14 @@ public static class SettingsContract
                 if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https"))
                     throw new ArgumentException("Website addresses must use HTTP or HTTPS.");
             }
+            var rawPoint = incoming.First(p => Field(p, "MonitorPointId")?.GetValue<string>() == id);
+            // Preserve private metadata for every point type, not only databases.
+            if (Field(rawPoint, "Metadata") is null)
+                point["Metadata"] = oldPoints.FirstOrDefault(p => p["MonitorPointId"]!.GetValue<string>() == id)?["Metadata"]?.DeepClone() ?? new JsonObject();
             if (point["Database"] is not JsonObject login) continue;
             if (!Enum.TryParse<DatabaseEngine>(login["Engine"]!.GetValue<string>(), out var engine) || !Enum.IsDefined(engine)) throw new ArgumentException("Database.Engine is invalid.");
             if (!Enum.TryParse<DatabaseTlsMode>(login["TlsMode"]!.GetValue<string>(), out var tls) || !Enum.IsDefined(tls)) throw new ArgumentException("Database.TlsMode is invalid.");
             if (login["Port"]!.GetValue<int>() is < 1 or > 65535) throw new ArgumentException("Database.Port must be 1-65535.");
-            var rawPoint = incoming.First(p => Field(p, "MonitorPointId")?.GetValue<string>() == id);
             var rawLogin = Field(rawPoint, "Database") as JsonObject;
             var password = rawLogin is null ? null : Field(rawLogin, "Password")?.GetValue<string>();
             if (SecretProtector.IsProtected(password)) throw new ArgumentException("Database.Password must be newly entered text, not a protected blob.");
@@ -95,9 +101,6 @@ public static class SettingsContract
                     throw new ArgumentException("Database target changed; enter the password again.");
                 login["Password"] = old?["Password"]?.DeepClone() ?? JsonValue.Create("");
             }
-            // The public DTO intentionally omits metadata; an ordinary edit must preserve it.
-            if (Field(rawPoint, "Metadata") is null)
-                point["Metadata"] = oldPoints.FirstOrDefault(p => p["MonitorPointId"]!.GetValue<string>() == id)?["Metadata"]?.DeepClone() ?? new JsonObject();
             login.Remove("HasPassword");
         }
         ValidateStrings(result);

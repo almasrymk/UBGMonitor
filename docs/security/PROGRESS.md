@@ -583,3 +583,9 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - التغيير: xUnit 2.5.3 إلى 2.9.3 فقط؛ يحافظ على واجهة اختبارات xUnit 2 ولا يغير runner. الحزمتان System.Net.Http 4.3.0 وSystem.Text.RegularExpressions 4.3.0 لم تعودا في vulnerable dependency graph.
 - التحقق: restore ناجح، Release build بلا warnings/errors؛ 154 نجاح/3 Unix skip/0 فشل. vulnerable audit النهائي لجميع المشاريع بلا أي vulnerabilities مبلغ عنها. التقرير TestResults/dependency-vulnerabilities-final.json محلي فقط.
 - الحد: خلو الفحص لا يثبت غياب جميع الثغرات، والاختبار عبر Unix لم يُشغّل محليًا.
+
+### R7-S01 — اختبارات إضافية لحفظ الإعدادات والمهلة
+- الحالة: DONE-VERIFIED
+- أصلح SettingsContract حفظ metadata الخاصة لنقاط غير قواعد البيانات، ويرفض Conditions غير الصحيحة بدل إسقاطها بصمت. PublicSettings يظل لا يكشف metadata.
+- الاختبارات: Ordinary_edit_preserves_non_database_metadata_and_rejects_malformed_conditions وCentral_request_timeout_cancels_transport_and_preserves_cached_configuration. لا شبكة فعلية؛ transport ينتظر cancellation.
+- التحقق: Release build بلا warnings/errors؛ 156 نجاح/3 Unix skip/0 فشل. لا تغييرات في تصميم الواجهة أو master.
