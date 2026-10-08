@@ -115,6 +115,11 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _openFirewallPort;
     [ObservableProperty] private string _remoteFingerprint = "Remote access has not been configured.";
     [ObservableProperty] private string _remoteCertificateDetails = "No certificate details available.";
+    [ObservableProperty] private string _certificateExpiry = "—";
+    [ObservableProperty] private string _certificateSubject = "—";
+    [ObservableProperty] private string _certificateIssuer = "—";
+    [ObservableProperty] private string _certificateSerial = "—";
+    [ObservableProperty] private string _certificateValidity = "Not configured";
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasTemporaryRemoteKey))]
     private string _newRemoteKey = string.Empty;
@@ -271,6 +276,11 @@ public sealed partial class SettingsViewModel : ObservableObject
         }
         finally { _loadingRemoteStatus = false; }
         RemoteFingerprint = status.Fingerprint is null ? "No remote certificate yet." : "Certificate SHA-256: " + status.Fingerprint;
+        CertificateExpiry = status.CertificateNotAfter?.ToString("yyyy/MM/dd HH:mm") ?? "—";
+        CertificateSubject = status.CertificateSubject ?? "—";
+        CertificateIssuer = status.CertificateIssuer ?? "—";
+        CertificateSerial = status.CertificateSerialNumber ?? "—";
+        CertificateValidity = status.CertificateNotBefore <= DateTime.Now && status.CertificateNotAfter > DateTime.Now ? "Valid dates" : "Not current";
         RemoteCertificateDetails = status.CertificateNotAfter is { } expires && status.CertificateNotBefore is { } starts
             ? $"Validity: {(starts <= DateTime.Now && expires > DateTime.Now ? "Current" : "Outside validity period")}\nExpires on: {expires:yyyy/MM/dd HH:mm}\nSubject: {status.CertificateSubject}\nIssuer: {status.CertificateIssuer}\nSerial number: {status.CertificateSerialNumber}"
             : "No certificate details available.";

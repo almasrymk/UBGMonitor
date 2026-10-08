@@ -61,6 +61,24 @@ public partial class SettingsView : UserControl
         if (password is null) { MonitorAgent.UI.Services.UiPlatform.ShowMessage("Copy password", "No saved password could be read. Save this monitor point first."); return; }
         await MonitorAgent.UI.Services.UiPlatform.CopySensitiveTextAsync(password);
     }
+    private async void CopyRemoteKey_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string role } button) await CopyRemoteKeyAndShowHintAsync(button, role);
+    }
+    private async void CopyConnectionValue_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string kind } button) return;
+        var settings = (DataContext as MainViewModel)?.Settings ?? DataContext as SettingsViewModel;
+        if (settings is null) return;
+        var value = kind == "url" ? settings.ApiBaseUrl : settings.ClientAccessKey;
+        if (string.IsNullOrWhiteSpace(value)) return;
+        await MonitorAgent.UI.Services.UiPlatform.CopySensitiveTextAsync(value, () =>
+        {
+            ToolTip.SetTip(button, new TextBlock { Text = "Copied", FontWeight = Avalonia.Media.FontWeight.Bold, Foreground = Avalonia.Media.Brushes.LimeGreen });
+            ToolTip.SetIsOpen(button, true);
+            Avalonia.Threading.DispatcherTimer.RunOnce(() => { ToolTip.SetIsOpen(button, false); ToolTip.SetTip(button, "Click to copy"); }, TimeSpan.FromMilliseconds(1200));
+        });
+    }
     private async void RemoteKey_PointerReleased(object? sender, Avalonia.Input.PointerReleasedEventArgs e)
     {
         if (sender is not TextBlock label || e.InitialPressMouseButton is not
@@ -68,6 +86,12 @@ public partial class SettingsView : UserControl
         var settings = (DataContext as MainViewModel)?.Settings ?? DataContext as SettingsViewModel;
         if (settings?.CanManageRemoteAccess != true || label.Tag is not string role) return;
         e.Handled = true;
+        await CopyRemoteKeyAndShowHintAsync(label, role);
+    }
+    private async Task CopyRemoteKeyAndShowHintAsync(Control label, string role)
+    {
+        var settings = (DataContext as MainViewModel)?.Settings ?? DataContext as SettingsViewModel;
+        if (settings?.CanManageRemoteAccess != true) return;
         void Copied(string copiedRole)
         {
             if (copiedRole != role) return;

@@ -10,17 +10,17 @@
                 <Grid ColumnDefinitions="*,28,*">
                     <StackPanel Grid.Column="0">
                         <TextBlock Classes="flabel" Text="This app connects to"/>
-                        <TextBox Classes="field wide" Text="{Binding ApiBaseUrl}"
-                                 ToolTip.Tip="This computer: 127.0.0.1. Remote: https://pc-name:5050"/>
+                        <Grid ColumnDefinitions="*,40" ColumnSpacing="8"><TextBox Classes="field wide" Text="{Binding ApiBaseUrl}"
+                                 ToolTip.Tip="This computer: 127.0.0.1. Remote: https://pc-name:5050"/><Button Grid.Column="1" Tag="url" Click="CopyConnectionValue_Click" Classes="footer" Padding="8" MinWidth="0" ToolTip.Tip="Click to copy"><mi:MaterialIcon Kind="ContentCopy" Width="16" Height="16"/></Button></Grid>
                     </StackPanel>
                     <StackPanel Grid.Column="2">
                         <TextBlock Classes="flabel" Text="Access key of that service (if it has one)"/>
-                        <TextBox Classes="field wide" Text="{Binding ClientAccessKey}"/>
+                        <Grid ColumnDefinitions="*,40" ColumnSpacing="8"><TextBox Classes="field wide" Text="{Binding ClientAccessKey}" Watermark="Enter access key..."/><Button Grid.Column="1" Tag="client-key" Click="CopyConnectionValue_Click" Classes="footer" Padding="8" MinWidth="0" ToolTip.Tip="Click to copy"><mi:MaterialIcon Kind="ContentCopy" Width="16" Height="16"/></Button></Grid>
                     </StackPanel>
                 </Grid>
                 <StackPanel Orientation="Horizontal">
-                    <Button Content="Connect" Command="{Binding ConnectCommand}" Classes="footer" Margin="0" MinWidth="90"/>
-                    <Button Content="Reset pairing" Command="{Binding ResetPairingCommand}" Classes="footer"/>
+                    <Button Background="{DynamicResource AccentGreenBrush}" Content="▶  Connect" Command="{Binding ConnectCommand}" Classes="footer" Margin="0" MinWidth="90"/>
+                    <Button Content="↻  Reset pairing" Command="{Binding ResetPairingCommand}" Classes="footer"/>
                     <TextBlock Classes="connmsg" Classes.ok="{Binding IsConnectionOk}" Text="{Binding ConnectionMessage}"
                                VerticalAlignment="Center" TextWrapping="Wrap" Margin="12,0,0,0" MaxWidth="700"/>
                 </StackPanel>
@@ -210,7 +210,7 @@
                 Padding="12,10">
             <StackPanel>
             <StackPanel Orientation="Horizontal">
-                <Button Content="Save" Command="{Binding SaveCommand}" Classes="footer" Margin="0,0,8,0" Padding="18,6"
+                <Button Background="{DynamicResource AccentGreenBrush}" Content="Save Changes" Command="{Binding SaveCommand}" Classes="footer" Margin="0,0,8,0" Padding="18,6"
                         ToolTip.Tip="Save the changes in this tab" ToolTip.ShowOnDisabled="True"/>
                 <Button Content="Reset" Click="Reset_Click" Classes="footer" Margin="0" Padding="18,6"
                         IsEnabled="{Binding HasChanges}" ToolTip.Tip="Undo the unsaved changes in this tab"
@@ -302,11 +302,11 @@
                         </StackPanel>
                     </Grid>
 
-                    <TextBlock Text="Secure Remote Access" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,22,0,2"/>
+                    <StackPanel Orientation="Horizontal" Spacing="14" Margin="0,4,0,6"><mi:MaterialIcon Kind="ShieldCheck" Width="28" Height="28" Foreground="{DynamicResource AccentGreenBrush}" VerticalAlignment="Center"/><TextBlock Text="Secure Remote Access" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center"/></StackPanel>
                     <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,12"
                                Text="Configure secure remote access for this device. Choose the listening address and port; keys are prepared automatically. Changes to access and firewall options are applied when you click Save."/>
                     <Border Classes="settingscard"><StackPanel Spacing="8">
-                    <TextBlock Text="Connection Endpoint" FontSize="16" FontWeight="SemiBold"/>
+                    <StackPanel Orientation="Horizontal" Spacing="14" Margin="0,4,0,6"><mi:MaterialIcon Kind="Web" Width="22" Height="22" Foreground="{DynamicResource AccentGreenBrush}" VerticalAlignment="Center"/><TextBlock Text="Connection Endpoint" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/></StackPanel>
                     <TextBlock Text="Choose the network interface and service port." FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
                     <Grid ColumnDefinitions="*,28,*">
                         <StackPanel Grid.Column="0">
@@ -333,37 +333,42 @@
                         </StackPanel>
                     </StackPanel></StackPanel></Border>
                     <Border Classes="settingscard" IsVisible="{Binding NetworkIndicatorsVisible}"><StackPanel Spacing="8" IsEnabled="{Binding CanManageRemoteAccess}">
-                        <TextBlock Text="Access Permissions" FontSize="16" FontWeight="SemiBold"/>
+                        <StackPanel Orientation="Horizontal" Spacing="14" Margin="0,4,0,6"><mi:MaterialIcon Kind="AccountGroup" Width="22" Height="22" Foreground="{DynamicResource AccentGreenBrush}" VerticalAlignment="Center"/><TextBlock Text="Access Permissions" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/></StackPanel>
                         <TextBlock Text="Manage remote viewer and administrator permissions." FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
-                        <CheckBox IsVisible="{Binding NetworkIndicatorsVisible}" Content="Allow remote administration with a separate admin key" IsChecked="{Binding RemoteKeyPanelOpen}"/>
+                        <StackPanel Orientation="Horizontal" Spacing="10"><ToggleButton Classes="onoff" IsChecked="{Binding RemoteKeyPanelOpen}"/><StackPanel><TextBlock Text="Allow remote administration with a separate admin key"/><TextBlock Text="When enabled, a separate administrator key is required for administration." FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/></StackPanel></StackPanel>
                         <StackPanel IsVisible="{Binding NetworkIndicatorsVisible}" Spacing="6" Margin="16,0,0,6">
-                            <Grid ColumnDefinitions="100,Auto,Auto" HorizontalAlignment="Left">
-                                <CheckBox FontSize="12" RenderTransformOrigin="0%,50%" Content="Viewer key" IsChecked="{Binding RemoteKeyPanelOpen, Mode=OneWay}" IsEnabled="False"><CheckBox.RenderTransform><ScaleTransform ScaleX="0.85" ScaleY="0.85"/></CheckBox.RenderTransform></CheckBox>
-                                <TextBlock FontWeight="Bold" Foreground="{DynamicResource AccentBlueBrush}" Cursor="Hand" ToolTip.Tip="Click to copy" Grid.Column="1" Tag="viewer" PointerReleased="RemoteKey_PointerReleased" Text="{Binding ViewerKeyDisplay}" VerticalAlignment="Center" TextWrapping="Wrap">
-                                </TextBlock>
-                                <Button Grid.Column="2" Margin="8,0,0,0" Width="28" Height="24" MinWidth="0" MinHeight="0" Padding="2" FontSize="12" Content="↻" ToolTip.Tip="Regenerate viewer key" Command="{Binding ManageRemoteAccessCommand}" CommandParameter="create-viewer-key" Classes="footer"/>
+                                                        <Grid ColumnDefinitions="130,*,40,130" ColumnSpacing="10">
+                                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center"><mi:MaterialIcon Kind="KeyVariant" Width="16" Height="16" Foreground="{DynamicResource TextSecondaryBrush}"/><CheckBox Content="Viewer key" IsChecked="{Binding RemoteKeyPanelOpen, Mode=OneWay}" IsEnabled="False"/></StackPanel>
+                                <Border Grid.Column="1" BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1" CornerRadius="5" Background="{DynamicResource BackgroundDarkBrush}" Padding="12,7"><TextBlock FontWeight="Bold" Foreground="{DynamicResource AccentBlueBrush}" Cursor="Hand" ToolTip.Tip="Click to copy" Tag="viewer" PointerReleased="RemoteKey_PointerReleased" Text="{Binding ViewerKeyDisplay}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/></Border>
+                                <Button Grid.Column="2" Tag="viewer" Click="CopyRemoteKey_Click" ToolTip.Tip="Click to copy" Classes="footer" Padding="8" MinWidth="0"><mi:MaterialIcon Kind="ContentCopy" Width="16" Height="16"/></Button>
+                                <Button Grid.Column="3" Command="{Binding ManageRemoteAccessCommand}" CommandParameter="create-viewer-key" Classes="footer" Padding="10,7"><StackPanel Orientation="Horizontal" Spacing="8"><mi:MaterialIcon Kind="Refresh" Width="16" Height="16"/><TextBlock Text="Regenerate"/></StackPanel></Button>
                             </Grid>
-                            <Grid ColumnDefinitions="100,Auto,Auto" HorizontalAlignment="Left">
-                                <CheckBox FontSize="12" RenderTransformOrigin="0%,50%" Content="Admin key" IsChecked="{Binding RemoteAdministration}" IsEnabled="{Binding RemoteKeyPanelOpen}"><CheckBox.RenderTransform><ScaleTransform ScaleX="0.85" ScaleY="0.85"/></CheckBox.RenderTransform></CheckBox>
-                                <TextBlock FontWeight="Bold" Foreground="{DynamicResource AccentBlueBrush}" Cursor="Hand" ToolTip.Tip="Click to copy" Grid.Column="1" Tag="admin" PointerReleased="RemoteKey_PointerReleased" Text="{Binding AdminKeyDisplay}" VerticalAlignment="Center" TextWrapping="Wrap">
-                                </TextBlock>
-                                <Button Grid.Column="2" Margin="8,0,0,0" Width="28" Height="24" MinWidth="0" MinHeight="0" Padding="2" FontSize="12" Content="↻" ToolTip.Tip="Regenerate admin key" Command="{Binding ManageRemoteAccessCommand}" CommandParameter="create-admin-key" Classes="footer"/>
+                                                        <Grid ColumnDefinitions="130,*,40,130" ColumnSpacing="10">
+                                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center"><mi:MaterialIcon Kind="KeyVariant" Width="16" Height="16" Foreground="{DynamicResource TextSecondaryBrush}"/><CheckBox Content="Admin key" IsChecked="{Binding RemoteAdministration}" IsEnabled="{Binding RemoteKeyPanelOpen}"/></StackPanel>
+                                <Border Grid.Column="1" BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1" CornerRadius="5" Background="{DynamicResource BackgroundDarkBrush}" Padding="12,7"><TextBlock FontWeight="Bold" Foreground="{DynamicResource AccentBlueBrush}" Cursor="Hand" ToolTip.Tip="Click to copy" Tag="admin" PointerReleased="RemoteKey_PointerReleased" Text="{Binding AdminKeyDisplay}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/></Border>
+                                <Button Grid.Column="2" Tag="admin" Click="CopyRemoteKey_Click" ToolTip.Tip="Click to copy" Classes="footer" Padding="8" MinWidth="0"><mi:MaterialIcon Kind="ContentCopy" Width="16" Height="16"/></Button>
+                                <Button Grid.Column="3" Command="{Binding ManageRemoteAccessCommand}" CommandParameter="create-admin-key" Classes="footer" Padding="10,7"><StackPanel Orientation="Horizontal" Spacing="8"><mi:MaterialIcon Kind="Refresh" Width="16" Height="16"/><TextBlock Text="Regenerate"/></StackPanel></Button>
                             </Grid>
                         </StackPanel>
                     </StackPanel></Border>
                     <Border Classes="settingscard"><StackPanel Spacing="8" IsEnabled="{Binding CanManageRemoteAccess}">
-                        <TextBlock Text="Certificate" FontSize="16" FontWeight="SemiBold"/>
+                        <StackPanel Orientation="Horizontal" Spacing="14" Margin="0,4,0,6"><mi:MaterialIcon Kind="CertificateOutline" Width="22" Height="22" Foreground="{DynamicResource AccentGreenBrush}" VerticalAlignment="Center"/><TextBlock Text="Certificate" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/></StackPanel>
                         <WrapPanel>
-                            <Button Content="Regenerate certificate" Command="{Binding ManageRemoteAccessCommand}" CommandParameter="regenerate-certificate" Classes="footer"/>
-                            <Button Content="Import customer PFX" Click="ImportCertificate_Click" Classes="footer"/>
+                            <Button Command="{Binding ManageRemoteAccessCommand}" CommandParameter="regenerate-certificate" Classes="footer" Padding="14,10"><StackPanel Orientation="Horizontal" Spacing="10"><mi:MaterialIcon Kind="Refresh" Width="22" Height="22"/><StackPanel><TextBlock Text="Regenerate Certificate" FontWeight="SemiBold"/><TextBlock Text="Create a new self-signed certificate." FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/></StackPanel></StackPanel></Button>
+                            <Button Click="ImportCertificate_Click" Classes="footer" Padding="14,10"><StackPanel Orientation="Horizontal" Spacing="10"><mi:MaterialIcon Kind="Upload" Width="22" Height="22"/><StackPanel><TextBlock Text="Import Customer PFX" FontWeight="SemiBold"/><TextBlock Text="Import an existing certificate (.pfx)." FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/></StackPanel></StackPanel></Button>
                         </WrapPanel>
                         <TextBox IsVisible="{Binding HasTemporaryRemoteKey}" Text="{Binding NewRemoteKey}" IsReadOnly="True" Watermark="Temporary key if encrypted display storage fails."/>
-                        <Border Background="{DynamicResource SurfaceDarkAltBrush}" CornerRadius="6" Padding="12"><StackPanel Spacing="6"><TextBlock Text="{Binding RemoteFingerprint}" TextWrapping="Wrap" FontSize="12"/><TextBlock Text="{Binding RemoteCertificateDetails}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/></StackPanel></Border>
+                                                <Border Background="{DynamicResource SurfaceDarkAltBrush}" BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1" CornerRadius="6" Padding="12">
+                            <Grid ColumnDefinitions="*,24,*">
+                                <StackPanel Spacing="8"><TextBlock Text="{Binding RemoteFingerprint}" FontSize="12" TextWrapping="Wrap"/><TextBlock Text="Serial Number" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/><TextBlock Text="{Binding CertificateSerial}" FontSize="12" TextWrapping="Wrap"/></StackPanel>
+                                <Grid Grid.Column="2" ColumnDefinitions="90,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="7"><TextBlock Text="Validity" FontSize="12"/><TextBlock Grid.Column="1" Text="{Binding CertificateValidity}" Foreground="{DynamicResource AccentGreenBrush}" FontSize="12"/><TextBlock Grid.Row="1" Text="Expires On" FontSize="12"/><TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding CertificateExpiry}" FontSize="12"/><TextBlock Grid.Row="2" Text="Issuer" FontSize="12"/><TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding CertificateIssuer}" FontSize="12" TextWrapping="Wrap"/><TextBlock Grid.Row="3" Text="Subject" FontSize="12"/><TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding CertificateSubject}" FontSize="12" TextWrapping="Wrap"/></Grid>
+                            </Grid>
+                        </Border>
                         <TextBlock Text="These actions require a local MonitorAgent Administrator connection." TextWrapping="Wrap" FontSize="11"/>
                     </StackPanel>
                     </Border>
                     <Border Classes="settingscard"><StackPanel Spacing="8">
-                    <TextBlock Text="Connect This App" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,10,0,2"/>
+                    <StackPanel Orientation="Horizontal" Spacing="14" Margin="0,4,0,6"><mi:MaterialIcon Kind="LinkVariant" Width="22" Height="22" Foreground="{DynamicResource AccentGreenBrush}" VerticalAlignment="Center"/><TextBlock Text="Connect This App" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/></StackPanel>
                     <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,12"
                                Text="The Agent service this app shows: the one on this computer (127.0.0.1) or one on another computer. Kept by this app only."/>
                     <ContentControl Content="{Binding}" ContentTemplate="{StaticResource ConnectFields}"/>
