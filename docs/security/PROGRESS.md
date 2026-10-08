@@ -754,3 +754,9 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - بطلب صريح من المالك: عند أول ظهور بعنوان شبكة، المفتاح الناقص أو الموجود دون نسخة عرض محلية يستبدل تلقائيًا بمفتاح جديد محفوظ مشفرًا؛ الإجراء يشمل تحميل الشاشة إذا كان العنوان محفوظًا مسبقًا. في الزيارات التالية تطابق بصمة المخزن يمنع إعادة الإنشاء. تدوير مفتاح قديم غير متاح نصه يبطل القديم حسب التوضيح للمالك؛ زر التدوير اليدوي ما زال يتطلب تأكيدًا.
 - الأزرار بجوار النص مباشرة عبر Auto columns ومحاذاة Left بدل عمود ممتد يفصل بينهما. لا تفعيل Admin تلقائي أو تطبيق firewall دون Save.
 - الاختبارات: أضيفت حالة existing/no-cache وتحقق استدعاء ثانٍ دون POST إضافي. Build ناجح صفر أخطاء مع تحذيري SYSLIB0057 القائمين؛ 193 نجاح/4 SKIPPED/0 فشل. الواجهة تفاعليًا غير متحققة؛ لا master/push/install أو تدوير مفاتيح الخدمة الحقيقية أثناء الاختبارات.
+
+### إصلاح إلغاء Upload لاختبار سرعة الإنترنت — 2026-10-08
+- الحالة: DONE-VERIFIED
+- الصورة توضح IOException من WriteAsync عند إلغاء socket. ProgressContent يربط request token مع serialization token حتى عند استخدام overload بلا token؛ يفحص الإلغاء قبل كل chunk ويحوّل IOException عند إلغاء فعلي فقط إلى OperationCanceledException في موضع الكتابة. RunStreamAsync يعالج إلغاء مرحلة القياس كما سابقًا. أخطاء الاتصال دون إلغاء لا تُبتلع ولا تُحسب bytes فاشلة.
+- SpeedTestUploadTests يحاكي stream يلغي token ثم يرمي IOException: إثبات cancellation وعدم عد البيانات؛ اختبار فشل حقيقي يظل HttpRequestException واختبار نجاح 100000 byte يستمر ويحسب الحجم كاملًا. جميعها offline دون speed-test traffic.
+- التحقق: Release build ناجح صفر أخطاء مع تحذيري SYSLIB0057 القائمين؛ 195 نجاح/4 SKIPPED/0 فشل. الإلغاء داخل Visual Studio واختبار سرعة حقيقي غير متحققين؛ لا تغيير debugger settings ولا master/push/install.

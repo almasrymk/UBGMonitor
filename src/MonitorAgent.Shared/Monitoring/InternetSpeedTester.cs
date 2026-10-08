@@ -102,22 +102,33 @@ public static class InternetSpeedTester
     private static async Task UploadStreamAsync(int attempt, Action<long> onBytes, CancellationToken token)
     {
         _ = attempt;
-        using var content = new ProgressContent(UploadBytesPerRequest, onBytes);
+        using var content = new ProgressContent(UploadBytesPerRequest, onBytes, token);
         using var response = await Client.PostAsync(UploadUrl, content, token).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
     }
 
-    private sealed class ProgressContent(int length, Action<long> onBytes) : HttpContent
+    private sealed class ProgressContent(int length, Action<long> onBytes, CancellationToken requestToken) : HttpContent
     {
         private static readonly byte[] Chunk = CreateChunk();
 
         protected override async Task SerializeToStreamAsync(Stream stream, System.Net.TransportContext? context, CancellationToken cancellationToken)
         {
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(requestToken, cancellationToken);
+            var token = linked.Token;
             var remaining = length;
             while (remaining > 0)
             {
+                token.ThrowIfCancellationRequested();
                 var size = Math.Min(Chunk.Length, remaining);
-                await stream.WriteAsync(Chunk.AsMemory(0, size), cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    await stream.WriteAsync(Chunk.AsMemory(0, size), token).ConfigureAwait(false);
+                }
+                catch (IOException ex) when (token.IsCancellationRequested)
+                {
+                    // Windows may surface an aborted socket write as IOException rather than cancellation.
+                    throw new OperationCanceledException("Speed test upload was canceled.", ex, token);
+                }
                 onBytes(size);
                 remaining -= size;
             }
