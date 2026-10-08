@@ -1,3 +1,4 @@
+using MonitorAgent.Cloud;
 using MonitorAgent.Service.Config;
 using MonitorAgent.Service.Connectivity;
 using MonitorAgent.Service.Licensing;
@@ -106,6 +107,10 @@ try
     builder.Services.AddHostedService<ApplicationsWatcher>();
     builder.Services.AddHostedService<ConfigPuller>();
     builder.Services.AddHostedService<LocalApiHost>();
+
+    // Monitor Cloud connector (off unless Cloud:Enabled or MONITORAGENT_CLOUDURL is set).
+    builder.Services.AddSingleton<ICloudAgentSource, MonitorAgent.Service.Cloud.ServiceCloudSource>();
+    builder.Services.AddMonitorCloud(CloudOptions.FromConfiguration(builder.Configuration, AgentPaths.StateFolder));
 
     var host = builder.Build();
     _ = host.Services.GetRequiredService<ISensorsService>();

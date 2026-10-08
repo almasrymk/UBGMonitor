@@ -31,6 +31,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MonitorAgent.Shared\MonitorAgent.Shared.csproj" />
+    <ProjectReference Include="..\MonitorAgent.Cloud\MonitorAgent.Cloud.csproj" />
   </ItemGroup>
 
 </Project>

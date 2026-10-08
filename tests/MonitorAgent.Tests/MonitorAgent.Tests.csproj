@@ -23,6 +23,7 @@
     <ProjectReference Include="..\..\src\MonitorAgent.Service\MonitorAgent.Service.csproj" />
     <ProjectReference Include="..\..\src\MonitorAgent.Shared\MonitorAgent.Shared.csproj" />
     <ProjectReference Include="..\..\src\MonitorAgent.Desktop\MonitorAgent.Desktop.csproj" />
+    <ProjectReference Include="..\..\src\MonitorAgent.Cloud\MonitorAgent.Cloud.csproj" />
   </ItemGroup>
 
 </Project>
