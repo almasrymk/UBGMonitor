@@ -785,3 +785,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - Copied باللون LimeGreen وخط Bold حسب طلب المالك. تغيير عرض فقط.
 - Release build ناجح صفر أخطاء مع SYSLIB0057 القائمين؛ 195 نجاح/4 SKIPPED/0 فشل. المظهر تفاعليًا غير متحقق؛ لا master/push/install.
+
+### R4-S05 — مسافة زر إعادة الإنشاء
+- الحالة: DONE-VERIFIED
+- إضافة Margin يسار 8 لزرّي إعادة إنشاء المفاتيح لإبعادهما قليلًا عن النص حسب طلب المالك.
+- Release build ناجح صفر أخطاء وتحذيرا SYSLIB0057 قائمان؛ 195 نجاح/4 SKIPPED/0 فشل. المظهر تفاعليًا غير متحقق؛ لا master/push/install.
