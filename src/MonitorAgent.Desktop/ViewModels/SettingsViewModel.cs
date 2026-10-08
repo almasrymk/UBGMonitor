@@ -116,16 +116,21 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string _remoteFingerprint = "Remote access has not been configured.";
     [ObservableProperty] private string _newRemoteKey = string.Empty;
     public bool CanManageRemoteAccess => _client.CanAdminister && _client.IsLocalTransport;
-    public bool CanEditNetworkOptions => ServiceListenAddress.Trim() == LocalOnlyAddress;
+    public bool CanEditNetworkOptions => string.IsNullOrWhiteSpace(ServiceListenAddress) || ServiceListenAddress.Trim() == LocalOnlyAddress;
     private bool _loadingListenAddress;
+    private string _lastValidListenAddress = LocalOnlyAddress;
     partial void OnServiceListenAddressChanged(string? oldValue, string newValue)
     {
         OnPropertyChanged(nameof(CanEditNetworkOptions));
+        // ComboBox can clear SelectedValue temporarily while replacing its selection.
+        if (!System.Net.IPAddress.TryParse(newValue, out _)) return;
+        var previous = _lastValidListenAddress;
+        _lastValidListenAddress = newValue;
         if (_loadingListenAddress) return;
         RemoteEnabled = !CanEditNetworkOptions;
         OpenFirewallPort = !CanEditNetworkOptions;
         if (!CanEditNetworkOptions && IsLoaded)
-            _ = ConfirmNetworkSelectionAsync(oldValue ?? LocalOnlyAddress, newValue);
+            _ = ConfirmNetworkSelectionAsync(previous, newValue);
     }
     private async Task ConfirmNetworkSelectionAsync(string previous, string selected)
     {
@@ -327,7 +332,7 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     /// <summary>The service is open to the network and any computer can use it.</summary>
     public bool IsServiceOpenWithoutKey =>
-        ServiceListenAddress.Trim() != LocalOnlyAddress && string.IsNullOrWhiteSpace(RemoteAccessKey);
+        !CanEditNetworkOptions && string.IsNullOrWhiteSpace(RemoteAccessKey);
 
     private static int RetentionDays(int days) => days <= 0 ? DefaultRetentionDays : Math.Clamp(days, 30, 365);
 

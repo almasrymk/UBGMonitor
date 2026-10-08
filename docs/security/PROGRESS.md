@@ -686,3 +686,10 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - خيار فتح البورت نُقل فوق Allow remote administration؛ خانة رقم البورت تبقى بجوار Service listens on حسب الطلب السابق. لا فتح firewall أو تفعيل تلقائي بمجرد اختيار العنوان، ولا تجاوز شرط المفتاح أو صلاحيات IPC.
 - الملفات: SettingsViewModel.cs وSettingsView.axaml. بعد إصلاح nullable warning: Release build 0 warnings/errors، tests 160 نجاح/3 Unix-only skip/0 فشل.
 - غير المتحقق: الرسالة وتسلسل الاختيار/Cancel وتفعيل checkboxs لم تُختبر تفاعليًا في Desktop؛ لا تغيير master أو نشر.
+
+### R4-S05 — إصلاح null عند تغيير اختيار عنوان الشبكة
+- الحالة: DONE-VERIFIED
+- السبب: Avalonia ComboBox يمرر SelectedValue=null مؤقتًا؛ CanEditNetworkOptions استدعت Trim قبل التحقق فتسببت في NullReferenceException الظاهرة عند المالك.
+- التغيير: null/empty آمن في getter، callback يتجاهل القيمة غير الصالحة ولا يغير HTTPS/firewall أو يعرض رسالة. آخر عنوان صالح يُحفظ ليعود إليه Cancel بعد المرور بقيمة null؛ IsServiceOpenWithoutKey أصبح null-safe كذلك.
+- الاختبارات الجديدة NetworkSelectionTests تنفذ ViewModel الحقيقي: nonlocal ثم null ثم 127 بلا exception أو تغيير flags أثناء null، وCancel يعيد آخر عنوان صالح بلا رسالة للقيمة المؤقتة.
+- التحقق: Release build بلا تحذيرات/أخطاء؛ suite 162 نجاح/3 Unix-only skip/0 فشل. اختبار الواجهة التفاعلي في Visual Studio لم يُنفذ؛ لا master أو نشر.
