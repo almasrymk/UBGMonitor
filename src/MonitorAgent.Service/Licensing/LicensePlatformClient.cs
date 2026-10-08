@@ -37,7 +37,7 @@ public interface ILicensePlatformClient
     Task<string?> GetSigningKeysAsync(CancellationToken cancellationToken);
 }
 
-/// <summary>Calls the licensing site's device endpoints, signing in with the built-in API client when one is set.</summary>
+/// <summary>Calls the licensing site's device endpoints using installation or legacy administrator-supplied credentials.</summary>
 public sealed class LicensePlatformClient : ILicensePlatformClient
 {
     public const string HttpClientName = "licensing";
@@ -72,7 +72,7 @@ public sealed class LicensePlatformClient : ILicensePlatformClient
             productCode = _options.ProductCode,
             appVersion = _identity.Version,
             os = OsName
-        }, Guid.NewGuid().ToString(), cancellationToken);
+        }, Guid.NewGuid().ToString(), deviceId, cancellationToken);
 
     public Task<LicenseReply> CheckAsync(string productKey, string deviceId, bool heartbeat, CancellationToken cancellationToken)
         => PostAsync(heartbeat ? "heartbeat" : "validate", new
@@ -82,10 +82,10 @@ public sealed class LicensePlatformClient : ILicensePlatformClient
             productCode = _options.ProductCode,
             appVersion = _identity.Version,
             os = OsName
-        }, null, cancellationToken);
+        }, null, deviceId, cancellationToken);
 
     public Task<LicenseReply> DeactivateAsync(string productKey, string deviceId, CancellationToken cancellationToken)
-        => PostAsync("deactivate", new { productKey, deviceId }, null, cancellationToken);
+        => PostAsync("deactivate", new { productKey, deviceId }, null, deviceId, cancellationToken);
 
     public async Task<string?> GetSigningKeysAsync(CancellationToken cancellationToken)
     {
@@ -105,15 +105,22 @@ public sealed class LicensePlatformClient : ILicensePlatformClient
 
     private Uri BaseUri => new(_options.PlatformUrl.TrimEnd('/') + "/");
 
-    private bool HasCredentials => _options.ClientId.Length > 0 && _options.ClientSecret.Length > 0;
+    private string ClientId => _options.DeviceCredential?.ClientId ?? _options.ClientId;
+    private string ClientSecret => _options.DeviceCredential?.ClientSecret ?? _options.ClientSecret;
 
-    private async Task<LicenseReply> PostAsync(string action, object body, string? idempotencyKey, CancellationToken cancellationToken)
+    private async Task<LicenseReply> PostAsync(string action, object body, string? idempotencyKey, string deviceId, CancellationToken cancellationToken)
     {
+        if (_options.DeviceCredential is { } enrolled && !enrolled.Matches(deviceId, _options))
+            return new LicenseReply(LicenseReplyKind.Unavailable, "The enrollment credential does not match this installation.", "DEVICE_ENROLLMENT_INVALID");
+        if (string.IsNullOrWhiteSpace(ClientId) || string.IsNullOrWhiteSpace(ClientSecret))
+            return new LicenseReply(LicenseReplyKind.Unavailable, "An installation credential is required.", "DEVICE_CREDENTIAL_REQUIRED");
         try
         {
             for (var attempt = 0; ; attempt++)
             {
-                var token = HasCredentials ? await GetAccessTokenAsync(cancellationToken) : null;
+                var token = await GetAccessTokenAsync(cancellationToken);
+                if (token is null)
+                    return new LicenseReply(LicenseReplyKind.Unavailable, "The platform could not authenticate this installation.", "DEVICE_AUTH_UNAVAILABLE");
                 using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(BaseUri, $"api/v1/licensing/{action}"))
                 {
                     Content = JsonContent.Create(body)
@@ -163,7 +170,7 @@ public sealed class LicensePlatformClient : ILicensePlatformClient
 
             using var response = await Client().PostAsJsonAsync(
                 new Uri(BaseUri, "api/v1/auth/client-token"),
-                new { clientId = _options.ClientId, clientSecret = _options.ClientSecret },
+                new { clientId = ClientId, clientSecret = ClientSecret },
                 cancellationToken);
             if (!response.IsSuccessStatusCode)
             {

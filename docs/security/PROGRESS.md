@@ -170,3 +170,68 @@
 - [ ] تأكيد إلغاء سر الترخيص المكشوف ومراجعة استخدامه.
 - [ ] دمج PR في `security/hardening` قبل بدء Run 1 كما تنص `RUN_PROMPTS.md`.
 - [ ] حسم ملاحظات مراجعة تصميم Run 2/4 عند Phase A: سياسات LocalAdministrator، فرض TLS على النقاط الجديدة من الخدمة، واختبار اتصال TLS فعلي، وتفاصيل هوية IPC وسحب الصلاحيات.
+
+## Run 5 — توسعة تسجيل الأجهزة حسب طلب صاحب المشروع (2026-10-08)
+
+الطلب الأحدث يتقدم على طلب متابعة master السابق: لا تعديلات إضافية عليه، لا نشر تلقائي، لا إزالة Authentication، لا ClientSecret مشترك موزع، وتنفيذ الأجزاء الآمنة مع تسجيل ما يحتاج اعتمادًا. فروع العمل codex/security-hardening-enrollment وcodex/device-enrollment. D1=NO؛ D2/D3 غير معتمدين. توسعة enrollment مفوضة صراحة رغم قاعدة التوقف الأصلية في S04. الخطوات E01/E02/E03/E05 مترابطة داخل المنصة وجُمعت لأن استخدام الحقول بدون migration والفحص بدون اختبارات لا ينتج تغييرًا قابلًا للتسليم؛ E04/E05 مترابطتان داخل Agent.
+
+### R5-E01 — نموذج الربط والترحيل
+- الحالة: DONE-UNVERIFIED
+- ماذا تغير ولماذا: ApiClient جديد مرتبط بجهاز وhash ترخيص وبنطاق activate/validate فقط؛ migration إضافية nullable لا تغير العملاء الموجودين. Design factory يمنع تشغيل host أو قراءة إعدادات النشر عند توليد migration.
+- الملفات: ApiClient.cs، Configurations.cs، AppDbContextDesignFactory.cs، DeviceClientBindings migration/designer/snapshot داخل مستودع المنصة.
+- الأوامر الفعلية: ef migrations add نجح؛ has-pending-model-changes نجح وأكد عدم وجود اختلاف؛ migrations script --idempotent نجح. SQL المولد يحتوي ADD للعمودين فقط داخل transaction مع migration history؛ لم يُطبق على قاعدة.
+- اختبار الأمان: scope escalation للعميل المرتبط يُرفض؛ سر الاعتماد لا يساوي hash المخزن ولا يظهر في audit.
+- اختبار عدم الانكسار: العملاء غير المرتبطين يعملون في اختبار legacy ودورة suite الأصلية.
+- غير المتحقق: ترقية SQL Server قديمة فعلية؛ اختبارات المنصة تستخدم SQLite EnsureCreated. يلزم staging وbackup واعتماد migration.
+- اختلاف عن الخطة: توسعة المنصة الجديدة مفوضة من المستخدم؛ لا pinning غير معتمد.
+
+### R5-E02 — إصدار اعتماد إداري مستقل
+- الحالة: DONE-VERIFIED
+- ماذا تغير ولماذا: endpoint بصلاحيتَي إدارة الترخيص/API Client، default-off، tenant filtering، تحقق active license/device/name، no-store، secret مرة واحدة وhash فقط في DB.
+- الملفات: ApiClientService.cs، BusinessControllers.cs، appsettings.json، DeviceEnrollmentTests.cs.
+- الأوامر الفعلية: build Release نجح؛ suite المنصة النهائي 136 ناجحًا، 0 فاشلًا، 0 متجاوزًا.
+- اختبار الأمان: anonymous/client forbidden، tenant mismatch لا يجد الترخيص، default-off، secrets فريدة وغير مسجلة، منع scopes زائدة.
+- اختبار عدم الانكسار: enrollment لا يحجز activation، ودورة activate/validate/heartbeat/deactivate تعمل.
+- غير المتحقق: صلاحيات النشر/قناة تسليم الاعتماد؛ لا endpoint anonymous ولا واجهة onboarding جديدة.
+- اختلاف عن الخطة: تسجيل إداري يدوي، لا اعتماد bootstrap مشترك.
+
+### R5-E03 — فرض الربط عند الاستخدام
+- الحالة: DONE-VERIFIED
+- ماذا تغير ولماذا: فحص client active وربطه بالجهاز والترخيص قبل الإجراءات الأربعة وقبل idempotency replay؛ يبقى legacy غير المرتبط متوافقًا. JWT العميل الملغى لا يصل لإعادة رد قديم.
+- الملفات: DeviceLicensingService.cs، LicensingController.cs، DeviceEnrollmentTests.cs.
+- الأوامر: suite المنصة النهائي 136 ناجحًا. أول build للاختبارات احتاج using إضافية؛ صُححت أخطاء compilation ولم تُضعف assertions.
+- اختبار الأمان: تغيير deviceId/productKey يُرفض في الأربعة؛ revoke ثم replay يُرفض.
+- اختبار عدم الانكسار: lifecycle للعميل الجديد وتفعيل legacy القديم ناجحان.
+- غير المتحقق: اختبار staging/عملاء حقيقيين، لم يتم الاتصال بمسارات licensing الإنتاجية.
+- اختلاف عن الخطة: لا شيء خارج توسعة التسجيل المصرح بها.
+
+### R5-E04 — استهلاك اعتماد الجهاز في Agent
+- الحالة: DONE-UNVERIFIED
+- ماذا تغير ولماذا: opt-in runtime configuration منفصل للجهاز، مع تحقق device/product/HTTPS/platform قبل إرسال السر؛ لا legacy fallback عند mismatch ولا anonymous device request عند غياب/رفض token. خيارات legacy والتوكنات الحالية وoffline logic محفوظة.
+- الملفات: LicensingOptions.cs، LicensePlatformClient.cs، DeviceEnrollmentClientTests.cs.
+- الأوامر: dotnet build MonitorAgent.sln -c Release --no-restore نجح 0 أخطاء/0 تحذيرات؛ dotnet test -c Release --no-build --no-restore نجح 96/0 فشل/1 Unix skip، الإجمالي97.
+- اختبار الأمان: mismatch يرسل صفر طلبات حتى مع legacy configured؛ refusal يرسل token request فقط؛ ToString لا يطبع secret؛ التشغيل يحتاج opt-in.
+- اختبار عدم الانكسار: bearer token reuse ودورة الطلبات ومسار legacy ناجحة؛ جميع LicensingTests الأصلية ناجحة.
+- غير المتحقق: حفظ دائم/تسليم آمن تحت حساب الخدمة يحتاج Run2/3/6؛ لا importer ولا LocalApi جديد ولا onboarding إنتاجي. Linux/macOS للتغيير الجديد غير مختبرين لأن النشر ممنوع.
+- اختلاف عن الخطة: إعداد runtime اختياري قابل للتجربة بدل حذف auth؛ لا shared secret في التوزيع.
+
+### R5-E05 — التحقق المشترك
+- الحالة: DONE-VERIFIED
+- الأوامر الفعلية: Release build للمشروعين ناجح؛ Agent97 إجمالي (96 pass/1skip)، المنصة136 pass. آخر build incremental للمنصة0 warning؛ build الكامل السابق أظهر CS0108 الموجودة مسبقًا في MediaController ولم تُعدل خارج النطاق. git diff --check للمشروعين ناجح. EF tools10.0.9 أظهر تنبيه إصدار مقابل runtime10.0.12 لكنه ولد migration/script بنجاح.
+- التفاصيل والأدلة: DEVICE_ENROLLMENT.md؛ نتائج TRX وSQL داخل TestResults في كل مستودع. اختبارات المنصة HTTP TestServer/SQLite؛ Agent HTTP fake. لا دليل end-to-end فعلي بين binary Agent ومنصة SQL Server؛ لا ندعي ذلك.
+- ملحوظة عامة: لم يُحذف اختبار ولم يتغير UI أو product identifiers؛ لا CI جديد بدون push.
+
+### R5-S01/R5-S02/R5-S05 — بوابات الإنتاج
+- الحالة: BLOCKED
+- السبب: الدومين الدائم وJWK المستقلة لم تُعتمد؛ لن نثبت keys جُلبت من نفس الخادم كـtrust anchors ولن نغير التحقق الحالي بما يعطل license صالحًا. قواعد binding/offline/restart/rollback الأصلية ظلت ونجحت اختبارات Agent؛ نجاح pinning عبر ترقية حالية لا يمكن إثباته قبل D3.
+- S04: توسعة E01–E04 هي البديل المفوض من المستخدم لـD1=NO؛ التنفيذ الآمن موجود والتفعيل الإنتاجي مشروط ببوابات موثقة.
+
+### R5-S03/R5-S06 — توثيق التدوير وحدود الحماية
+- الحالة: DONE-VERIFIED
+- الملفات: LICENSING.md، DEVICE_ENROLLMENT.md، PROGRESS.md.
+- توثيق ship-public-key-first ثم بدء توقيع المنصة، وعدم ادعاء أن ACL/encryption يحل key substitution أو binary patching. لا تدوير أو deploy فعلي.
+- GET العام الوحيد المصرح به استخرج 4 JWK (active1/retiring3) وحفظ نسخة متجاهَلة unverified؛ لم تستخدم في code ولا config ولا tests كـtrust roots. الـSHA256 وموقعها في DEVICE_ENROLLMENT.md.
+
+## ملخص التسليم المحلي لـRun 5
+
+الأجزاء الآمنة وتوسعة التسجيل مجهزة ومختبرة محليًا؛ Run5 كامل وF18/F19 لم ينتهوا. لا push/PR/merge/deploy/migration إنتاج؛ master لم يتغير بعد طلب المستخدم الأحدث. Run1 يتوقف مؤقتًا عند S02، وباقي التشغيلات ليست منجزة. المطلوب قبل التفعيل: قرار registration UX، دومين/JWK معتمدان، staging migration/backup، حماية provisioning/state، تأكيد انتقال وإلغاء الاعتماد المكشوف، واعتماد الدمج والنشر منفصلين. لا حاجة لأي سر خاص في المحادثة.

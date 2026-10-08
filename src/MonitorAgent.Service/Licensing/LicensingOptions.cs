@@ -17,10 +17,13 @@ public sealed class LicensingOptions
     /// <summary>The MonitorAgent product's code on the licensing site; fixed there once the product is created.</summary>
     public string ProductCode { get; init; } = DefaultProductCode;
 
-    /// <summary>The licensing site's API client (Integrations › API Clients); empty sends the device requests without a token.</summary>
+    /// <summary>Legacy installation configuration; empty credentials leave online operations unavailable.</summary>
     public string ClientId { get; init; } = string.Empty;
 
     public string ClientSecret { get; init; } = string.Empty;
+
+    /// <summary>Optional installation-specific credential, supplied by an administrator. Never shipped.</summary>
+    public DeviceEnrollmentCredential? DeviceCredential { get; init; }
 
     /// <summary>Kept below the app's 20-second request timeout, so an activation answer reaches the app.</summary>
     public int TimeoutSeconds { get; init; } = 15;
@@ -37,7 +40,33 @@ public sealed class LicensingOptions
         {
             ProductCode = section["ProductCode"]?.Trim() is { Length: > 0 } code ? code : DefaultProductCode,
             ClientId = section["ClientId"]?.Trim() ?? string.Empty,
-            ClientSecret = SecretProtector.IsProtected(secret) ? SecretProtector.Unprotect(secret) : secret
+            ClientSecret = SecretProtector.IsProtected(secret) ? SecretProtector.Unprotect(secret) : secret,
+            DeviceCredential = configuration.GetValue<bool>("DeviceEnrollment:Enabled")
+                ? new DeviceEnrollmentCredential(
+                    configuration["DeviceEnrollment:DeviceId"] ?? "",
+                    configuration["DeviceEnrollment:ProductCode"] ?? "",
+                    configuration["DeviceEnrollment:PlatformUrl"] ?? "",
+                    configuration["DeviceEnrollment:ClientId"] ?? "",
+                    configuration["DeviceEnrollment:ClientSecret"] ?? "")
+                : null
         };
     }
+}
+
+// Deliberately not a record: its generated ToString would expose the credential.
+public sealed class DeviceEnrollmentCredential(string deviceId, string productCode, string platformUrl, string clientId, string clientSecret)
+{
+    public string DeviceId { get; } = deviceId;
+    public string ProductCode { get; } = productCode;
+    public string PlatformUrl { get; } = platformUrl;
+    public string ClientId { get; } = clientId;
+    public string ClientSecret { get; } = clientSecret;
+
+    public bool Matches(string device, LicensingOptions options) =>
+        DeviceId == device && ProductCode == options.ProductCode &&
+        !string.IsNullOrWhiteSpace(ClientId) && !string.IsNullOrWhiteSpace(ClientSecret) &&
+        Uri.TryCreate(PlatformUrl, UriKind.Absolute, out var enrolled) &&
+        Uri.TryCreate(options.PlatformUrl, UriKind.Absolute, out var configured) &&
+        enrolled.Scheme == Uri.UriSchemeHttps && enrolled == configured &&
+        string.IsNullOrEmpty(enrolled.UserInfo) && string.IsNullOrEmpty(enrolled.Query) && string.IsNullOrEmpty(enrolled.Fragment);
 }
