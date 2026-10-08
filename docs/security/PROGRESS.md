@@ -569,3 +569,11 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - اختبار عدم الانكسار: HTTPS فعلي بمفتاح قراءة صالح يرجع 200؛ مفاتيح مستقلة ودوران وإلغاء واستخراج حالة صحيحة.
 - غير المتحقق: جهاز ثانٍ وDesktop UI وLocalSystem وUnix والجدار الناري واستيراد شهادة إنتاج؛ لذلك لا ادعاء بجاهزية إنتاجية.
 - جمع الخطوات لأن transport/authentication/pairing عقد اتصال واحد؛ فصلها يكسر اتصال Desktop. R4-S06 موثق في commit مستقل سابقًا.
+
+### R7-S02a — إصلاح SQLite
+- الحالة: DONE-VERIFIED
+- الفحص كشف SQLitePCLRaw.lib.e_sqlite3 2.1.6 بثغرة High (GHSA-2m69-gcr7-jv3q). أضيف override مباشر للحزمة المجانية SQLitePCLRaw.bundle_e_sqlite3 3.0.5، وفق توصية maintainer باستعمال توزيع SourceGear.sqlite3 الحديث. Microsoft.Data.Sqlite وschema لم يتغيرا.
+- الملفات: MonitorAgent.Service.csproj. ملفات نتائج الفحص المؤقتة في TestResults غير موزعة.
+- الأوامر: restore، Release build بلا warnings/errors، tests: 154 نجاح/3 skip/0 فشل. إعادة vulnerable audit أثبتت اختفاء تنبيه SQLite وبقاء حزمتين في الاختبارات لإصلاح لاحق.
+- اختبار عدم الانكسار: ReportStore وSQLite المحلي ضمن suite الحالية. Unix native runtimes ما زالت تحتاج CI.
+- مصادر: https://github.com/advisories/GHSA-2m69-gcr7-jv3q وhttps://github.com/ericsink/SQLitePCL.raw .
