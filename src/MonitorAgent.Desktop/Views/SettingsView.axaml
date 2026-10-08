@@ -317,7 +317,7 @@
                         </StackPanel>
                     </Grid>
                     <StackPanel IsEnabled="{Binding CanManageRemoteAccess}">
-                        <StackPanel IsVisible="{Binding !CanEditNetworkOptions}" Orientation="Horizontal" Spacing="20" Margin="0,4,0,8">
+                        <StackPanel IsVisible="{Binding NetworkIndicatorsVisible}" Orientation="Horizontal" Spacing="20" Margin="0,4,0,8">
                             <StackPanel Orientation="Horizontal" Spacing="5">
                                 <mi:MaterialIcon Kind="Check" Width="14" Height="14" Foreground="{DynamicResource AccentGreenBrush}" VerticalAlignment="Center"/>
                                 <TextBlock Text="HTTPS access" FontSize="12" Foreground="{DynamicResource AccentGreenBrush}" VerticalAlignment="Center"/>

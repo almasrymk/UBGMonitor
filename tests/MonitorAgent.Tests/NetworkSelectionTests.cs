@@ -6,6 +6,22 @@ namespace MonitorAgent.Tests;
 public sealed class NetworkSelectionTests
 {
     [Fact]
+    public async Task Network_indicators_wait_for_acceptance_and_hide_again_on_loopback()
+    {
+        var settings = new SettingsViewModel(new AgentApiClient()) { IsLoaded = true };
+        var response = new TaskCompletionSource<bool>();
+        settings.ConfirmWarning = _ => response.Task;
+        settings.ServiceListenAddress = "192.168.1.8";
+        Assert.False(settings.NetworkIndicatorsVisible);
+        response.SetResult(true);
+        // Await the same confirmation path to deterministically observe its final state.
+        var confirm = typeof(SettingsViewModel).GetMethod("ConfirmNetworkSelectionAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        await (Task)confirm.Invoke(settings, ["127.0.0.1", "192.168.1.8"])!;
+        Assert.True(settings.NetworkIndicatorsVisible);
+        settings.ServiceListenAddress = "127.0.0.1";
+        Assert.False(settings.NetworkIndicatorsVisible);
+    }
+    [Fact]
     public async Task Temporary_selection_clear_after_save_does_not_mark_the_tab_dirty_or_prompt_on_exit()
     {
         var settings = new SettingsViewModel(new AgentApiClient());

@@ -805,3 +805,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - بطلب المالك: استبدال checkboxs HTTPS وفتح البورت بعلامتي Check أخضرتين 14×14 ونص أخضر 12، داخل صف أفقي بفاصل 20؛ الصف يظهر للعناوين غير 127 ويختفي محليًا. إعداد RemoteEnabled/OpenFirewallPort يظل مرتبطًا بالعنوان ويطبق عند Save؛ العرض يبين الخيارات المقررة وليس تحققًا من فتح البورت في النظام.
 - Release build ناجح صفر أخطاء وتحذيرا SYSLIB0057 قائمان؛ 195 نجاح/4 SKIPPED/0 فشل. المظهر تفاعليًا غير متحقق؛ لا master/push/install.
+
+### R4-S05 — تأخير علامات HTTPS والبورت لحين الموافقة
+- الحالة: DONE-VERIFIED
+- NetworkIndicatorsVisible منفصل عن اختيار العنوان: عند تغيير عنوان الشبكة يخفي العلامتين حتى قبول الرسالة، ثم يظهرهما. Cancel يعيد الحالة السابقة والرجوع 127 يخفيهما؛ null المؤقت يحافظ على حالة العرض. الإعدادات المحفوظة بعنوان شبكة تظهر عند التحميل دون إعادة رسالة.
+- اختبار Network_indicators_wait_for_acceptance_and_hide_again_on_loopback يثبت إخفاء العلامتين أثناء انتظار القرار ثم عرضهما بعد قبوله وإخفاءهما محليًا. آخر Build incremental ناجح 0 warnings/errors؛ 196 نجاح/4 SKIPPED/0 فشل. الواجهة تفاعليًا غير متحققة؛ لا master/push/install.

@@ -169,6 +169,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     public event Action<string>? RemoteKeyCopied;
     public bool CanEditNetworkOptions => string.IsNullOrWhiteSpace(ServiceListenAddress) || ServiceListenAddress.Trim() == LocalOnlyAddress;
     private bool _loadingListenAddress;
+    [ObservableProperty] private bool _networkIndicatorsVisible;
     private (bool Enabled, bool Administration, bool Firewall) _savedRemoteFlags;
     private string _lastValidListenAddress = LocalOnlyAddress;
     partial void OnServiceListenAddressChanged(string? oldValue, string newValue)
@@ -177,15 +178,21 @@ public sealed partial class SettingsViewModel : ObservableObject
         if (!System.Net.IPAddress.TryParse(newValue, out _))
         {
             var wasLoading = _loadingListenAddress;
+            var indicatorsWereVisible = NetworkIndicatorsVisible;
             _loadingListenAddress = true;
             try { ServiceListenAddress = _lastValidListenAddress; }
-            finally { _loadingListenAddress = wasLoading; }
+            finally { _loadingListenAddress = wasLoading; NetworkIndicatorsVisible = indicatorsWereVisible; }
             return;
         }
         OnPropertyChanged(nameof(CanEditNetworkOptions));
         var previous = _lastValidListenAddress;
         _lastValidListenAddress = newValue;
-        if (_loadingListenAddress) return;
+        if (_loadingListenAddress)
+        {
+            NetworkIndicatorsVisible = !CanEditNetworkOptions;
+            return;
+        }
+        NetworkIndicatorsVisible = false;
         RemoteEnabled = !CanEditNetworkOptions;
         OpenFirewallPort = !CanEditNetworkOptions;
         if (!CanEditNetworkOptions && IsLoaded)
@@ -201,8 +208,13 @@ public sealed partial class SettingsViewModel : ObservableObject
             finally { _loadingListenAddress = false; }
             RemoteEnabled = !CanEditNetworkOptions;
             OpenFirewallPort = !CanEditNetworkOptions;
+            NetworkIndicatorsVisible = !CanEditNetworkOptions;
         }
-        if (accepted && ServiceListenAddress == selected) await PrepareRemoteKeysAsync();
+        if (accepted && ServiceListenAddress == selected)
+        {
+            NetworkIndicatorsVisible = !CanEditNetworkOptions;
+            await PrepareRemoteKeysAsync();
+        }
     }
     [RelayCommand]
     private Task ManageRemoteAccessAsync(string action) => ManageRemoteAccessCoreAsync(action);
