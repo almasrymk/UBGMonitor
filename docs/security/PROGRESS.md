@@ -770,3 +770,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - تصغير Viewer/Admin بـScaleTransform 0.85 وخط 12 مقارنة بالخيار الرئيسي؛ المفاتيح باللون AccentBlueBrush وخط Bold ومؤشر Hand وتلميح نسخ. الضغط اليسار أو اليمين ينسخ عبر نفس التحقق من البصمة والصلاحية وSensitiveClipboard ويعرض رسالة دون نص المفتاح. نقل خيار فتح البورت فوق Allow remote administration وصفوفه.
 - التحقق: آخر Release build ناجح 0 warnings/errors (incremental)؛ 195 نجاح/4 SKIPPED/0 فشل. مطابقة الشاشة بصريًا والclipboard الحقيقي لم تختبرا تفاعليًا؛ لا master/push/install.
+
+### R4-S05 — تصغير باقي checkboxs في شاشة الإعدادات
+- الحالة: DONE-VERIFIED
+- Style محلي داخل SettingsView لجميع CheckBox بحجم خط 12 وScaleTransform 0.85 ومحاذاة أصل يسار/منتصف، بما يطابق Viewer/Admin دون مضاعفة التحويل المحلي عليهما. لا تغيير bindings أو ترتيب أو شاشات أخرى.
+- التحقق: Release build ناجح صفر أخطاء مع تحذيري SYSLIB0057 القائمين؛ 195 نجاح/4 SKIPPED/0 فشل. الفحص البصري أثناء التشغيل غير متحقق؛ لا master/push/install.

@@ -34,6 +34,13 @@
         </DataTemplate>
     </UserControl.Resources>
     <UserControl.Styles>
+        <Style Selector="CheckBox">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="RenderTransformOrigin" Value="0%,50%"/>
+            <Setter Property="RenderTransform">
+                <ScaleTransform ScaleX="0.85" ScaleY="0.85"/>
+            </Setter>
+        </Style>
         <Style Selector="TextBlock.flabel">
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
             <Setter Property="Margin" Value="0,0,0,4"/>
