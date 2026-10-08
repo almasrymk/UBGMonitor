@@ -327,8 +327,8 @@
                                 <TextBlock Text="Open firewall port" FontSize="12" Foreground="{DynamicResource AccentGreenBrush}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </StackPanel>
-                        <CheckBox IsVisible="{Binding !CanEditNetworkOptions}" Content="Allow remote administration with a separate admin key" IsChecked="{Binding RemoteKeyPanelOpen}"/>
-                        <StackPanel IsVisible="{Binding !CanEditNetworkOptions}" Spacing="6" Margin="16,0,0,6">
+                        <CheckBox IsVisible="{Binding NetworkIndicatorsVisible}" Content="Allow remote administration with a separate admin key" IsChecked="{Binding RemoteKeyPanelOpen}"/>
+                        <StackPanel IsVisible="{Binding NetworkIndicatorsVisible}" Spacing="6" Margin="16,0,0,6">
                             <Grid ColumnDefinitions="100,Auto,Auto" HorizontalAlignment="Left">
                                 <CheckBox FontSize="12" RenderTransformOrigin="0%,50%" Content="Viewer key" IsChecked="{Binding RemoteKeyPanelOpen, Mode=OneWay}" IsEnabled="False"><CheckBox.RenderTransform><ScaleTransform ScaleX="0.85" ScaleY="0.85"/></CheckBox.RenderTransform></CheckBox>
                                 <SelectableTextBlock FontWeight="Bold" Foreground="{DynamicResource AccentBlueBrush}" Cursor="Hand" ToolTip.Tip="Click to copy" Grid.Column="1" Tag="viewer" PointerPressed="RemoteKey_PointerPressed" Text="{Binding ViewerKeyDisplay}" VerticalAlignment="Center" TextWrapping="Wrap">

@@ -810,3 +810,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - NetworkIndicatorsVisible منفصل عن اختيار العنوان: عند تغيير عنوان الشبكة يخفي العلامتين حتى قبول الرسالة، ثم يظهرهما. Cancel يعيد الحالة السابقة والرجوع 127 يخفيهما؛ null المؤقت يحافظ على حالة العرض. الإعدادات المحفوظة بعنوان شبكة تظهر عند التحميل دون إعادة رسالة.
 - اختبار Network_indicators_wait_for_acceptance_and_hide_again_on_loopback يثبت إخفاء العلامتين أثناء انتظار القرار ثم عرضهما بعد قبوله وإخفاءهما محليًا. آخر Build incremental ناجح 0 warnings/errors؛ 196 نجاح/4 SKIPPED/0 فشل. الواجهة تفاعليًا غير متحققة؛ لا master/push/install.
+
+### R4-S05 — توحيد ظهور checkboxs الوصول بعد الموافقة
+- الحالة: DONE-VERIFIED
+- Allow remote administration وصفوف Viewer key/Admin key ومفاتيحها وأزرارها تتبع NetworkIndicatorsVisible نفسها لعلامتي HTTPS والبورت؛ لا تظهر قبل الموافقة وتختفي عند 127. لا تغيير checkboxs نقاط المراقبة أو وظائف الصلاحيات.
+- Release build ناجح صفر أخطاء وتحذيرا SYSLIB0057 قائمان؛ 196 نجاح/4 SKIPPED/0 فشل. العرض تفاعليًا غير متحقق؛ لا master/push/install.
