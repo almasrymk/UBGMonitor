@@ -912,3 +912,9 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - حقول المفاتيح بعرض 360 وارتفاع 30 وخط 12 وpadding 8,4، وأزرار النسخ وإعادة الإنشاء بارتفاع 30. حذف checkbox Viewer واستبداله بالاسم فقط؛ نقل checkbox Admin إلى آخر الصف بعد Regenerate مع نفس binding وصلاحية التعديل الحالية. وظائف النسخ والمفاتيح محفوظة.
 - Release build ناجح وتحذيرا الشهادة القائمان؛ اختبارات الرجوع 196 نجاح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
+
+### R4-S05 — تصغير Monitor Points وتثبيت التحرير قبل الحفظ
+- الحالة: DONE-VERIFIED
+- شريط الإضافة والبحث وفلتر النوع بارتفاع 34 وخط 12؛ زر إضافة عرض 180 وفلتر 180؛ صف الجدول 42 بدل 62، وcheckbox بمقياس 0.95 بدل 0.85 المحلي السابق.
+- زر القلم يثبت الصف السابق ثم يحدد النقطة ويعرضها ويبدأ التحرير بعد نقل التركيز عبر Dispatcher. إضافة زر ContentSaveOutline بجوار القلم؛ زر الصف وزر Save Changes يثبتان Cell/Row عبر CommitEdit قبل استدعاء SaveCommand؛ عند فشل تحقق الخلية لا يتم الحفظ. زر حفظ الصف يحفظ تغييرات التابة كلها باستخدام المسار الحالي.
+- Release build ناجح وتحذيرا الشهادة القائمان؛ اختبارات الرجوع 196 نجاح و4 SKIPPED وصفر فشل. تشغيل التحرير والحفظ تفاعليًا مع خدمة المالك DONE-UNVERIFIED؛ لا ادعاء اختبار فعلي للحفظ عبر الخدمة. لا master/push/install.
