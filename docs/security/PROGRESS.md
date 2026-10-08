@@ -669,3 +669,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - التغيير: حذف عنوان Access key for other computers وخانته المعطلة من SettingsView.axaml لأنها من طريقة إدارة المفتاح القديمة وتسبب التباسًا. إنشاء ودوران المفاتيح يظل من الأزرار الحالية، وخانة اتصال This app مستقلة.
 - التحقق: dotnet build MonitorAgent.sln -c Release --no-restore نجح بلا تحذيرات/أخطاء؛ dotnet test MonitorAgent.sln -c Release --no-build --no-restore: 160 نجاح/3 Unix-only skip/0 فشل.
 - التغيير محدود بالواجهة، بلا تغيير JSON أو compatibility؛ لم تُختبر الشاشة تفاعليًا ولم تُنشر أو تُثبّت نسخة جديدة.
+
+### R4-S05 — حذف عبارة إغلاق الوصول البعيد بطلب المالك
+- الحالة: DONE-VERIFIED
+- التغيير: حذف عبارة Remote access stays closed until enabled with a viewer key والحاوية الفارغة التابعة لها من SettingsView.axaml؛ تعديل نص واجهة فقط.
+- التحقق: Release build بلا تحذيرات أو أخطاء؛ الاختبارات 160 نجاح/3 Unix-only skip/0 فشل. لم تُشغّل الواجهة تفاعليًا ولم تُنشر نسخة جديدة.
