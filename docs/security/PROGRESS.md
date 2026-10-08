@@ -289,3 +289,15 @@
 - غير المتحقق: CI المعدلة لم تُنشر حسب أمر المستخدم، فلا ادعاء بنجاح GitHub job/Unix PowerShell. المسح لا يدعي تنظيف التاريخ كله. SHA القديم0c66b6a مستثنى فقط، لا secret-value allowlist؛ الإلغاء الإداري يظل Pending.
 - اختلاف عن الخطة: إثبات رفض commit تم محليًا بنفس binary/flags في repo مؤقت مستقل بدل push؛ لا CI حقيقية بدون نشر. scan manual آخر commit لتجنب مسح تاريخ التسريب القديم غير المعالج بالكامل.
 - مرجع الأداة: https://github.com/gitleaks/gitleaks (الوثائق الأصلية؛ download8.30.1/checksums الرسمية).
+
+### R1-S08 — إجراءات المالك وتسليم Run1 محليًا
+- الحالة: DONE-VERIFIED
+- ماذا تغير ولماذا: checklist للإلغاء والانتقال الآمن ومراجعة الاستخدام/visibility/history/secret scanning/push protection، بالإضافة إلى خطوات staging واعتماد Run5؛ بلا secret values.
+- الملفات: OWNER_ACTIONS.md وPROGRESS.md.
+- الأوامر الفعلية: build Release0أخطاء/0تحذيرات؛ suite109pass/1skip/0fail؛ لا إجراءات إدارية على المنصة أو GitHub.
+- اختبار الأمان وعدم الانكسار: لا تغيير منتج في الخطوة؛ suite كامل ناجح. تنفيذ checklist نفسه Pending عند المالك.
+- غير المتحقق: إلغاء السر المكشوف ومراجعة logs وصلاحيات مستودع GitHub؛ لا يدعي التوثيق تنفيذها.
+- اختلاف عن الخطة: إضافة بوابات enrollment الجديدة المصرح بها إلى نفس checklist.
+
+## ملخص Run 1 الحالي
+S01–S06 وS08 DONE-VERIFIED محليًا؛ S07 DONE-UNVERIFIED في CI/Unix مع إثبات رفض fake credential محليًا. defaults بلا بيانات شخصية/secret، cache الجديد صفر points، routing الفارغ صامت، network DB path مهملة، Release بلا development copies، المصدر لا يتتبع state/cert، فحص publish2 ملفات ناجح/self-tests9 حالات. F01 Pending لإلغاء credential خارج المستودع. لا push/PR/merge/deploy حسب أمر المستخدم؛ يلزم clean-VM/upgrade/OS matrix قبل إصدار.
