@@ -597,3 +597,9 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - التحقق المحلي: vulnerable check PASS؛ scanner 9 حالات PASS؛ publish win-x64 Service وDesktop ناجحان والفحص PASS؛ bash syntax وPowerShell parser وgit diff --check ناجحة.
 - غير المتحقق: workflow غير منشور حسب طلبك؛ Unix runtime/permission fixture وCI الجديدة لم تُشغل. fixture لا تدعي scripted install كاملًا؛ installer يحتاج جهاز مخصص وصلاحيات.
 - توثيق التبعيات: DEPENDENCIES.md، sensor library ثابتة وDefender live result غير متاح.
+
+### R2-S01 / R7-S01 — إثبات كل مسارات القراءة
+- الحالة: DONE-VERIFIED
+- التغيير: OfflineTelemetry test-only DispatchProxy يرجع fixtures دون بدء sensors أو network؛ ReportBuilder/ReportStore حقيقيان داخل testhost.
+- الاختبار: Licensed_viewer_can_read_every_read_route_with_offline_telemetry_and_real_report_store يمر على كل GET ذو Viewer metadata، يستبدل route parameters بقيم صحيحة، ويتحقق من success وJSON؛ لا مخارج سرية أو خدمة إنتاج.
+- التحقق: الاختبار المنفرد ناجح، والـsuite الكاملة نتيجتها في output هذا commit. Build السابق 0 warnings/errors. لا ادعاء بأن telemetry hardware الفعلية اختبرت.

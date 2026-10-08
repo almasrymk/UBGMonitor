@@ -21,6 +21,8 @@ using MonitorAgent.Shared.Models;
 using MonitorAgent.Shared.Security;
 using System.Security.Cryptography.X509Certificates;
 using MonitorAgent.UI.Services;
+using MonitorAgent.Service.SystemInfo;
+using MonitorAgent.Service.Reports;
 
 namespace MonitorAgent.Tests;
 
@@ -71,6 +73,14 @@ public sealed class LocalApiSecurityTests
             remote.MigrateLegacy(key, tcp);
             var services = new ServiceCollection().AddSingleton<ILocalConfigCache>(cache)
                 .AddSingleton(remote)
+                .AddSingleton(OfflineTelemetry.Create<ISystemInfoService>())
+                .AddSingleton(OfflineTelemetry.Create<IHardwareService>())
+                .AddSingleton(OfflineTelemetry.Create<ISensorsService>())
+                .AddSingleton(OfflineTelemetry.Create<INetworkService>())
+                .AddSingleton(OfflineTelemetry.Create<IApplicationsService>())
+                .AddSingleton(OfflineTelemetry.Create<IDiskActivityService>())
+                .AddSingleton(OfflineTelemetry.Create<IInternetStatus>())
+                .AddSingleton<ReportBuilder>()
                 .AddSingleton(new MonitorAgent.Service.Reports.ReportStore(NullLogger<MonitorAgent.Service.Reports.ReportStore>.Instance))
                 .AddSingleton<IIssueDataLogger, Issues>().AddSingleton<INotificationStore, Notifications>()
                 .AddSingleton<ILicenseState>(new License { IsLicensed = licensed }).AddSingleton<NotificationTrigger>()
@@ -104,6 +114,23 @@ public sealed class LocalApiSecurityTests
         var address = new UriBuilder(app.Host.Urls.Single()) { Scheme = "http" }.Uri;
         try { Assert.False((await plaintext.GetAsync(new Uri(address, ApiRoutes.Status))).IsSuccessStatusCode); }
         catch (HttpRequestException) { /* TLS port may close a plaintext connection without an HTTP response. */ }
+    }
+
+    [Fact]
+    public async Task Licensed_viewer_can_read_every_read_route_with_offline_telemetry_and_real_report_store()
+    {
+        await using var app = await App.Start(true, AgentAccessRole.Viewer);
+        using var client = app.Client;
+        var endpoints = ((IEndpointRouteBuilder)app.Host).DataSources.SelectMany(s => s.Endpoints).OfType<RouteEndpoint>();
+        foreach (var endpoint in endpoints.Where(e => e.Metadata.GetMetadata<RequiredAgentRole>()?.Role == AgentAccessRole.Viewer))
+        {
+            if (!endpoint.Metadata.GetMetadata<HttpMethodMetadata>()!.HttpMethods.Contains("GET")) continue;
+            var path = endpoint.RoutePattern.RawText!.Replace("{level:int}", "1").Replace("{type}", "settings");
+            using var response = await client.GetAsync(path);
+            Assert.True(response.IsSuccessStatusCode, $"{path}: {response.StatusCode}");
+            if (response.StatusCode == HttpStatusCode.OK)
+                using (JsonDocument.Parse(await response.Content.ReadAsStringAsync())) { }
+        }
     }
 
     [Fact]
