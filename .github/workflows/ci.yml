@@ -1,0 +1,42 @@
+name: MonitorAgent CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - 'security/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build and test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Restore
+        run: dotnet restore MonitorAgent.sln
+      - name: Build Release
+        run: dotnet build MonitorAgent.sln -c Release --no-restore
+      - name: Test Release
+        run: dotnet test MonitorAgent.sln -c Release --no-build --no-restore --logger trx --results-directory TestResults
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}
+          path: TestResults/*.trx
+          if-no-files-found: warn
+          retention-days: 14
