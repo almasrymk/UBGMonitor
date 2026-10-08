@@ -301,3 +301,38 @@
 
 ## ملخص Run 1 الحالي
 S01–S06 وS08 DONE-VERIFIED محليًا؛ S07 DONE-UNVERIFIED في CI/Unix مع إثبات رفض fake credential محليًا. defaults بلا بيانات شخصية/secret، cache الجديد صفر points، routing الفارغ صامت، network DB path مهملة، Release بلا development copies، المصدر لا يتتبع state/cert، فحص publish2 ملفات ناجح/self-tests9 حالات. F01 Pending لإلغاء credential خارج المستودع. لا push/PR/merge/deploy حسب أمر المستخدم؛ يلزم clean-VM/upgrade/OS matrix قبل إصدار.
+
+## Run 2 — خطة التنفيذ (Phase A)
+
+### R2-S02 — تجربة النقل المحلي قبل تغيير المنتج
+- الحالة: DONE-UNVERIFIED
+- الأوامر الفعلية: dotnet run --project .security-work/ipc-poc/IpcPoc.csproj -c Release نجح على Windows/.NET8:8 checks. التجربة خارج المنتج بأسماء pipes فريدة وACL للحساب التجريبي فقط، لا تثبيت خدمة ولا تعديل groups ولا endpoints الإنتاجية.
+- ما ثبت: GET عبر HttpClient/NamedPipeClientStream؛ PUT JSON64KiB؛ report1MiB؛ مضيفان Viewer/Admin؛ Viewer PUT403 حتى مع role header مزور؛ قراءة owner ترفض pipe المملوكة لحساب المستخدم مقابل SYSTEM/Administrators؛ Kestrel FirstPipeInstance يرفض اسمًا محجوزًا عند start.
+- ما لم يثبت: مستخدم standard مستقل/عضوية custom groups غير مرفوعة؛ قبول endpoint حقيقية يملكها SYSTEM؛ Unix socket/root:group/modes/macOS؛ تطبيق production client ownership check. لا ندعي أن PoC الحساب الحالي يثبت access denial لحساب آخر.
+- مراجع الفحص: local ASP.NET8 reference XML أكد PipeSecurity global options؛ المصدر الرسمي للنسخة8.0.26 أكد FirstPipeInstance والحفاظ على instance قبل تسليم connection: https://raw.githubusercontent.com/dotnet/aspnetcore/v8.0.26/src/Servers/Kestrel/Transport.NamedPipes/src/Internal/NamedPipeConnectionListener.cs .
+- اختلاف مؤثر: .NET8 لا توفر per-endpoint CreateNamedPipeServerStream callback الموجودة في runtime10؛ لا ترقية runtime. نستخدم WebApplication منفصلة لكل local role، وهو بديل مسموح في6.1. ACL production تمنح ReadWrite+ReadPermissions للمجموعات حتى يستطيع العميل قراءة owner، ولا FullControl؛ FullControl في PoC للحساب التجريبي فقط.
+
+### خطوات Phase B المقترحة وترتيبها
+1. R2-S01: استخراج بناء pipeline/map من LocalApiHost إلى host قابل للاختبار دون تغيير العقود؛ characterization لكل route من ApiRoutes ومخرجاتها وlicense-required وأخطاء reports/hardware/processes. fake services وsettings مؤقتة بلا HTTP خارجي أو DB عميل. حزمة اختبار جديدة متوقعة Microsoft.AspNetCore.TestHost8.0.26 (مجانية، test-only) إن لم تكفِ Kestrel IPC tests؛ لا dependency منتج جديدة للنقل لأن NamedPipes ضمن ASP.NET8 framework.
+2. R2-S03: Role metadata Viewer/Admin صريحة لكل route؛ deny default وtest enumerates endpoint data sources. license gate بعد auth/role؛ OpenWithoutLicense لا تعني anonymous.
+3. R2-S04/R2-S06: service IPC ومصدر الدور من المضيف/client transport يتغيران معًا حتى لا تنقطع الواجهة أثناء الانتقال. Windows ACL protected/SIDs، missing group fail-closed SYSTEM/elevated admin، owner check قبل HTTP. Unix socket في root-owned directory وcreate modes آمنة؛ لا role من header/IP. admin-first/viewer fallback فقط عند رفض صلاحية admin، وليس عند فشل ownership check أو خطأ أمني. expose role/local transport كحالة اتصال؛ لا IsLocal كإذن لفك الأسرار.
+4. R2-S05: تعديل install Windows/Linux/macOS/deb/pkg لإنشاء groups المطلوبة وشرح sign-out؛ حفظ groups عند uninstall العادي؛ runtime dir حسب النظام. لا تشغيل installer هنا. Unix أمين:0660 يمكنه منح group واحدة؛ مستخدم الإدارة يجب أن يكون عضوًا في admin+viewer للحصول على الوصول لقناتَي الجدول، أو نحتاج POSIX ACL policy مستقلة. يلزم حسم العضوية المشتركة عند التثبيت/توثيق إضافة الأعضاء قبل التنفيذ، ولا افتراض أن Unix تدعم nested groups.
+5. R2-S07: DTO settings whitelist field-by-field وhasPassword/hasRemoteAccessKey؛ لا secrets/blobs. validate كامل قبل write، ثم merge server-side فقط عند identity/target unchanged. تشمل target identity Engine/Server/Port/Database/Username/IntegratedSecurity حتى لا يُحوّل password لسياق مختلف. legacy key محفوظ ولا يقبل تغييره من PUT. UI password box فارغة وnull/absent تعني keep؛ مسار إدخال جديد plain over admin IPC دون Desktop decrypt. حدود مستمدة من controls الحالية ومحددة في validator tests؛ ServicePort0 القديمة تُعرض كeffective default ضمن ترقية الإدخال ولا تُرفض ملفات legacy عند مجرد قراءتها.
+6. R2-S08: typed request monitorPointId/login؛ resolving stored secret داخل الخدمة ومقارنة target قبل use؛ reject protected client input؛ response عام لا driver exception/secret. tests لا اتصال قواعد حقيقية.
+7. R2-S09: TCP viewer-only/must-key حتى loopback؛ لا remote listener بلا key؛ Host allowlist/remove CORS؛ لا fallback listener أضعف. TLS/hash/admin remote فيRun4؛ لا نعلن remote جاهزًا قبلها.
+8. R2-S10: URLs http/https فقط؛ applications من خدمة محلية وعنوان absolute local موجود، confirmation per-user؛ UNC مرفوض؛ reveal محلي فقط. لا تعديل شكل الواجهات أو أسماء المنتج.
+9. R2-S11: تحديث README/الدور/مجموعات OS وowner test matrix؛ إزالة curl loopback/CORS القديمة، توثيق failure messages وعدم الخلط بين access-denied/service down.
+
+### الملفات المتوقع تغييرها
+Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/validation + DatabaseMonitor test boundary؛ Shared DTO/contracts؛ Desktop AgentApiClient/AppSettingsStore/SettingsViewModel/DatabaseLoginWindow/MonitorPointLauncher/ShellOpen + controls bindings للأوامر الإدارية؛ scripts install/uninstall/unit/pkg/deb؛ tests characterization/security/regression/Windows transport/Unix transport؛ README وsecurity docs. لا تغييرات على sensor backend أو reports schemas أو تراخيص الإنتاج.
+
+### الاختبارات وبوابات التنفيذ
+- كل route policy؛ Viewer403 لكل admin action؛ unlicensed contract محفوظ؛ status/read routes shapes ثابتة باستثناء settings DTO المقصود.
+- settings GET لا secrets/blobs، كل input malformed/out-of-range لا write؛ target change بلا password400؛ new database point يعمل وuntouched stored credential يبقى؛ database test protected blob مرفوض.
+- TCP missing key401 حتى loopback/bodyless POST؛ Host mismatch rejected؛ zero CORS.
+- launch file/javascript/custom/UNC ممنوع؛ remote app/reveal ممنوع.
+- Windows namedpipe owner/first instance/GET/PUT/report وACL cross-account؛ Unix root-owned dir/socket/0660 واستثناء symlinks/stale files دون حذف مسار مهاجم؛ قياسات حقيقية على OS المقصود فقط.
+- عضوية وإدارة groups تحت حساب عادي وroot/SYSTEM، login refresh/sign-out، وDesktop end-to-end تحتاج VM/أنظمة حقيقية. CI الجديدة ما زالت محلية بدون push.
+
+### حالة Phase A
+خطة التنفيذ وتجربة Windows الجزئية مكتملتان. Run2 security fixes لم تنفذ بعد ولا ثغرة API مغلقة بمجرد PoC. بوابة0.3 تقول: "Do not write product code until the owner starts Phase B." لا deploy أو تغييرات حسابات/خدمة من Phase A. توضيح المرحلة للمراجعة قبل الانتقال لتنفيذ التغيير الذي يبدل الاتصال والصلاحيات.
