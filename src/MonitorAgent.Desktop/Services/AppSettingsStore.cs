@@ -53,14 +53,26 @@ public sealed class AppSettingsStore
     }
 
     /// <exception cref="IOException">The service did not save the settings; the message says why.</exception>
-    public async Task SaveAsync(UiAppSettings settings, IReadOnlyList<MonitorPoint> monitorPoints)
+    public async Task SaveAsync(UiAppSettings settings, IReadOnlyList<MonitorPoint> monitorPoints, RemoteAccessAction? remoteAccess = null)
     {
+        if (remoteAccess is not null)
+        {
+            if (!_client.CanAdminister || !_client.IsLocalTransport)
+                throw new IOException("Remote access settings require local Administrator access.");
+            var status = await _client.GetRemoteAccessAsync() ?? throw new IOException("Could not check remote access settings. Nothing was saved.");
+            if (remoteAccess.Enabled && !status.HasViewerKey)
+                throw new IOException("Create a viewer key before saving enabled remote access. Nothing was saved.");
+            if (remoteAccess.AllowAdministration && !status.HasAdminKey)
+                throw new IOException("Create a separate admin key before saving remote administration. Nothing was saved.");
+        }
         settings.MonitorPoints = monitorPoints.ToList();
         var section = JsonSerializer.SerializeToNode(settings, JsonOptions) as JsonObject ?? [];
         if (await _client.SaveSettingsAsync(section) is { } error)
         {
             throw new IOException(error);
         }
+        if (remoteAccess is not null && await _client.ManageRemoteAccessAsync(remoteAccess) is null)
+            throw new IOException("General settings were saved, but remote access could not be applied. Check the service and retry Save.");
     }
 }
 

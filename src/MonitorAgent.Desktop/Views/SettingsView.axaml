@@ -296,7 +296,7 @@
 
                     <TextBlock Text="Service network access" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,22,0,2"/>
                     <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,12"
-                               Text="Remote access uses HTTPS. Save the listening address and port, then create a viewer key and enable access locally. Firewall opening and remote administration are explicit choices."/>
+                               Text="Remote access uses HTTPS. Create a viewer key, choose the listening address and port, then save. Save also applies the remote access and firewall options."/>
                     <Grid ColumnDefinitions="*,28,*">
                         <StackPanel Grid.Column="0">
                             <TextBlock Classes="flabel" Text="Service listens on"/>
@@ -314,7 +314,6 @@
                         <CheckBox Content="Open this port in this computer's firewall" IsChecked="{Binding OpenFirewallPort}" IsEnabled="{Binding CanEditNetworkOptions}"/>
                         <CheckBox Content="Allow remote administration with a separate admin key" IsChecked="{Binding RemoteAdministration}"/>
                         <WrapPanel>
-                            <Button Content="Apply remote access" Command="{Binding ManageRemoteAccessCommand}" CommandParameter="configure" Classes="footer"/>
                             <Button Content="Create / rotate viewer key" Command="{Binding ManageRemoteAccessCommand}" CommandParameter="create-viewer-key" Classes="footer"/>
                             <Button Content="Create / rotate admin key" Command="{Binding ManageRemoteAccessCommand}" CommandParameter="create-admin-key" Classes="footer"/>
                             <Button Content="Revoke viewer key" Command="{Binding ManageRemoteAccessCommand}" CommandParameter="revoke-viewer-key" Classes="footer"/>

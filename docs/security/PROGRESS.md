@@ -693,3 +693,11 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - التغيير: null/empty آمن في getter، callback يتجاهل القيمة غير الصالحة ولا يغير HTTPS/firewall أو يعرض رسالة. آخر عنوان صالح يُحفظ ليعود إليه Cancel بعد المرور بقيمة null؛ IsServiceOpenWithoutKey أصبح null-safe كذلك.
 - الاختبارات الجديدة NetworkSelectionTests تنفذ ViewModel الحقيقي: nonlocal ثم null ثم 127 بلا exception أو تغيير flags أثناء null، وCancel يعيد آخر عنوان صالح بلا رسالة للقيمة المؤقتة.
 - التحقق: Release build بلا تحذيرات/أخطاء؛ suite 162 نجاح/3 Unix-only skip/0 فشل. اختبار الواجهة التفاعلي في Visual Studio لم يُنفذ؛ لا master أو نشر.
+
+### R4-S02/R4-S05 — دمج تطبيق الوصول البعيد في Save بطلب المالك
+- الحالة: DONE-VERIFIED
+- التغيير: حذف Apply remote access من الواجهة؛ General Save يرسل settings ثم configure عبر IPC Administrator نفسه. preflight يرفض Viewer/Admin key ناقصًا قبل أي write، وفشل settings يمنع configure. فشل configure بعد settings يوضح حفظًا جزئيًا ولا يعلن نجاحًا أو يمسح dirty state.
+- RemoteEnabled/RemoteAdministration/OpenFirewallPort ضمن General fingerprint حتى تتفعل Save عند تغيير checkbox فقط؛ Reset يسترجع flags المحفوظة. حالة remote المحملة تُحفظ baseline، والعناوين nonlocal تظل تفرض الخيارات حسب طلب المالك السابق. الرسالة والتعليمات أصبحت تشير إلى Save.
+- الملفات: SettingsViewModel.cs وSettingsView.axaml وAppSettingsStore.cs وREMOTE_ACCESS.md.
+- الاختبارات CombinedSettingsSaveTests: 5 حالات valid/missing viewer/missing admin/PUT failure/configure failure، مع ترتيب الطلبات؛ test إضافي dirty tracking وReset. جميعها offline، لا port/firewall حقيقي.
+- التحقق: Release build بلا warnings/errors؛ 168 نجاح/3 Unix-only skip/0 فشل. UI تفاعليًا لم يُختبر؛ لا master أو نشر. التغيير لا يجمع الكتابتين في transaction واحدة، ويصرح بالفشل الجزئي بدل إخفائه.

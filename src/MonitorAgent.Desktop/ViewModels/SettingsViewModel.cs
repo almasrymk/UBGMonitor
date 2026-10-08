@@ -118,6 +118,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     public bool CanManageRemoteAccess => _client.CanAdminister && _client.IsLocalTransport;
     public bool CanEditNetworkOptions => string.IsNullOrWhiteSpace(ServiceListenAddress) || ServiceListenAddress.Trim() == LocalOnlyAddress;
     private bool _loadingListenAddress;
+    private (bool Enabled, bool Administration, bool Firewall) _savedRemoteFlags;
     private string _lastValidListenAddress = LocalOnlyAddress;
     partial void OnServiceListenAddressChanged(string? oldValue, string newValue)
     {
@@ -135,7 +136,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     private async Task ConfirmNetworkSelectionAsync(string previous, string selected)
     {
         if (ConfirmWarning is null) return;
-        var accepted = await ConfirmWarning("اختيار عنوان شبكة يعني أن اتصال الأجهزة الأخرى سيكون مشفرًا باستخدام HTTPS، وسيتم السماح بالبورت في جدار الحماية عند الضغط على Apply remote access. يجب إنشاء Viewer key أولًا. هل تريد المتابعة؟");
+        var accepted = await ConfirmWarning("اختيار عنوان شبكة يعني أن اتصال الأجهزة الأخرى سيكون مشفرًا باستخدام HTTPS، وسيتم السماح بالبورت في جدار الحماية عند الضغط على Save. يجب إنشاء Viewer key أولًا. هل تريد المتابعة؟");
         if (!accepted && ServiceListenAddress == selected)
         {
             _loadingListenAddress = true;
@@ -159,10 +160,14 @@ public sealed partial class SettingsViewModel : ObservableObject
     }
     private void ApplyRemoteStatus(RemoteAccessStatus status)
     {
+        _savedRemoteFlags = (status.Enabled, status.AllowAdministration, status.OpenFirewall);
         RemoteEnabled = status.Enabled; RemoteAdministration = status.AllowAdministration; OpenFirewallPort = status.OpenFirewall;
         if (!CanEditNetworkOptions) { RemoteEnabled = true; OpenFirewallPort = true; }
         RemoteFingerprint = status.Fingerprint is null ? "No remote certificate yet." : "Certificate SHA-256: " + status.Fingerprint;
         OnPropertyChanged(nameof(CanManageRemoteAccess));
+        _savedFingerprints[SectionGeneral] = JsonSerializer.Serialize(_snapshot.General) + JsonSerializer.Serialize(new
+        { RemoteEnabled = status.Enabled, RemoteAdministration = status.AllowAdministration, OpenFirewallPort = status.OpenFirewall });
+        RefreshHasChanges();
     }
 
     public SettingsViewModel(AgentApiClient client)
@@ -523,7 +528,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             case SectionConditions:
                 return JsonSerializer.Serialize(CaptureDeviceSpec()) + JsonSerializer.Serialize(Capture().Conditions);
             default:
-                return JsonSerializer.Serialize(CaptureGeneral());
+                return JsonSerializer.Serialize(CaptureGeneral()) + JsonSerializer.Serialize(new { RemoteEnabled, RemoteAdministration, OpenFirewallPort });
         }
     }
 
@@ -748,10 +753,12 @@ public sealed partial class SettingsViewModel : ObservableObject
                 ? CaptureMonitorPoints()
                 : _monitorPointSnapshot.Select(ClonePoint).ToList();
 
-            await _store.SaveAsync(settings, points);
+            await _store.SaveAsync(settings, points, section == SectionGeneral && CanManageRemoteAccess
+                ? new RemoteAccessAction("configure", RemoteEnabled, RemoteAdministration, OpenFirewallPort) : null);
             if (section == SectionGeneral)
             {
                 FollowServicePort(current.General, saved.General);
+                _savedRemoteFlags = (RemoteEnabled, RemoteAdministration, OpenFirewallPort);
             }
 
             _snapshot = Clone(settings);
@@ -789,6 +796,9 @@ public sealed partial class SettingsViewModel : ObservableObject
                     break;
                 default:
                     ApplyGeneral(_snapshot.General);
+                    RemoteEnabled = CanEditNetworkOptions ? _savedRemoteFlags.Enabled : true;
+                    RemoteAdministration = _savedRemoteFlags.Administration;
+                    OpenFirewallPort = CanEditNetworkOptions ? _savedRemoteFlags.Firewall : true;
                     break;
             }
         }
