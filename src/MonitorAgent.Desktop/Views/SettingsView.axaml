@@ -310,10 +310,8 @@
                         </StackPanel>
                     </Grid>
                     <StackPanel IsEnabled="{Binding CanManageRemoteAccess}">
-                        <CheckBox Content="Enable remote HTTPS access" IsChecked="{Binding RemoteEnabled}" IsEnabled="{Binding CanEditNetworkOptions}"/>
-                        <CheckBox Content="Open this port in this computer's firewall" IsChecked="{Binding OpenFirewallPort}" IsEnabled="{Binding CanEditNetworkOptions}"/>
-                        <CheckBox Content="Allow remote administration with a separate admin key" IsChecked="{Binding RemoteKeyPanelOpen}"/>
-                        <StackPanel IsVisible="{Binding RemoteKeyPanelOpen}" Spacing="6" Margin="16,0,0,6">
+                        <CheckBox Content="Allow access (HTTPS)" IsChecked="{Binding RemoteEnabled}" IsEnabled="{Binding CanEditNetworkOptions}"/>
+                        <StackPanel Spacing="6" Margin="16,0,0,6">
                             <Grid ColumnDefinitions="100,*,Auto">
                                 <CheckBox Content="Viewer" IsChecked="True" IsEnabled="False"/>
                                 <SelectableTextBlock Grid.Column="1" Tag="viewer" PointerPressed="RemoteKey_PointerPressed" Text="{Binding ViewerKeyDisplay}" VerticalAlignment="Center" TextWrapping="Wrap">
@@ -327,6 +325,7 @@
                                 <Button Grid.Column="2" Content="↻" ToolTip.Tip="Regenerate admin key" Command="{Binding ManageRemoteAccessCommand}" CommandParameter="create-admin-key" Classes="footer"/>
                             </Grid>
                         </StackPanel>
+                        <CheckBox Content="Open this port in this computer's firewall" IsChecked="{Binding OpenFirewallPort}" IsEnabled="{Binding CanEditNetworkOptions}"/>
                         <WrapPanel>
                             <Button Content="Regenerate certificate" Command="{Binding ManageRemoteAccessCommand}" CommandParameter="regenerate-certificate" Classes="footer"/>
                             <Button Content="Import customer PFX" Click="ImportCertificate_Click" Classes="footer"/>
@@ -638,6 +637,3 @@
         </Panel>
     </DockPanel>
 </UserControl>
-
-
-

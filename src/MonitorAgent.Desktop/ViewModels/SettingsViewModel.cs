@@ -118,16 +118,14 @@ public sealed partial class SettingsViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(HasTemporaryRemoteKey))]
     private string _newRemoteKey = string.Empty;
     public bool HasTemporaryRemoteKey => NewRemoteKey.Length > 0;
-    [ObservableProperty] private bool _remoteKeyPanelOpen;
     [ObservableProperty] private string _viewerKeyDisplay = "Key unavailable here; regenerate to display it.";
     [ObservableProperty] private string _adminKeyDisplay = "Key unavailable here; regenerate to display it.";
     private readonly RemoteKeyDisplayStore _remoteKeyDisplayStore = new();
     private bool _loadingRemoteStatus;
     private bool _preparingRemoteKeys;
-    partial void OnRemoteKeyPanelOpenChanged(bool value)
+    partial void OnRemoteEnabledChanged(bool value)
     {
-        if (_loadingRemoteStatus || !CanManageRemoteAccess) return;
-        RemoteAdministration = value;
+        if (_loadingRemoteStatus || _loadingListenAddress || !IsLoaded || !CanManageRemoteAccess) return;
         if (value) _ = PrepareRemoteKeysAsync();
     }
     private async Task PrepareRemoteKeysAsync()
@@ -231,12 +229,6 @@ public sealed partial class SettingsViewModel : ObservableObject
     }
     private void ApplyRemoteStatus(RemoteAccessStatus status)
     {
-        if (status.AllowAdministration && !RemoteKeyPanelOpen)
-        {
-            _loadingRemoteStatus = true;
-            try { RemoteKeyPanelOpen = true; }
-            finally { _loadingRemoteStatus = false; }
-        }
         if (CanManageRemoteAccess)
         {
             var viewer = _remoteKeyDisplayStore.Load("viewer", status.ViewerKeyHash);
@@ -245,8 +237,13 @@ public sealed partial class SettingsViewModel : ObservableObject
             AdminKeyDisplay = admin.Length > 0 ? admin : "Key unavailable here; regenerate to display it.";
         }
         _savedRemoteFlags = (status.Enabled, status.AllowAdministration, status.OpenFirewall);
-        RemoteEnabled = status.Enabled; RemoteAdministration = status.AllowAdministration; OpenFirewallPort = status.OpenFirewall;
-        if (!CanEditNetworkOptions) { RemoteEnabled = true; OpenFirewallPort = true; }
+        _loadingRemoteStatus = true;
+        try
+        {
+            RemoteEnabled = status.Enabled; RemoteAdministration = status.AllowAdministration; OpenFirewallPort = status.OpenFirewall;
+            if (!CanEditNetworkOptions) { RemoteEnabled = true; OpenFirewallPort = true; }
+        }
+        finally { _loadingRemoteStatus = false; }
         RemoteFingerprint = status.Fingerprint is null ? "No remote certificate yet." : "Certificate SHA-256: " + status.Fingerprint;
         OnPropertyChanged(nameof(CanManageRemoteAccess));
         _savedFingerprints[SectionGeneral] = JsonSerializer.Serialize(_snapshot.General) + JsonSerializer.Serialize(new

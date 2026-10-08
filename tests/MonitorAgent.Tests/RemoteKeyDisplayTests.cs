@@ -29,10 +29,10 @@ public sealed class RemoteKeyDisplayTests
         Assert.Equal(admin, reloaded.Load("admin", Hash(admin)));
     }
     [Fact]
-    public void Panel_toggle_cannot_enable_admin_for_a_nonadministrator_client()
+    public void Access_toggle_does_not_implicitly_enable_admin()
     {
         var settings = new SettingsViewModel(new AgentApiClient());
-        settings.RemoteKeyPanelOpen = true;
+        settings.RemoteEnabled = true;
         Assert.False(settings.RemoteAdministration);
         Assert.Equal("Key unavailable here; regenerate to display it.", settings.ViewerKeyDisplay);
     }

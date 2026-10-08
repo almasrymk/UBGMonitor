@@ -724,3 +724,10 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الاختبارات: RemoteKeyDisplayTests يثبت التخزين دون plaintext وroundtrip منفصل للمفتاحين ورفض المفتاح القديم/الملغي؛ اختبار صلاحية العميل يمنع تفعيل Admin من عميل غير مسؤول.
 - التحقق الفعلي: Release build 0 warnings/errors؛ 189 نجاح/4 SKIPPED/0 فشل. المتخطى 3 Unix وCloud E2E؛ الواجهة تفاعليًا والكليك اليمين على Windows غير متحققين. لم يغير التنفيذ مفاتيح الخدمة الحقيقية أو يثبت نسخة جديدة أو ينشر التغييرات على master.
 - اختلاف عن عرض المرة الواحدة: طلب المالك إبقاء النص ظاهرًا؛ أضيف مخزن محلي مشفر دون تغيير تخزين الخدمة إلى plaintext. الواجهة تعرض المفتاح لمن يملك صلاحيات إدارة محلية فقط.
+
+### R4-S02/R4-S05 — تصحيح ترتيب Allow access حسب توضيح المالك
+- الحالة: DONE-VERIFIED
+- Allow access (HTTPS) هو checkbox الرئيسي المرتبط RemoteEnabled؛ تحته مباشرة Viewer ثابت وAdmin اختياري وبجانب كل منهما label ومفتاح ونسخ بالكليك اليمين وزر إعادة الإنشاء. إزالة checkbox المستقل Allow remote administration؛ صف Admin نفسه يتحكم RemoteAdministration. الصفوف تظل ظاهرة، وفتح البورت بعدها.
+- تفعيل الوصول ينشئ المفاتيح الناقصة فقط عند اتصال المسؤول المحلي وتحميل الإعدادات؛ تحميل حالة الخدمة لا ينشئ مفاتيح ولا يمنح Admin تلقائيًا. المفاتيح الموجودة لا تتغير إلا بإعادة الإنشاء وتأكيد المالك؛ Save يطبق صلاحيات الوصول.
+- اختبار Access_toggle_does_not_implicitly_enable_admin يثبت بقاء Admin مغلقًا عند تفعيل الوصول؛ باقي cache/dirty/network/security regressions محفوظة.
+- التحقق: Release build ناجح مع تحذيري SYSLIB0057 القائمين من .NET 10، صفر أخطاء؛ 189 نجاح/4 SKIPPED/0 فشل. الواجهة تفاعليًا غير متحققة. لا master/push/install أو تغيير إعدادات الخدمة الجارية.
