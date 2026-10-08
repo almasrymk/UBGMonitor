@@ -800,3 +800,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - النصوص أصبحت Viewer key وAdmin key بطلب المالك؛ دون تغيير الوظائف.
 - Release build ناجح صفر أخطاء وتحذيرا SYSLIB0057 قائمان؛ 195 نجاح/4 SKIPPED/0 فشل. المظهر تفاعليًا غير متحقق؛ لا master/push/install.
+
+### R4-S05 — علامات HTTPS والجدار الناري بدل checkboxs
+- الحالة: DONE-VERIFIED
+- بطلب المالك: استبدال checkboxs HTTPS وفتح البورت بعلامتي Check أخضرتين 14×14 ونص أخضر 12، داخل صف أفقي بفاصل 20؛ الصف يظهر للعناوين غير 127 ويختفي محليًا. إعداد RemoteEnabled/OpenFirewallPort يظل مرتبطًا بالعنوان ويطبق عند Save؛ العرض يبين الخيارات المقررة وليس تحققًا من فتح البورت في النظام.
+- Release build ناجح صفر أخطاء وتحذيرا SYSLIB0057 قائمان؛ 195 نجاح/4 SKIPPED/0 فشل. المظهر تفاعليًا غير متحقق؛ لا master/push/install.
