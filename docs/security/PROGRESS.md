@@ -636,3 +636,9 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - SECURITY_MATRIX.md يحتوي صفًا لكل F-01 إلى F-32 مع الشدة والضعف والمعالجة والمصدر ودليل الأمان/regression والحد المتبقي. تحقق محلي من 32 ID فريدًا ولا missing ID.
 - لا تُرفع C/H ذات owner/runtime proof ناقص إلى Fixed. F-01/F-18/F-19/F-29/F-32 Pending. تفاصيل each-step verification تبقى في سجلها.
 - آخر build/tests للكود: 0 warnings/errors، 160 نجاح/3 Unix skip/0 فشل؛ الوثيقة لا تغير runtime.
+
+### R7-S04 — إجراءات التوقيع والإصدار
+- الحالة: DONE-UNVERIFIED
+- RELEASE.md يوثق Windows Authenticode للملفات والسكربتات والتحقق، macOS Developer ID/notarization مع السطور الدقيقة لاستبدال ad-hoc/quarantine، Linux package/repository signatures وAV acceptance ومصفوفة OS/tested-by-date.
+- تحقق source line numbers بالـrg، ولا signing credentials متاحة. لا signtool/codesign/notarytool أو Defender driver test منفذ؛ لا ادعاء نجاح ولا bypass.
+- آخر suite: 160 نجاح/3 Unix skip/0 فشل، build بلا تحذيرات/أخطاء؛ documentation-only.
