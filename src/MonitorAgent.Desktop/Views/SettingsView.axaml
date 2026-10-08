@@ -323,13 +323,13 @@
                         <StackPanel IsVisible="{Binding !CanEditNetworkOptions}" Spacing="6" Margin="16,0,0,6">
                             <Grid ColumnDefinitions="100,Auto,Auto" HorizontalAlignment="Left">
                                 <CheckBox FontSize="12" RenderTransformOrigin="0%,50%" Content="Viewer" IsChecked="{Binding RemoteKeyPanelOpen, Mode=OneWay}" IsEnabled="False"><CheckBox.RenderTransform><ScaleTransform ScaleX="0.85" ScaleY="0.85"/></CheckBox.RenderTransform></CheckBox>
-                                <SelectableTextBlock FontWeight="Bold" Foreground="{DynamicResource AccentBlueBrush}" Cursor="Hand" ToolTip.Tip="Click to copy key" Grid.Column="1" Tag="viewer" PointerPressed="RemoteKey_PointerPressed" Text="{Binding ViewerKeyDisplay}" VerticalAlignment="Center" TextWrapping="Wrap">
+                                <SelectableTextBlock FontWeight="Bold" Foreground="{DynamicResource AccentBlueBrush}" Cursor="Hand" ToolTip.Tip="Click to copy" Grid.Column="1" Tag="viewer" PointerPressed="RemoteKey_PointerPressed" Text="{Binding ViewerKeyDisplay}" VerticalAlignment="Center" TextWrapping="Wrap">
                                 </SelectableTextBlock>
                                 <Button Grid.Column="2" Content="↻" ToolTip.Tip="Regenerate viewer key" Command="{Binding ManageRemoteAccessCommand}" CommandParameter="create-viewer-key" Classes="footer"/>
                             </Grid>
                             <Grid ColumnDefinitions="100,Auto,Auto" HorizontalAlignment="Left">
                                 <CheckBox FontSize="12" RenderTransformOrigin="0%,50%" Content="Admin" IsChecked="{Binding RemoteAdministration}" IsEnabled="{Binding RemoteKeyPanelOpen}"><CheckBox.RenderTransform><ScaleTransform ScaleX="0.85" ScaleY="0.85"/></CheckBox.RenderTransform></CheckBox>
-                                <SelectableTextBlock FontWeight="Bold" Foreground="{DynamicResource AccentBlueBrush}" Cursor="Hand" ToolTip.Tip="Click to copy key" Grid.Column="1" Tag="admin" PointerPressed="RemoteKey_PointerPressed" Text="{Binding AdminKeyDisplay}" VerticalAlignment="Center" TextWrapping="Wrap">
+                                <SelectableTextBlock FontWeight="Bold" Foreground="{DynamicResource AccentBlueBrush}" Cursor="Hand" ToolTip.Tip="Click to copy" Grid.Column="1" Tag="admin" PointerPressed="RemoteKey_PointerPressed" Text="{Binding AdminKeyDisplay}" VerticalAlignment="Center" TextWrapping="Wrap">
                                 </SelectableTextBlock>
                                 <Button Grid.Column="2" Content="↻" ToolTip.Tip="Regenerate admin key" Command="{Binding ManageRemoteAccessCommand}" CommandParameter="create-admin-key" Classes="footer"/>
                             </Grid>

@@ -25,7 +25,7 @@ public static class UiPlatform
         _ = clipboard.SetTextAsync(text);
         return true;
     }
-    public static async Task CopySensitiveTextAsync(string text)
+    public static async Task CopySensitiveTextAsync(string text, Action? onCopied = null)
     {
         if (Main?.Clipboard is not { } clipboard) return;
         try
@@ -40,7 +40,8 @@ public static class UiPlatform
                     item.Set(DataFormat.CreateBytesPlatformFormat("CanUploadToCloudClipboard"), new byte[4]);
                 }
                 data.Add(item);
-                await clipboard.SetDataAsync(data);
+                  await clipboard.SetDataAsync(data);
+                  onCopied?.Invoke();
             }, () => clipboard.TryGetTextAsync(), () => clipboard.ClearAsync());
         }
         catch (Exception ex) when (ex is InvalidOperationException or System.Runtime.InteropServices.COMException) { }

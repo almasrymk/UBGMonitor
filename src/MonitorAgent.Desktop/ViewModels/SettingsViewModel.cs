@@ -157,12 +157,16 @@ public sealed partial class SettingsViewModel : ObservableObject
         var key = _remoteKeyDisplayStore.Load(role, role == "viewer" ? status.ViewerKeyHash : status.AdminKeyHash);
         if (key.Length > 0)
         {
-            await UiPlatform.CopySensitiveTextAsync(key);
-            StatusMessage = role == "viewer" ? "Viewer key copied." : "Admin key copied.";
+            await UiPlatform.CopySensitiveTextAsync(key, () =>
+            {
+                StatusMessage = role == "viewer" ? "Viewer key copied." : "Admin key copied.";
+                RemoteKeyCopied?.Invoke(role);
+            });
         }
         else StatusMessage = "This key is unavailable here or has changed; regenerate it locally.";
     }
     public bool CanManageRemoteAccess => _client.CanAdminister && _client.IsLocalTransport;
+    public event Action<string>? RemoteKeyCopied;
     public bool CanEditNetworkOptions => string.IsNullOrWhiteSpace(ServiceListenAddress) || ServiceListenAddress.Trim() == LocalOnlyAddress;
     private bool _loadingListenAddress;
     private (bool Enabled, bool Administration, bool Firewall) _savedRemoteFlags;

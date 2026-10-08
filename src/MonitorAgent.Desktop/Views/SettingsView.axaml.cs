@@ -69,7 +69,20 @@ public partial class SettingsView : UserControl
         var settings = (DataContext as MainViewModel)?.Settings ?? DataContext as SettingsViewModel;
         if (settings?.CanManageRemoteAccess != true || label.Tag is not string role) return;
         e.Handled = true;
-        await settings.CopyRemoteKeyCommand.ExecuteAsync(role);
+        void Copied(string copiedRole)
+        {
+            if (copiedRole != role) return;
+            ToolTip.SetTip(label, "Copied");
+            ToolTip.SetIsOpen(label, true);
+            Avalonia.Threading.DispatcherTimer.RunOnce(() =>
+            {
+                ToolTip.SetIsOpen(label, false);
+                ToolTip.SetTip(label, "Click to copy");
+            }, TimeSpan.FromMilliseconds(1200));
+        }
+        settings.RemoteKeyCopied += Copied;
+        try { await settings.CopyRemoteKeyCommand.ExecuteAsync(role); }
+        finally { settings.RemoteKeyCopied -= Copied; }
     }
     private async void ImportCertificate_Click(object? sender, RoutedEventArgs e)
     {

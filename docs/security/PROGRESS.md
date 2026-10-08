@@ -775,3 +775,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - Style محلي داخل SettingsView لجميع CheckBox بحجم خط 12 وScaleTransform 0.85 ومحاذاة أصل يسار/منتصف، بما يطابق Viewer/Admin دون مضاعفة التحويل المحلي عليهما. لا تغيير bindings أو ترتيب أو شاشات أخرى.
 - التحقق: Release build ناجح صفر أخطاء مع تحذيري SYSLIB0057 القائمين؛ 195 نجاح/4 SKIPPED/0 فشل. الفحص البصري أثناء التشغيل غير متحقق؛ لا master/push/install.
+
+### R4-S05 — تلميحات نسخ المفاتيح بالإنجليزية
+- الحالة: DONE-VERIFIED
+- الوقوف على المفتاح يظهر Click to copy؛ بعد نجاح clipboard.SetDataAsync يظهر Copied فورًا لمدة 1200ms ثم يرجع التلميح الأساسي. callback يأتي بعد الكتابة الناجحة وقبل انتظار مسح clipboard بعد 30 ثانية، فلا يظهر نجاح عند فشل الكتابة. لا نص مفتاح في التلميح أو logs.
+- التحقق: Release build ناجح صفر أخطاء وتحذيرا SYSLIB0057 قائمان؛ 195 نجاح/4 SKIPPED/0 فشل. tooltip والclipboard الحقيقي لم يختبرا تفاعليًا؛ لا master/push/install.
