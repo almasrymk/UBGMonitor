@@ -1,0 +1,2 @@
+agent.proto sha256 107198d0f9e5c06d2c5702192555104948492c8636c0ad9ae713d0268d8b2e3b
+source almasrymk/MonitorAgentPlatform proto/monitor/agent/v1/agent.proto (hash of the file with LF line endings)

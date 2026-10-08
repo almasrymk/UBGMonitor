@@ -708,3 +708,10 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الإصلاح: callback يعيد آخر عنوان صالح مباشرةً عند null/invalid قبل إشعارات تتبع التغييرات؛ لا يغير HTTPS/firewall أو يعرض رسالة. اختبار null السابق حدّث ليتوقع بقاء العنوان الصالح بدل null.
 - التحقق: Release build 0 warnings/errors؛ suite 169 نجاح/3 Unix-only skip/0 فشل. أضيفت assertions لتعديل حقيقي بعد الحفظ؛ اختبارات NetworkSelectionTests الثلاثة أعيدت ونجحت وتثبت استمرار تنبيه التعديل الحقيقي.
 - الاختبار يستخدم clean marker الحقيقي دون حفظ تفضيلات المستخدم؛ واجهة Visual Studio لم تُختبر تفاعليًا. لا نشر أو master.
+
+### دمج فرعي Security وCloud على master بطلب المالك — 2026-10-08
+- الحالة: DONE-VERIFIED
+- المالك طلب دمج codex/security-hardening-enrollment وcloud/m7-connector؛ تم تجهيز الدمج في codex/merge-security-and-m7 من origin/master دون إنشاء commits مباشرة على master أو إعادة كتابة التاريخ.
+- حل تعارض CI بالاحتفاظ codex/** وcloud/** ومصفوفة الأمان؛ الاحتفاظ Microsoft.Data.Sqlite 10.0.12 مع SQLitePCLRaw.bundle_e_sqlite3 3.0.5. ترقية TestHost إلى 10.0.12 لتوافق net10.0 بعد فشل 9 اختبارات بسبب PipeWriter في TestHost 8؛ لم تُحذف أو تُخفف اختبارات.
+- التحقق: Release build ناجح؛ الاختبارات بعد الإصلاح 187 نجاح، 4 SKIPPED، صفر فشل. المتخطى: 3 Unix-only وCloud E2E لعدم بيانات بيئة Cloud. فحص الحزم: لا High/Critical مبلغ عنها.
+- التحويل إلى .NET 10 يأتي من فرع Cloud؛ أول build أظهر تحذيري SYSLIB0057 للشهادات، والـincremental build الأخير بلا تحذيرات. التشغيل الفعلي متعدد الأنظمة وCloud E2E غير متحقق؛ Cloud معطل افتراضيًا. لا تثبيت أو نشر خدمة أو اتصال بترخيص الإنتاج.

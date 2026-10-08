@@ -6,6 +6,7 @@ on:
     branches:
       - 'security/**'
       - 'codex/**'
+      - 'cloud/**'
       - master
   workflow_dispatch:
 
@@ -34,10 +35,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Set up .NET 8
+      - name: Set up .NET 10
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '10.0.x'
       - name: Restore
         run: dotnet restore MonitorAgent.sln
       - name: Build Release
