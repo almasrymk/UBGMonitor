@@ -701,3 +701,10 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الملفات: SettingsViewModel.cs وSettingsView.axaml وAppSettingsStore.cs وREMOTE_ACCESS.md.
 - الاختبارات CombinedSettingsSaveTests: 5 حالات valid/missing viewer/missing admin/PUT failure/configure failure، مع ترتيب الطلبات؛ test إضافي dirty tracking وReset. جميعها offline، لا port/firewall حقيقي.
 - التحقق: Release build بلا warnings/errors؛ 168 نجاح/3 Unix-only skip/0 فشل. UI تفاعليًا لم يُختبر؛ لا master أو نشر. التغيير لا يجمع الكتابتين في transaction واحدة، ويصرح بالفشل الجزئي بدل إخفائه.
+
+### R4-S05 — إصلاح تنبيه التعديلات غير المحفوظة بعد Save
+- الحالة: DONE-VERIFIED
+- إعادة الإنتاج: Temporary_selection_clear_after_save_does_not_mark_the_tab_dirty_or_prompt_on_exit فشل قبل الإصلاح؛ HasChanges=true رغم استخدام نفس MarkClean الذي يستدعيه Save. سبب ذلك أن SelectedValue=null المؤقت بقي في property، وCaptureGeneral اعتبر العنوان 127 بدل العنوان المحفوظ.
+- الإصلاح: callback يعيد آخر عنوان صالح مباشرةً عند null/invalid قبل إشعارات تتبع التغييرات؛ لا يغير HTTPS/firewall أو يعرض رسالة. اختبار null السابق حدّث ليتوقع بقاء العنوان الصالح بدل null.
+- التحقق: Release build 0 warnings/errors؛ suite 169 نجاح/3 Unix-only skip/0 فشل. أضيفت assertions لتعديل حقيقي بعد الحفظ؛ اختبارات NetworkSelectionTests الثلاثة أعيدت ونجحت وتثبت استمرار تنبيه التعديل الحقيقي.
+- الاختبار يستخدم clean marker الحقيقي دون حفظ تفضيلات المستخدم؛ واجهة Visual Studio لم تُختبر تفاعليًا. لا نشر أو master.

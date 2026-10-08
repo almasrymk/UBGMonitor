@@ -122,9 +122,16 @@ public sealed partial class SettingsViewModel : ObservableObject
     private string _lastValidListenAddress = LocalOnlyAddress;
     partial void OnServiceListenAddressChanged(string? oldValue, string newValue)
     {
-        OnPropertyChanged(nameof(CanEditNetworkOptions));
         // ComboBox can clear SelectedValue temporarily while replacing its selection.
-        if (!System.Net.IPAddress.TryParse(newValue, out _)) return;
+        if (!System.Net.IPAddress.TryParse(newValue, out _))
+        {
+            var wasLoading = _loadingListenAddress;
+            _loadingListenAddress = true;
+            try { ServiceListenAddress = _lastValidListenAddress; }
+            finally { _loadingListenAddress = wasLoading; }
+            return;
+        }
+        OnPropertyChanged(nameof(CanEditNetworkOptions));
         var previous = _lastValidListenAddress;
         _lastValidListenAddress = newValue;
         if (_loadingListenAddress) return;
