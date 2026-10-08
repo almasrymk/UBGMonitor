@@ -347,7 +347,7 @@ public sealed class CloudEndToEndTests
         var client = new CloudHttpClient(http);
         var status = new CloudStatus();
         var service = new CloudAgentService(
-            Microsoft.Extensions.Options.Options.Create(options), source, new NoopLicense(), new CloudStateStore(folder), client, new DeviceTokenProvider(client, TimeProvider.System),
+            Microsoft.Extensions.Options.Options.Create(options), source, new NoopLicense(), new AcceptAll(), new CloudStateStore(folder), client, new DeviceTokenProvider(client, TimeProvider.System),
             status, TimeProvider.System, NullLogger<CloudAgentService>.Instance);
 
         using var stop = new CancellationTokenSource();
@@ -376,10 +376,50 @@ public sealed class CloudEndToEndTests
         }
     }
 
+    private sealed class AcceptAll : ICloudConfigApplier
+    {
+        public Task<(bool Success, string? Error)> ApplyAsync(int version, string json, CancellationToken cancellationToken) => Task.FromResult((true, (string?)null));
+    }
+
     private sealed class NoopLicense : ICloudLicenseSink
     {
         public void Update(string state, string? reasonCode, string? token, DateTimeOffset? checkAfter)
         {
         }
+    }
+}
+
+public sealed class CloudConfigDocumentTests
+{
+    private const string Valid = """
+        { "version": 7, "telemetry": { "sampleSeconds": 10 },
+          "thresholds": { "cpu": { "warningPercent": 70, "criticalPercent": 90, "forSeconds": 60, "clearBelowPercent": 65 },
+                          "ram": { "warningPercent": 80, "criticalPercent": 95, "forSeconds": 300 },
+                          "disk": { "warningPercent": 85, "criticalPercent": 92, "forSeconds": 60 },
+                          "tempC": { "critical": 85, "forSeconds": 120 } },
+          "monitorPoints": [], "features": { "remoteActions": false } }
+        """;
+
+    [Fact]
+    public void A_valid_document_is_read()
+    {
+        Assert.True(CloudConfigDocument.TryParse(Valid, out var document, out var error));
+        Assert.Null(error);
+        Assert.Equal(7, document!.Version);
+        Assert.Equal(10, document.SampleSeconds);
+        Assert.Equal(90, document.Cpu.CriticalPercent);
+        Assert.Equal(65, document.Cpu.ClearBelowPercent);
+        Assert.Null(document.Ram.ClearBelowPercent);
+    }
+
+    [Theory]
+    [InlineData("not json")]
+    [InlineData("{ \"thresholds\": {} }")]
+    [InlineData("{ \"thresholds\": { \"cpu\": { \"warningPercent\": 90, \"criticalPercent\": 80 }, \"ram\": { \"warningPercent\": 80, \"criticalPercent\": 95 }, \"disk\": { \"warningPercent\": 85, \"criticalPercent\": 92 } } }")]
+    public void An_invalid_document_is_refused_with_a_reason(string json)
+    {
+        Assert.False(CloudConfigDocument.TryParse(json, out var document, out var error));
+        Assert.Null(document);
+        Assert.False(string.IsNullOrWhiteSpace(error));
     }
 }

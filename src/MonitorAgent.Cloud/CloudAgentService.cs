@@ -15,7 +15,7 @@ namespace MonitorAgent.Cloud;
 /// when needed, gets a device token, keeps one gateway session open and reconnects with back-off (AG-10).
 /// </summary>
 public sealed partial class CloudAgentService(
-    IOptions<CloudOptions> options, ICloudAgentSource source, ICloudLicenseSink license, CloudStateStore store, CloudHttpClient http, DeviceTokenProvider tokens,
+    IOptions<CloudOptions> options, ICloudAgentSource source, ICloudLicenseSink license, ICloudConfigApplier configs, CloudStateStore store, CloudHttpClient http, DeviceTokenProvider tokens,
     CloudStatus status, TimeProvider clock, ILogger<CloudAgentService> logger) : BackgroundService
 {
     public static readonly TimeSpan IssueInterval = TimeSpan.FromSeconds(5);
@@ -236,7 +236,7 @@ public sealed partial class CloudAgentService(
                 UseProxy = true,
             },
         });
-        var session = new GatewaySession(channel, token, outbox, source, license, status, logger, clock);
+        var session = new GatewaySession(channel, token, outbox, source, license, configs, status, logger, clock);
         session.Opened += () => _fullPointsWanted = true;
         session.InventoryRequested += () => _inventoryWanted = true;
         try
@@ -300,6 +300,7 @@ public static class CloudServiceCollectionExtensions
         services.AddSingleton(Options.Create(options));
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<ICloudLicenseSink, NoLicenseSink>();
+        services.TryAddSingleton<ICloudConfigApplier, ShapeOnlyConfigApplier>();
         services.AddSingleton(new CloudStateStore(options.StateFolder));
         services.AddSingleton<CloudStatus>();
         services.AddHttpClient<CloudHttpClient>(client =>

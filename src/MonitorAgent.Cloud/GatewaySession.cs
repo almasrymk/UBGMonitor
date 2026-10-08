@@ -13,7 +13,8 @@ namespace MonitorAgent.Cloud;
 /// cancellation sends <c>Goodbye</c> first.
 /// </summary>
 public sealed partial class GatewaySession(
-    GrpcChannel channel, string token, Outbox outbox, ICloudAgentSource source, ICloudLicenseSink license, CloudStatus status, ILogger logger, TimeProvider clock)
+    GrpcChannel channel, string token, Outbox outbox, ICloudAgentSource source, ICloudLicenseSink license, ICloudConfigApplier configs, CloudStatus status, ILogger logger,
+    TimeProvider clock)
 {
     public static readonly TimeSpan WelcomeTimeout = TimeSpan.FromSeconds(15);
     public static readonly TimeSpan SnapshotInterval = TimeSpan.FromSeconds(60);
@@ -166,13 +167,15 @@ public sealed partial class GatewaySession(
 
                     break;
                 case CloudMessage.BodyOneofCase.LicenseUpdate:
-                    var update = message.LicenseUpdate;
-                    license.Update(update.State == LicenseState.Unlicensed ? "Unlicensed" : "Licensed", NullIfEmpty(update.ReasonCode), NullIfEmpty(update.Token),
-                        update.CheckAfter?.ToDateTimeOffset());
+                    var licence = message.LicenseUpdate;
+                    license.Update(licence.State == LicenseState.Unlicensed ? "Unlicensed" : "Licensed", NullIfEmpty(licence.ReasonCode), NullIfEmpty(licence.Token),
+                        licence.CheckAfter?.ToDateTimeOffset());
                     break;
                 case CloudMessage.BodyOneofCase.ConfigUpdate:
-                    // Central configuration is applied from M8; the version is acknowledged so the cloud shows it as received.
-                    outbox.Enqueue(Outbox.Config, new AgentMessage { ConfigApplied = new ConfigApplied { Version = message.ConfigUpdate.Version, Success = true } });
+                    var update = message.ConfigUpdate;
+                    var (success, error) = await configs.ApplyAsync(update.Version, Payloads.Decompress(update.JsonBrotli), cancellationToken);
+                    LogConfig(logger, update.Version, success, error ?? string.Empty);
+                    outbox.Enqueue(Outbox.Config, new AgentMessage { ConfigApplied = new ConfigApplied { Version = update.Version, Success = success, Error = error ?? string.Empty } });
                     break;
                 case CloudMessage.BodyOneofCase.RequestInventory:
                     InventoryRequested?.Invoke();
@@ -252,6 +255,9 @@ public sealed partial class GatewaySession(
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "[Cloud] Disconnected by the cloud: {Code}, retry after {Seconds} s")]
     private static partial void LogDisconnected(ILogger logger, string code, uint seconds);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[Cloud] Configuration version {Version}: applied={Success} {Error}")]
+    private static partial void LogConfig(ILogger logger, int version, bool success, string error);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "[Cloud] Snapshot not sent: {Message}")]
     private static partial void LogSnapshotFailed(ILogger logger, string message);

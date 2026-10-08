@@ -65,3 +65,62 @@ internal sealed class NoLicenseSink : ICloudLicenseSink
     {
     }
 }
+
+/// <summary>Applies a cloud configuration document (05 section 8): validate, apply atomically, persist; false keeps the previous one.</summary>
+public interface ICloudConfigApplier
+{
+    Task<(bool Success, string? Error)> ApplyAsync(int version, string json, CancellationToken cancellationToken);
+}
+
+/// <summary>Without an applier the connector checks the document's shape and accepts it (the agent keeps its local settings).</summary>
+internal sealed class ShapeOnlyConfigApplier : ICloudConfigApplier
+{
+    public Task<(bool Success, string? Error)> ApplyAsync(int version, string json, CancellationToken cancellationToken) =>
+        Task.FromResult(CloudConfigDocument.TryParse(json, out _, out var error) ? (true, (string?)null) : (false, error));
+}
+
+public sealed record CloudThreshold(double WarningPercent, double CriticalPercent, int ForSeconds, double? ClearBelowPercent);
+
+/// <summary>The parts of the configuration document the agent uses.</summary>
+public sealed record CloudConfigDocument(int Version, int SampleSeconds, CloudThreshold Cpu, CloudThreshold Ram, CloudThreshold Disk)
+{
+    public static bool TryParse(string json, out CloudConfigDocument? document, out string? error)
+    {
+        document = null;
+        try
+        {
+            using var parsed = System.Text.Json.JsonDocument.Parse(json);
+            var root = parsed.RootElement;
+            var thresholds = root.GetProperty("thresholds");
+            CloudThreshold Read(string name)
+            {
+                var t = thresholds.GetProperty(name);
+                return new CloudThreshold(
+                    t.GetProperty("warningPercent").GetDouble(), t.GetProperty("criticalPercent").GetDouble(), t.TryGetProperty("forSeconds", out var f) ? f.GetInt32() : 0,
+                    t.TryGetProperty("clearBelowPercent", out var c) && c.ValueKind == System.Text.Json.JsonValueKind.Number ? c.GetDouble() : null);
+            }
+
+            var cpu = Read("cpu");
+            var ram = Read("ram");
+            var disk = Read("disk");
+            foreach (var (name, t) in new[] { ("cpu", cpu), ("ram", ram), ("disk", disk) })
+            {
+                if (t.WarningPercent is <= 0 or > 100 || t.CriticalPercent is <= 0 or > 100 || t.CriticalPercent <= t.WarningPercent)
+                {
+                    error = $"thresholds.{name}: warning and critical must be 1-100 with critical above warning.";
+                    return false;
+                }
+            }
+
+            var sample = root.TryGetProperty("telemetry", out var telemetry) && telemetry.TryGetProperty("sampleSeconds", out var s) ? s.GetInt32() : 5;
+            document = new CloudConfigDocument(root.TryGetProperty("version", out var v) ? v.GetInt32() : 0, Math.Clamp(sample, 1, 30), cpu, ram, disk);
+            error = null;
+            return true;
+        }
+        catch (Exception ex) when (ex is System.Text.Json.JsonException or KeyNotFoundException or InvalidOperationException or FormatException)
+        {
+            error = $"The configuration document is not valid: {ex.Message}";
+            return false;
+        }
+    }
+}
