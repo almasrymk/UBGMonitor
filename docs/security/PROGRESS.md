@@ -901,3 +901,9 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - ضبط HorizontalContentAlignment وVerticalContentAlignment إلى Center على RepeatButton وContentPresenter، وتمديد زر السهم داخل نصف الحاوية مع Margin صفر؛ تصحيح انحراف الأسهم لليسار دون تغيير موضع الحاوية أو القيم.
 - Release build ناجح وتحذيرا الشهادة القائمان؛ 196 اختبار ناجح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
+
+### R4-S05 — تصغير العناوين وإضافة أيقونات قائمة الإعدادات
+- الحالة: DONE-VERIFIED
+- تصغير العناوين الرئيسية للشاشات الثلاث من 28 إلى 24، وعناوين البطاقات إلى 18 والعناوين الفرعية إلى 15، ووصف النصوص 12؛ تصغير خط 14 إلى 13 مع إبقاء وظائف الحقول والقيم.
+- إضافة CogOutline وChartBar وFileDocumentOutline بحجم 20 إلى General/Monitor Points/Device Specifications في القائمة، مع نص 12 ومسافة 10. الأيقونات ترث لون اختيار القائمة الحالي.
+- Release build ناجح مع تحذيري الشهادة القائمين؛ الاختبارات 196 نجاح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
