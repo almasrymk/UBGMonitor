@@ -39,6 +39,8 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     private readonly AppSettingsStore _store;
     private readonly AgentApiClient _client;
+    public bool CanAdminister => _client.CanAdminister;
+    public string AccessExplanation => CanAdminister ? "Administrator access" : "Read-only access. Ask an administrator to add you to MonitorAgent Admins.";
     private UiAppSettings _snapshot = new();
     private List<MonitorPoint> _monitorPointSnapshot = [];
 
@@ -112,6 +114,12 @@ public sealed partial class SettingsViewModel : ObservableObject
     public SettingsViewModel(AgentApiClient client)
     {
         _client = client;
+        _client.RoleChanged += () => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            OnPropertyChanged(nameof(CanAdminister));
+            OnPropertyChanged(nameof(AccessExplanation));
+            SaveCommand.NotifyCanExecuteChanged();
+        });
         _store = new AppSettingsStore(client);
         TargetOptions.Add(new TargetOption(AllMonitorPointsId, "All monitor points"));
         ShowUnloaded();
@@ -365,7 +373,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             Theme = _snapshot.General.Theme
         }.Save();
 
-    private bool CanSave() => HasChanges && IsLoaded;
+    private bool CanSave() => HasChanges && IsLoaded && CanAdminister;
 
     private static readonly string[] Sections = [SectionGeneral, SectionMonitorPoints, SectionConditions];
     private static readonly TimeSpan StatusMessageDuration = TimeSpan.FromSeconds(4);

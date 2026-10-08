@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
+using MonitorAgent.Shared.Security;
 
 namespace MonitorAgent.Service.LocalApi;
 
@@ -35,43 +36,46 @@ public sealed class LocalApiHost : BackgroundService
     }
 
     /// <summary>Starts the API on the address and port from the settings, and restarts it when they change.</summary>
+    private readonly List<WebApplication> _localApps = [];
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        foreach (var role in new[] { AgentAccessRole.Viewer, AgentAccessRole.Administrator })
+        {
+            var builder = WebApplication.CreateBuilder();
+            builder.Logging.ClearProviders();
+            ConfigureServices(builder.Services);
+            IpcHostConfiguration.Configure(builder, role, _logger);
+            var local = builder.Build();
+            ConfigureApplication(local, role);
+            try { await local.StartAsync(stoppingToken); IpcHostConfiguration.Finish(role, _logger); _localApps.Add(local); }
+            catch { await local.DisposeAsync(); throw; }
+        }
         var cache = _rootProvider.GetRequiredService<ILocalConfigCache>();
         while (!stoppingToken.IsCancellationRequested)
         {
-            var listen = Listening.From(cache.GetGeneral(), _options.Port);
-            if (!await TryStartAsync(listen, stoppingToken))
+            var general = cache.GetGeneral();
+            var listen = Listening.From(general, _options.Port);
+            var key = general.RemoteAccessKey;
+            if (!listen.LocalOnly && !string.IsNullOrWhiteSpace(key))
             {
-                var fallback = listen with { Address = IPAddress.Loopback.ToString() };
-                _logger.LogWarning("[API] Falling back to http://127.0.0.1:{Port}", fallback.Port);
-                if (!await TryStartAsync(fallback, stoppingToken) && !await TryStartAsync(fallback with { Port = _options.Port }, stoppingToken))
+                if (!await TryStartAsync(listen, stoppingToken))
                 {
                     await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
                     continue;
                 }
+                UpdateFirewall(listen);
             }
-
-            UpdateFirewall(listen);
+            else _rootProvider.GetRequiredService<IFirewall>().Allow(null);
             try
             {
-                while (Listening.From(cache.GetGeneral(), _options.Port) == listen)
-                {
+                while (Listening.From(cache.GetGeneral(), _options.Port) == listen && cache.GetGeneral().RemoteAccessKey == key)
                     await Task.Delay(TimeSpan.FromSeconds(3), stoppingToken);
-                }
             }
-            catch (OperationCanceledException)
-            {
-            }
-
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
             await StopAppAsync();
-            if (!stoppingToken.IsCancellationRequested)
-            {
-                _logger.LogInformation("[API] The listen address or port changed; restarting the API");
-            }
         }
     }
-
     private async Task<bool> TryStartAsync(Listening listen, CancellationToken stoppingToken)
     {
         var builder = WebApplication.CreateBuilder();
@@ -80,7 +84,7 @@ public sealed class LocalApiHost : BackgroundService
         builder.WebHost.UseUrls(listen.Urls);
         ConfigureServices(builder.Services);
         var app = builder.Build();
-        ConfigureApplication(app);
+        ConfigureApplication(app, AgentAccessRole.Viewer, tcp: true, boundAddress: listen.Address);
 
         try
         {
@@ -98,41 +102,33 @@ public sealed class LocalApiHost : BackgroundService
         }
     }
 
-    public static void ConfigureServices(IServiceCollection services)
+    public static void ConfigureServices(IServiceCollection services) { }
+
+    public void ConfigureApplication(WebApplication app, AgentAccessRole transportRole = AgentAccessRole.None, bool tcp = false, string? boundAddress = null)
     {
-        services.AddCors(o => o.AddPolicy("localhost", p =>
-            p.SetIsOriginAllowed(origin =>
-                {
-                    if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri))
-                    {
-                        return false;
-                    }
-
-                    return uri.Host is "localhost" or "127.0.0.1";
-                })
-                .AllowAnyHeader()
-                .AllowAnyMethod()));
-
-    }
-
-    public void ConfigureApplication(WebApplication app)
-    {
-
-        app.UseCors("localhost");
+        app.UseRouting();
         app.Use(async (context, next) =>
         {
-            var key = _rootProvider.GetRequiredService<ILocalConfigCache>().GetGeneral().RemoteAccessKey;
-            var remote = context.Connection.RemoteIpAddress;
-            if (!string.IsNullOrEmpty(key) && remote is not null && !IPAddress.IsLoopback(remote)
-                && !CryptographicOperations.FixedTimeEquals(
-                    Encoding.UTF8.GetBytes(context.Request.Headers[ApiRoutes.AccessKeyHeader].ToString()),
-                    Encoding.UTF8.GetBytes(key)))
+            if (tcp)
             {
-                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                await context.Response.WriteAsync("The access key is missing or wrong.");
+                var key = _rootProvider.GetRequiredService<ILocalConfigCache>().GetGeneral().RemoteAccessKey;
+                if (string.IsNullOrWhiteSpace(key) || !CryptographicOperations.FixedTimeEquals(
+                    SHA256.HashData(Encoding.UTF8.GetBytes(context.Request.Headers[ApiRoutes.AccessKeyHeader].ToString())),
+                    SHA256.HashData(Encoding.UTF8.GetBytes(key))))
+                {
+                    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                    return;
+                }
+                var host = context.Request.Host.Host;
+                var allowed = boundAddress == IPAddress.Any.ToString() ? LocalAddresses().Append("127.0.0.1").Contains(host) : host == boundAddress;
+                if (!allowed) { context.Response.StatusCode = StatusCodes.Status400BadRequest; return; }
+            }
+            var required = context.GetEndpoint()?.Metadata.GetMetadata<RequiredAgentRole>();
+            if (required is null || transportRole < required.Role)
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
                 return;
             }
-
             await next();
         });
         app.Use(async (context, next) =>
@@ -205,7 +201,7 @@ public sealed class LocalApiHost : BackgroundService
             ? [$"http://127.0.0.1:{Port}"]
             : Address == IPAddress.Any.ToString()
                 ? [$"http://0.0.0.0:{Port}"]
-                : [$"http://{Address}:{Port}", $"http://127.0.0.1:{Port}"];
+                : [$"http://{Address}:{Port}"];
 
         public static Listening From(GeneralRuntimeSettings general, int defaultPort)
         {
@@ -237,6 +233,8 @@ public sealed class LocalApiHost : BackgroundService
     {
         await base.StopAsync(cancellationToken);
         await StopAppAsync();
+        foreach (var local in _localApps) { await local.StopAsync(cancellationToken); await local.DisposeAsync(); }
+        _localApps.Clear();
     }
 
     /// <summary>
@@ -263,7 +261,9 @@ public sealed class LocalApiHost : BackgroundService
 
     private void MapEndpoints(WebApplication app)
     {
-        app.MapGet(ApiRoutes.Status, () =>
+        var viewer = app.MapGroup("").WithMetadata(new RequiredAgentRole(AgentAccessRole.Viewer));
+        var admin = app.MapGroup("").WithMetadata(new RequiredAgentRole(AgentAccessRole.Administrator));
+        viewer.MapGet(ApiRoutes.Status, () =>
         {
             var identity = _rootProvider.GetRequiredService<IAgentIdentity>();
             var connectivity = _rootProvider.GetRequiredService<IConnectivityTracker>();
@@ -284,63 +284,71 @@ public sealed class LocalApiHost : BackgroundService
             });
         });
 
-        app.MapPost(ApiRoutes.DatabaseTest, async (DatabaseLogin login, CancellationToken ct) =>
+        admin.MapPost(ApiRoutes.DatabaseTest, async (DatabaseTestRequest request, CancellationToken ct) =>
         {
+            DatabaseLogin login;
+            try { login = DatabaseTestResolver.Resolve(request, ServiceSettingsFile.ReadSection()); }
+            catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
             var watch = System.Diagnostics.Stopwatch.StartNew();
             var failure = await DatabaseMonitor.ConnectFailureAsync(login, ct);
-            _logger.LogInformation("[Database] Test from the app: {Server}/{Database} - {Result}", login.Server, login.Database, failure ?? "connected");
-            return Results.Ok(new DatabaseTestResultDto(failure is null, failure ?? $"Connected in {watch.ElapsedMilliseconds} ms."));
+            _logger.LogInformation("[Database] Administrator connection test: {Success}", failure is null);
+            return Results.Ok(new DatabaseTestResultDto(failure is null, failure is null ? $"Connected in {watch.ElapsedMilliseconds} ms." : "Connection failed. Check the target, credentials and certificate configuration."));
         });
 
-        app.MapGet(ApiRoutes.Snapshot, async (CancellationToken ct) =>
+        viewer.MapGet(ApiRoutes.Snapshot, async (CancellationToken ct) =>
             Results.Ok(await _rootProvider.GetRequiredService<ISystemInfoService>().GetSnapshotAsync(ct)));
 
-        app.MapGet(ApiRoutes.Cpu, async (CancellationToken ct) =>
+        viewer.MapGet(ApiRoutes.Cpu, async (CancellationToken ct) =>
             Results.Ok(await _rootProvider.GetRequiredService<ISystemInfoService>().GetCpuAsync(ct)));
 
-        app.MapGet(ApiRoutes.Ram, async (CancellationToken ct) =>
+        viewer.MapGet(ApiRoutes.Ram, async (CancellationToken ct) =>
             Results.Ok(await _rootProvider.GetRequiredService<ISystemInfoService>().GetRamAsync(ct)));
 
-        app.MapGet(ApiRoutes.Network, async (CancellationToken ct) =>
+        viewer.MapGet(ApiRoutes.Network, async (CancellationToken ct) =>
             Results.Ok(await _rootProvider.GetRequiredService<ISystemInfoService>().GetNetworkAsync(ct)));
 
-        app.MapGet(ApiRoutes.DiskPartitions, async (CancellationToken ct) =>
+        viewer.MapGet(ApiRoutes.DiskPartitions, async (CancellationToken ct) =>
             Results.Ok(await _rootProvider.GetRequiredService<ISystemInfoService>().GetPartitionsAsync(ct)));
 
-        app.MapGet(ApiRoutes.DiskPhysical, async (CancellationToken ct) =>
+        viewer.MapGet(ApiRoutes.DiskPhysical, async (CancellationToken ct) =>
             Results.Ok(await _rootProvider.GetRequiredService<ISystemInfoService>().GetPhysicalDisksAsync(ct)));
 
-        app.MapGet(ApiRoutes.Settings, () => Results.Ok(ServiceSettingsFile.ReadSection()));
+        viewer.MapGet(ApiRoutes.Settings, () => Results.Ok(SettingsContract.PublicSettings(ServiceSettingsFile.ReadSection())));
 
-        app.MapPut(ApiRoutes.Settings, (System.Text.Json.Nodes.JsonObject section) =>
+        admin.MapPut(ApiRoutes.Settings, (System.Text.Json.Nodes.JsonObject section) =>
         {
             try
             {
                 var before = ServiceSettingsFile.ReadSection();
+                section = SettingsContract.Merge(section, before);
                 ServiceSettingsFile.WriteSection(section);
                 _logger.LogInformation("[Settings] Saved by the app to {Path}", ServiceSettingsFile.PrimaryPath);
                 ReportSettingsChanges(SettingsChanges.Describe(before, section));
                 return Results.NoContent();
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
+            catch (Exception ex) when (ex is ArgumentException or System.Text.Json.JsonException or InvalidOperationException)
+            {
+                return Results.BadRequest(new { error = ex is ArgumentException ? ex.Message : "Invalid settings data." });
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 _logger.LogWarning(ex, "[Settings] Saving failed");
                 return Results.Problem($"The service could not save its settings file: {ex.Message}");
             }
         });
 
-        app.MapGet(ApiRoutes.DiskActivity, () =>
+        viewer.MapGet(ApiRoutes.DiskActivity, () =>
             _rootProvider.GetRequiredService<IDiskActivityService>().GetActivity() is { } activity
                 ? Results.Ok(activity)
                 : Results.NoContent());
 
-        app.MapGet(ApiRoutes.Hardware, async (CancellationToken ct) =>
+        viewer.MapGet(ApiRoutes.Hardware, async (CancellationToken ct) =>
             Results.Ok(await _rootProvider.GetRequiredService<IHardwareService>().GetHardwareAsync(ct)));
 
-        app.MapGet(ApiRoutes.HardwareLevels, async (CancellationToken ct) =>
+        viewer.MapGet(ApiRoutes.HardwareLevels, async (CancellationToken ct) =>
             Results.Ok(await _rootProvider.GetRequiredService<IHardwareService>().GetStaticLevelsAsync(ct)));
 
-        app.MapGet($"{ApiRoutes.HardwareLevels}/{{level:int}}", async (int level, CancellationToken ct) =>
+        viewer.MapGet($"{ApiRoutes.HardwareLevels}/{{level:int}}", async (int level, CancellationToken ct) =>
         {
             HardwareLevelDto? dto = level switch
             {
@@ -353,13 +361,13 @@ public sealed class LocalApiHost : BackgroundService
             return dto is null ? Results.BadRequest(new { error = "level must be 1-5" }) : Results.Ok(dto);
         });
 
-        app.MapGet(ApiRoutes.Os, async (CancellationToken ct) =>
+        viewer.MapGet(ApiRoutes.Os, async (CancellationToken ct) =>
             Results.Ok(await _rootProvider.GetRequiredService<IHardwareService>().GetOsAsync(ct)));
 
-        app.MapGet(ApiRoutes.Sensors, async (CancellationToken ct) =>
+        viewer.MapGet(ApiRoutes.Sensors, async (CancellationToken ct) =>
             Results.Ok(await _rootProvider.GetRequiredService<ISensorsService>().GetSensorsAsync(ct)));
 
-        app.MapGet(ApiRoutes.ProcessesTop, async (int? count, string? sortBy, CancellationToken ct) =>
+        viewer.MapGet(ApiRoutes.ProcessesTop, async (int? count, string? sortBy, CancellationToken ct) =>
         {
             var sort = string.IsNullOrWhiteSpace(sortBy) ? "cpu" : sortBy.Trim().ToLowerInvariant();
             if (sort is not "cpu" and not "ram" and not "network" and not "disk")
@@ -372,35 +380,35 @@ public sealed class LocalApiHost : BackgroundService
             return Results.Ok(items);
         });
 
-        app.MapGet(ApiRoutes.Programs, async (CancellationToken ct) =>
+        viewer.MapGet(ApiRoutes.Programs, async (CancellationToken ct) =>
             Results.Ok(await _rootProvider.GetRequiredService<IApplicationsService>().GetProgramsAsync(ct)));
 
-        app.MapGet(ApiRoutes.Users, async (CancellationToken ct) =>
+        viewer.MapGet(ApiRoutes.Users, async (CancellationToken ct) =>
             Results.Ok(await _rootProvider.GetRequiredService<IApplicationsService>().GetUsersAsync(ct)));
 
-        app.MapGet(ApiRoutes.Services, async (CancellationToken ct) =>
+        viewer.MapGet(ApiRoutes.Services, async (CancellationToken ct) =>
             Results.Ok(await _rootProvider.GetRequiredService<IApplicationsService>().GetServicesAsync(ct)));
 
-        app.MapGet(ApiRoutes.MonitorPoints, async (CancellationToken ct) =>
+        viewer.MapGet(ApiRoutes.MonitorPoints, async (CancellationToken ct) =>
             Results.Ok(await MonitorPointStatusBuilder.BuildAsync(_rootProvider, ct)));
 
-        app.MapGet(ApiRoutes.Issues, () =>
+        viewer.MapGet(ApiRoutes.Issues, () =>
         {
             var issues = _rootProvider.GetRequiredService<IMonitorHealthStore>().GetIssues();
             return Results.Ok(IsLicensed() ? issues : issues.Where(i => i.Id == LicenseCodes.IssueId).ToList());
         });
 
-        app.MapGet(ApiRoutes.Notifications, () => IsLicensed()
+        viewer.MapGet(ApiRoutes.Notifications, () => IsLicensed()
             ? Results.Ok(_rootProvider.GetRequiredService<INotificationStore>().GetNotifications())
             : Results.Ok(new[] { LicenseNotice() }));
 
-        app.MapGet(ApiRoutes.Internet, () =>
+        viewer.MapGet(ApiRoutes.Internet, () =>
             Results.Ok(_rootProvider.GetRequiredService<IInternetStatus>().GetState()));
 
-        app.MapGet(ApiRoutes.ReportSubjects, async (CancellationToken ct) =>
+        viewer.MapGet(ApiRoutes.ReportSubjects, async (CancellationToken ct) =>
             Results.Ok(await _rootProvider.GetRequiredService<ReportBuilder>().GetSubjectsAsync(ct)));
 
-        app.MapGet($"{ApiRoutes.Reports}/{{type}}", async (string type, DateTime? from, DateTime? to, string? subject, CancellationToken ct) =>
+        viewer.MapGet($"{ApiRoutes.Reports}/{{type}}", async (string type, DateTime? from, DateTime? to, string? subject, CancellationToken ct) =>
         {
             if (ReportTypes.Find(type) is null)
             {
@@ -426,22 +434,22 @@ public sealed class LocalApiHost : BackgroundService
             }
         });
 
-        app.MapPost(ApiRoutes.InternetSpeedTest, () =>
+        admin.MapPost(ApiRoutes.InternetSpeedTest, () =>
         {
             var internet = _rootProvider.GetRequiredService<IInternetStatus>();
             internet.StartSpeedTest();
             return Results.Accepted(ApiRoutes.Internet, internet.GetState());
         });
 
-        app.MapGet(ApiRoutes.License, () => Results.Ok(_rootProvider.GetRequiredService<ILicenseState>().GetStatus()));
+        viewer.MapGet(ApiRoutes.License, () => Results.Ok(_rootProvider.GetRequiredService<ILicenseState>().GetStatus()));
 
-        app.MapPost(ApiRoutes.LicenseActivate, async (LicenseActivateRequest request, CancellationToken ct) =>
+        admin.MapPost(ApiRoutes.LicenseActivate, async (LicenseActivateRequest request, CancellationToken ct) =>
             Results.Ok(await _rootProvider.GetRequiredService<ILicenseState>().ActivateAsync(request.ProductKey, ct)));
 
-        app.MapPost(ApiRoutes.LicenseDeactivate, async (CancellationToken ct) =>
+        admin.MapPost(ApiRoutes.LicenseDeactivate, async (CancellationToken ct) =>
             Results.Ok(await _rootProvider.GetRequiredService<ILicenseState>().DeactivateAsync(ct)));
 
-        app.MapPost(ApiRoutes.LicenseRefresh, async (CancellationToken ct) =>
+        admin.MapPost(ApiRoutes.LicenseRefresh, async (CancellationToken ct) =>
             Results.Ok(await _rootProvider.GetRequiredService<ILicenseState>().RefreshAsync(ct)));
     }
 

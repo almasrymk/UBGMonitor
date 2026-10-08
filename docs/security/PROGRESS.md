@@ -345,3 +345,65 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الملفات: LocalApiHost.cs، LocalApiSecurityTests.cs، مشروع الاختبارات.
 - استخراج ConfigureServices/ConfigureApplication دون تغيير السلوك؛ TestHost8.0.26 test-only المذكورة في Phase A. اختبارات enumerate كل route غير مفتوحة بدون license وتثبت403/code، status/license JSON shape ومسارات invalid queries.
 - restore/build0 أخطاء/0 تحذيرات؛ suite112pass/1skip/0fail. فحوص القراءة الناجحة لكل telemetry/report route ليست مكتملة بعد؛ سنوسعها خلال التنفيذ، فلا ادعاء بكامل characterization net.
+
+### R2-S03 — سياسة صريحة لكل مسار
+- الحالة: DONE-VERIFIED
+- التغيير: metadata Viewer/Administrator لكل route، رفض المسارات بلا سياسة، role من المضيف فقط؛ license gate بعدها. Default role=None حتى لا يمنح استدعاء pipeline غير مضبوط إدارة.
+- الملفات: LocalApiHost، LocalIpc، LocalApiSecurityTests.
+- التحقق: Release build صفر أخطاء/تحذيرات؛ 129pass/1skip/0fail. Every_route_has_a_policy_and_viewers_cannot_run_administrator_actions يعدد السياسات ويرفض كل POST/PUT الإداري حتى مع role header مزور. Status/license regression وlicense-required ناجحة.
+- غير المتحقق: characterization لكل telemetry/report ناجح ما زال مطلوبًا؛ S01 لا يصبح verified بهذا الاختبار وحده.
+
+### R2-S04 — قنوات IPC والخدمة
+- الحالة: DONE-UNVERIFIED
+- التغيير: مضيف لكل role، namedpipe ACL protected يملكها Administrators مع SYSTEM/group SID؛ Unix root-owned socket و0755 directory، إنشاء0077 ثم0660. رفض symlink/regular file/live endpoint عند تنظيف stale socket، حذف فقط بعد ConnectionRefused. لا HTTP loopback محلي.
+- الملفات: IpcHostConfiguration، LocalIpc، LocalApiHost.
+- التحقق: build/suite أعلاه؛ Windows PoC السابق8 checks. لا تشغيل service/install أو تغيير groups هنا.
+- غير المتحقق: قبول SYSTEM endpoint وACL cross-account وUnix root/socket/end-to-end تحتاج أجهزة حقيقية؛ لا ادعاء إثباتها من TestServer.
+
+### R2-S05 — مجموعات التثبيت
+- الحالة: DONE-UNVERIFIED
+- التغيير: Windows ينشئ Admins/Viewers ويضيف installing user؛ Linux/deb وmacOS/pkg ينشئان المجموعتين، SUDO_USER ينضم إليهما لتفادي غياب nested groups. systemd RuntimeDirectory0755. uninstall العادي يبقي groups؛ purge يحذفها. رسالة sign-out/in.
+- الملفات: install/uninstall Windows/Linux/macOS وdeb/postinst/postrm وbuild-pkg/unit.
+- التحقق: build/suite ناجحان؛ scripts لم تُنفذ لأنها تثبت خدمة وتغير حسابات الجهاز.
+- غير المتحقق: syntax/runtime Unix/package وstandard-user membership؛ لا claims عن تثبيت فعلي.
+
+### R2-S06 — عميل IPC وصلاحية الواجهة
+- الحالة: DONE-UNVERIFIED
+- التغيير: loopback preferences تعني IPC، admin-first/viewer fallback عند access/unavailable فقط؛ SecurityException لا تسمح fallback. يتحقق owner SYSTEM/Administrators أوroot قبل HTTP. exposing Role/CanAdminister/IsLocalTransport؛ Settings read-only وDB configure/license/speedtest guards، خطأ access denied منفصل عن توقف الخدمة.
+- الملفات: AgentApiClient وSettings/License/Network/MainViewModels وSettingsView.
+- التحقق: build0/0 وسuite129pass/1skip؛ اختبارات role service ناجحة.
+- غير المتحقق: Desktop UI تفاعلية وlogin/ACL على الأجهزة؛ رسالة endpoint identity وUnix fail-closed تحتاج owner matrix.
+
+### R2-S07 — عقد إعدادات بلا أسرار
+- الحالة: DONE-VERIFIED
+- التغيير: whitelist typed roots، حذف password/key وextensible metadata من GET وإرجاع flags؛ metadata محفوظة داخليًا عند تعديل DB العادي. رفض protected input، تحقق IPv4/port/interval/retention/IDs/types/length/icon/count قبل write. المفتاح القديم محفوظ وغير قابل للتغيير عبر PUT. password absent أو HasPassword مع empty يحتفظ به فقط إذا كامل target unchanged، وإلا400؛ الواجهة لا تفك password ولا ترسل stored blob.
+- الملفات: SettingsContract، DatabaseLogin، DatabaseLoginWindow، LocalApiHost، SettingsContractTests.
+- التحقق: public-secret exclusion، ordinary edit preservation، تغيير server/user/database مرفوض، plain password جديد مقبول، invalid ranges لا تغير الأصل؛ build0/0 وسuite129pass/1skip.
+- اختلاف: interval1..86400 وspeed0..86400 حدود صريحة لأن controls السابقة لم تفرض Max/Min لكل حقل؛ ServicePort0 legacy محفوظ. أسرار disk ما زالت F15/F16 حتى Run3/6، فلا نعلن إغلاقها نهائيًا.
+
+### R2-S08 — إغلاق اختبار فك كلمة المرور
+- الحالة: DONE-VERIFIED
+- التغيير: typed monitorPointId/login، resolving inside service؛ protected input مرفوض، target identity كاملة عند reuse، driver failure لا يُرجع للعميل ولا يُسجل؛ النتائج العامة تحافظ على success/message.
+- الملفات: DatabaseTestRequest، DatabaseTestResolver، API/client/window/tests.
+- التحقق: نفس tests ترفض protected/redirect وتسمح stored-ID/plain new بدون اتصال قاعدة بيانات حقيقية؛ license action regression ناجح. build/suite أعلاه.
+- غير المتحقق: live DB customer غير متصل عمدًا.
+
+### R2-S09 — حماية TCP والمتصفح
+- الحالة: DONE-VERIFIED
+- التغيير: key مطلوب حتى loopback وbodyless POST، Host allowlist، zero CORS، Viewer-only TCP، listener لا يبدأ بدون key. TLS/hash في Run4 فلا remote production-ready الآن.
+- التحقق: Tcp_checks_key_even_on_loopback_and_rejects_wrong_host_and_bodyless_posts يثبت401/400/403 وGET الصحيح200؛ build/suite أعلاه.
+
+### R2-S10 — فتح العناوين والبرامج
+- الحالة: DONE-UNVERIFIED
+- التغيير: http/https فقط، Application يحتاج local transport وabsolute existing local-drive path (رفض UNC/network drives) وتأكيد كامل المسار محفوظ بملف خاص بالمستخدم؛ remote process reveal ممنوع. فتح DB لا يفك/ينسخ password؛ integrated security محفوظة.
+- الملفات: MonitorPointLauncher، ApplicationLaunchApprovals، MainViewModel، ProcessListCardViewModel، tests.
+- التحقق: unsafe scheme/remote application/UNC رفض ناجح؛ build/suite أعلاه. لا تشغيل executable أو متصفح من الاختبارات.
+- غير المتحقق: confirmation dialog وlaunch/clipboard/database-tool end-to-end تحتاج UI owner.
+
+### R2-S11 — توثيق الاتصال والصلاحيات
+- الحالة: DONE-VERIFIED
+- README أزال curl/CORS السابقين وشرح IPC/groups/role/sign-out. توثيق install القديم سيستبدل فيRun3.
+- جمع S03–S11 في commit واحد: تغيير النقل وعقد password/policies وعميل الواجهة يجب أن يصل للطرفين معًا؛ فصلها كان يترك عميلًا يرسل blobs أو loopback مجهولًا بعد تغيير الخدمة. كل خطوة موثقة مستقلة؛ لم تُغير master ولم تُنشر تغييرات.
+
+## Run 3 — خطة التنفيذ
+المضي بتفويض المستخدم السابق: State settings/data/report منفصلة عن install، Atomic owner-only writes وmigration backup قبل أي تغيير؛ temp-folder tests fresh/upgrade/re-run/interrupted وحماية logging config. Windows installer prebuilt/default ProgramFiles وACL/check/source switch/desktop؛ Unix ownership/modes/legacy snapshot بدل merge. Verification scripts وREADME. لا تشغيل installer على الجهاز الحالي؛ تحقق أجهزة OS/customer يظل DONE-UNVERIFIED.

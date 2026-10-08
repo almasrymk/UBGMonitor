@@ -30,10 +30,13 @@ public partial class DatabaseLoginWindow : Window
     {
     }
 
-    public DatabaseLoginWindow(DatabaseLogin? current, AgentApiClient? client = null)
+    private readonly string? _monitorPointId;
+    private bool _hasSavedPassword;
+    public DatabaseLoginWindow(DatabaseLogin? current, AgentApiClient? client = null, string? monitorPointId = null)
     {
         InitializeComponent();
         _client = client;
+        _monitorPointId = monitorPointId;
         TestButton.IsVisible = client is not null;
         EngineBox.ItemsSource = _engines;
         Load(current);
@@ -50,11 +53,10 @@ public partial class DatabaseLoginWindow : Window
         UserBox.Text = current?.Username ?? string.Empty;
         IntegratedBox.IsChecked = current?.IntegratedSecurity == true;
         _storedPassword = current?.Password ?? string.Empty;
-        _shownPassword = SecretProtector.IsProtected(_storedPassword)
-            ? SecretProtector.Unprotect(_storedPassword)
-            : _storedPassword;
-        PasswordInput.Text = _shownPassword;
-        if (_storedPassword.Length > 0 && _shownPassword.Length == 0)
+        _hasSavedPassword = current?.HasPassword == true;
+        _shownPassword = string.Empty;
+        PasswordInput.Text = string.Empty;
+        if (current?.HasPassword == true || _storedPassword.Length > 0)
         {
             PasswordNote.Text = "The saved password is encrypted on the service's computer. Leave the box empty to keep it, or type a new one.";
         }
@@ -141,6 +143,7 @@ public partial class DatabaseLoginWindow : Window
             Database = database,
             Username = integrated ? string.Empty : user,
             Password = integrated ? string.Empty : Password(),
+            HasPassword = !integrated && _hasSavedPassword,
             IntegratedSecurity = integrated
         };
     }
@@ -155,11 +158,10 @@ public partial class DatabaseLoginWindow : Window
         var typed = PasswordInput.Text ?? string.Empty;
         if (typed == _shownPassword && _storedPassword.Length > 0)
         {
-            return _storedPassword;
+            return string.Empty;
         }
 
-        var encryptHere = OperatingSystem.IsWindows() && (_client is null || _client.IsLocal);
-        return encryptHere ? SecretProtector.Protect(typed) : typed;
+        return typed;
     }
 
     private async void Test_Click(object? sender, RoutedEventArgs e)
@@ -173,7 +175,7 @@ public partial class DatabaseLoginWindow : Window
         SetMessage("Testing the connection...", "TextSecondaryBrush");
         try
         {
-            var result = await _client.TestDatabaseAsync(login);
+            var result = await _client.TestDatabaseAsync(login, monitorPointId: _monitorPointId);
             SetMessage(result.Message, result.Success ? "AccentGreenBrush" : "AccentRedBrush");
         }
         finally

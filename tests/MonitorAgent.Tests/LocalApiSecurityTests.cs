@@ -17,6 +17,7 @@ using MonitorAgent.Service.Options;
 using MonitorAgent.Service.Runtime;
 using MonitorAgent.Shared.Constants;
 using MonitorAgent.Shared.Models;
+using MonitorAgent.Shared.Security;
 
 namespace MonitorAgent.Tests;
 
@@ -37,9 +38,11 @@ public sealed class LocalApiSecurityTests
         public ServiceProvider Services { get; }
         public HttpClient Client => Host.GetTestClient();
         private App(WebApplication host, ServiceProvider services) { Host = host; Services = services; }
-        public static async Task<App> Start(bool licensed)
+        public static async Task<App> Start(bool licensed, AgentAccessRole role = AgentAccessRole.Administrator, bool tcp = false, string key = "")
         {
-            var services = new ServiceCollection().AddSingleton<ILocalConfigCache>(new FakeLocalConfigCache())
+            var cache = new FakeLocalConfigCache();
+            cache.General.RemoteAccessKey = key;
+            var services = new ServiceCollection().AddSingleton<ILocalConfigCache>(cache)
                 .AddSingleton<ILicenseState>(new License { IsLicensed = licensed }).AddSingleton<NotificationTrigger>()
                 .AddSingleton<IMonitorHealthStore, MonitorHealthStore>()
                 .AddSingleton<IConnectivityTracker, ConnectivityTracker>()
@@ -48,11 +51,45 @@ public sealed class LocalApiSecurityTests
             builder.WebHost.UseTestServer();
             LocalApiHost.ConfigureServices(builder.Services);
             var host = builder.Build();
-            new LocalApiHost(services, Options.Create(new LocalApiOptions()), NullLogger<LocalApiHost>.Instance).ConfigureApplication(host);
+            new LocalApiHost(services, Options.Create(new LocalApiOptions()), NullLogger<LocalApiHost>.Instance).ConfigureApplication(host, role, tcp, "127.0.0.1");
             await host.StartAsync();
             return new App(host, services);
         }
         public async ValueTask DisposeAsync() { await Host.DisposeAsync(); await Services.DisposeAsync(); }
+    }
+
+    [Fact]
+    public async Task Every_route_has_a_policy_and_viewers_cannot_run_administrator_actions()
+    {
+        await using var app = await App.Start(true, AgentAccessRole.Viewer);
+        using var client = app.Client;
+        client.DefaultRequestHeaders.Add("X-MonitorAgent-Role", "Administrator");
+        var endpoints = ((IEndpointRouteBuilder)app.Host).DataSources.SelectMany(s => s.Endpoints).OfType<RouteEndpoint>().ToList();
+        Assert.NotEmpty(endpoints);
+        foreach (var endpoint in endpoints)
+        {
+            var policy = endpoint.Metadata.GetMetadata<RequiredAgentRole>();
+            Assert.NotNull(policy);
+            if (policy.Role != AgentAccessRole.Administrator) continue;
+            var method = endpoint.Metadata.GetMetadata<HttpMethodMetadata>()!.HttpMethods.Single();
+            Assert.Equal(HttpStatusCode.Forbidden, (await client.SendAsync(new HttpRequestMessage(new HttpMethod(method), endpoint.RoutePattern.RawText))).StatusCode);
+        }
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync(ApiRoutes.Status)).StatusCode);
+    }
+
+    [Fact]
+    public async Task Tcp_checks_key_even_on_loopback_and_rejects_wrong_host_and_bodyless_posts()
+    {
+        await using var app = await App.Start(true, AgentAccessRole.Viewer, tcp: true, key: "TEST-ONLY-remote-key");
+        using var client = app.Client;
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync(ApiRoutes.Status)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsync(ApiRoutes.LicenseDeactivate, null)).StatusCode);
+        client.DefaultRequestHeaders.Add(ApiRoutes.AccessKeyHeader, "TEST-ONLY-remote-key");
+        client.DefaultRequestHeaders.Host = "127.0.0.1";
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync(ApiRoutes.Status)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsync(ApiRoutes.LicenseDeactivate, null)).StatusCode);
+        client.DefaultRequestHeaders.Host = "attacker.test";
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync(ApiRoutes.Status)).StatusCode);
     }
 
     [Fact]

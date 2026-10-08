@@ -12,6 +12,14 @@ target=/usr/local/monitoragent
 plist="/Library/LaunchDaemons/$label.plist"
 settings="$target/appsettings.json"
 
+for group in monitoragent monitoragent-admin; do
+    dscl . -read "/Groups/$group" >/dev/null 2>&1 || dseditgroup -o create "$group"
+    if [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != root ]; then
+        dseditgroup -o edit -a "$SUDO_USER" -t user "$group"
+    fi
+done
+echo "Sign out and in to apply MonitorAgent group membership."
+
 if launchctl print "system/$label" >/dev/null 2>&1; then
     echo "Stopping $label..."
     launchctl bootout "system/$label" || true

@@ -232,7 +232,7 @@
             </StackPanel>
         </Border>
 
-        <Panel IsVisible="{Binding IsLoaded}">
+        <Panel IsVisible="{Binding IsLoaded}" IsEnabled="{Binding CanAdminister}" ToolTip.Tip="{Binding AccessExplanation}">
             <!-- General -->
             <ScrollViewer VerticalScrollBarVisibility="Auto"
                           IsVisible="{Binding SelectedSection, Converter={StaticResource EqualsConverter}, ConverterParameter=General}">
@@ -303,7 +303,7 @@
                         </StackPanel>
                         <StackPanel Grid.Column="2">
                             <TextBlock Classes="flabel" Text="Access key for other computers"/>
-                            <TextBox Classes="field wide" Text="{Binding RemoteAccessKey}"/>
+                            <TextBox Classes="field wide" Text="{Binding RemoteAccessKey}" IsEnabled="False" ToolTip.Tip="Remote keys are managed by a separate administrator action."/>
                             <TextBlock Foreground="{DynamicResource AccentYellowBrush}" TextWrapping="Wrap" Margin="0,-8,0,14"
                                        IsVisible="{Binding IsServiceOpenWithoutKey}"
                                        Text="Without an access key, any computer on the network can read this computer's data and change its settings."/>

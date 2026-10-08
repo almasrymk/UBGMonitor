@@ -20,6 +20,7 @@ public sealed class DatabaseLogin
     public string Username { get; set; } = string.Empty;
 
     public string Password { get; set; } = string.Empty;
+    public bool HasPassword { get; set; }
 
     public bool IntegratedSecurity { get; set; }
 
@@ -32,6 +33,7 @@ public sealed class DatabaseLogin
             Database = Database,
             Username = Username,
             Password = Password,
+            HasPassword = HasPassword,
             IntegratedSecurity = IntegratedSecurity
         };
 }

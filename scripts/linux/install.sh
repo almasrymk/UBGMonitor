@@ -11,6 +11,13 @@ target=/opt/monitoragent
 unit=/etc/systemd/system/monitoragent.service
 settings="$target/appsettings.json"
 
+getent group monitoragent >/dev/null || groupadd --system monitoragent
+getent group monitoragent-admin >/dev/null || groupadd --system monitoragent-admin
+if [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != root ]; then
+    usermod -aG monitoragent-admin,monitoragent "$SUDO_USER"
+    echo "Sign out and in to apply MonitorAgent group membership."
+fi
+
 if systemctl is-active --quiet monitoragent 2>/dev/null; then
     echo "Stopping monitoragent..."
     systemctl stop monitoragent

@@ -120,6 +120,7 @@ public sealed partial class ProcessListCardViewModel : ObservableObject, IDispos
     [RelayCommand]
     private void OpenSelectedProcess()
     {
+        if (!_client.IsLocalTransport) return;
         if (SelectedItem is null)
         {
             return;

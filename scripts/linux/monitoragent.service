@@ -12,6 +12,8 @@ User=root
 Restart=on-failure
 RestartSec=5
 StateDirectory=monitoragent
+RuntimeDirectory=monitoragent
+RuntimeDirectoryMode=0755
 LogsDirectory=monitoragent
 Environment=DOTNET_CLI_TELEMETRY_OPTOUT=1
 

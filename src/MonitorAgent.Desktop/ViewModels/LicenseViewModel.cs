@@ -55,6 +55,7 @@ public sealed partial class LicenseViewModel : ObservableObject
     [RelayCommand]
     private async Task ActivateAsync()
     {
+        if (!_client.CanAdminister) { ShowResult(false, "A MonitorAgent Administrator must activate the license."); return; }
         if (string.IsNullOrWhiteSpace(ProductKey))
         {
             ShowResult(false, "Enter the product key first.");
@@ -82,6 +83,7 @@ public sealed partial class LicenseViewModel : ObservableObject
     [RelayCommand]
     private async Task ReleaseAsync()
     {
+        if (!_client.CanAdminister) { ShowResult(false, "A MonitorAgent Administrator must release the license."); return; }
         IsBusy = true;
         try
         {
@@ -98,6 +100,7 @@ public sealed partial class LicenseViewModel : ObservableObject
     [RelayCommand]
     private async Task CheckNowAsync()
     {
+        if (!_client.CanAdminister) { ShowResult(false, "A MonitorAgent Administrator must request a license refresh."); return; }
         IsBusy = true;
         try
         {
@@ -152,8 +155,9 @@ public sealed partial class LicenseViewModel : ObservableObject
         };
         Message = status.Message;
         Details = string.Join("   ·   ", DetailParts(status));
-        CanRelease = status.KeyPrefix is not null && status.State is not (LicenseState.NotActivated or LicenseState.Revoked);
-        CanEnterKey = !(status.IsValid && CanRelease);
+        var hasActivation = status.KeyPrefix is not null && status.State is not (LicenseState.NotActivated or LicenseState.Revoked);
+        CanRelease = _client.CanAdminister && hasActivation;
+        CanEnterKey = _client.CanAdminister && !(status.IsValid && hasActivation);
         IsRequired = !status.IsValid;
     }
 

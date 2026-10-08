@@ -2,6 +2,12 @@
 set -e
 
 if [ "$1" = "configure" ]; then
+    getent group monitoragent >/dev/null || groupadd --system monitoragent
+    getent group monitoragent-admin >/dev/null || groupadd --system monitoragent-admin
+    if [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != root ]; then
+        usermod -aG monitoragent-admin,monitoragent "$SUDO_USER"
+        echo "Sign out and in to apply MonitorAgent group membership."
+    fi
     settings=/opt/monitoragent/appsettings.json
     saved=/var/lib/monitoragent/appsettings.previous.json
     if [ -f "$saved" ]; then

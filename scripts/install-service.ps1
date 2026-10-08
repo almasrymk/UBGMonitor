@@ -8,6 +8,14 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
 }
 
 $serviceName = "MonitorAgent"
+foreach ($group in @('MonitorAgent Admins', 'MonitorAgent Viewers')) {
+    if (-not (Get-LocalGroup -Name $group -ErrorAction SilentlyContinue)) { New-LocalGroup -Name $group | Out-Null }
+}
+$installingUser = [Security.Principal.WindowsIdentity]::GetCurrent().Name
+if (-not (Get-LocalGroupMember -Group 'MonitorAgent Admins' | Where-Object Name -eq $installingUser)) {
+    Add-LocalGroupMember -Group 'MonitorAgent Admins' -Member $installingUser
+}
+Write-Host 'MonitorAgent access groups created. Sign out and sign in again for new group membership to apply.'
 $publish = "C:\ProgramData\MonitorAgent\publish"
 $root = Split-Path -Parent $PSScriptRoot
 $settingsPath = Join-Path $publish "appsettings.json"

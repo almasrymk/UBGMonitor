@@ -43,7 +43,8 @@ public partial class SettingsView : UserControl
         }
 
         var client = ((DataContext as MainViewModel)?.Settings ?? DataContext as SettingsViewModel)?.Client;
-        var dialog = new DatabaseLoginWindow(row.DatabaseLogin?.Copy(), client);
+        if (client?.CanAdminister != true) return;
+        var dialog = new DatabaseLoginWindow(row.DatabaseLogin?.Copy(), client, row.MonitorPointId);
         if (await dialog.ShowDialog<bool>(owner) && dialog.Result is not null)
         {
             row.DatabaseLogin = dialog.Result;

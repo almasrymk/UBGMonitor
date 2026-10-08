@@ -170,6 +170,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             }
         };
         Network.StartSpeedTest = () => _client.StartSpeedTestAsync();
+        _client.RoleChanged += () => Avalonia.Threading.Dispatcher.UIThread.Post(() => Network.CanAdminister = _client.CanAdminister);
+        Network.CanAdminister = _client.CanAdminister;
         ApplySavedRuntimeSettings();
         _timer.Tick += async (_, _) => await RefreshDueAsync();
         _timer.Start();
@@ -645,7 +647,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
-    private void OpenMonitorPoint(DashboardMonitorPointViewModel? point)
+    private async Task OpenMonitorPointAsync(DashboardMonitorPointViewModel? point)
     {
         if (point is null)
         {
@@ -660,7 +662,17 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 Type = point.Type,
                 Address = point.Address
             };
-        var message = MonitorPointLauncher.Open(model);
+        var confirmed = false;
+        if (model.Type == MonitorPointType.Application && _client.IsLocalTransport && MonitorPointLauncher.IsAllowedApplicationPath(model.Address))
+        {
+            confirmed = ApplicationLaunchApprovals.IsApproved(model.Address);
+            if (!confirmed && Settings.ConfirmWarning is not null)
+            {
+                confirmed = await Settings.ConfirmWarning($"Allow MonitorAgent to launch this application?\n{Path.GetFullPath(model.Address)}");
+                if (confirmed) ApplicationLaunchApprovals.Approve(model.Address);
+            }
+        }
+        var message = MonitorPointLauncher.Open(model, _client.IsLocalTransport, confirmed);
         if (message is not null)
         {
             UiPlatform.ShowMessage(point.DisplayName, message);

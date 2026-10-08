@@ -10,10 +10,10 @@ namespace MonitorAgent.UI.Services;
 public static class MonitorPointLauncher
 {
     /// <returns>A message for the user, or null when there is nothing to tell.</returns>
-    public static string? Open(MonitorPoint point)
+    public static string? Open(MonitorPoint point, bool serviceIsLocal = false, bool applicationConfirmed = false)
         => point.Type switch
         {
-            MonitorPointType.Application => OpenApplication(point),
+            MonitorPointType.Application => serviceIsLocal && applicationConfirmed ? OpenApplication(point) : "Launching an application requires a local service and your confirmation.",
             MonitorPointType.Database => OpenDatabase(point),
             _ => OpenAddress(point)
         };
@@ -27,12 +27,14 @@ public static class MonitorPointLauncher
         }
 
         var url = address.Contains("://", StringComparison.Ordinal) ? address : "http://" + address;
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https")) return "Only HTTP and HTTPS addresses can be opened.";
         return ShellOpen.Open(url) ? null : $"Could not open {url}.";
     }
 
     private static string? OpenApplication(MonitorPoint point)
     {
         var path = point.Address.Trim().Trim('"');
+        if (!IsAllowedApplicationPath(path)) return "The application must be an existing absolute path on a local drive.";
         var processName = string.IsNullOrWhiteSpace(point.Model)
             ? Path.GetFileNameWithoutExtension(path)
             : point.Model.Trim();
@@ -71,10 +73,7 @@ public static class MonitorPointLauncher
             return $"No management program for {EngineName(login.Engine)} was found on this computer.";
         }
 
-        var password = SecretProtector.IsProtected(login.Password)
-            ? SecretProtector.Unprotect(login.Password)
-            : login.Password;
-        var needsPassword = !login.IntegratedSecurity && password.Length > 0;
+        var needsPassword = !login.IntegratedSecurity && login.HasPassword;
         var start = new ProcessStartInfo(program) { UseShellExecute = false };
         var file = Path.GetFileNameWithoutExtension(program);
         var autoLogin = false;
@@ -130,15 +129,24 @@ public static class MonitorPointLauncher
             return null;
         }
 
-        return UiPlatform.SetClipboardText(password)
-            ? $"{Path.GetFileNameWithoutExtension(program)} opened for {point.DisplayName}.\n\nThe password is copied - paste it (Ctrl+V) in the login box and press Connect."
-            : null;
+        return "The database tool is open. Enter its credentials explicitly; saved passwords are kept by the service.";
     }
 
     private static string SqlServerAddress(string server, int port)
         => port is > 0 and not 1433 && !server.Contains(',') && !server.Contains('\\')
             ? $"{server},{port}"
             : server;
+
+    public static bool IsAllowedApplicationPath(string path)
+    {
+        if (!Path.IsPathFullyQualified(path) || path.StartsWith("\\\\", StringComparison.Ordinal) || path.StartsWith("//", StringComparison.Ordinal) || !File.Exists(path)) return false;
+        if (OperatingSystem.IsWindows())
+        {
+            var drive = new DriveInfo(Path.GetPathRoot(path)!);
+            if (drive.DriveType is DriveType.Network or DriveType.Unknown or DriveType.NoRootDirectory) return false;
+        }
+        return true;
+    }
 
     private static void AddIfSet(ProcessStartInfo start, string name, string? value)
     {

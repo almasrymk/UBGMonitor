@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
 using System.Net.Sockets;
+using MonitorAgent.Shared.Security;
 using System.Text.Json;
 using MonitorAgent.Shared.Constants;
 using MonitorAgent.Shared.Models;
@@ -25,7 +26,7 @@ public sealed class AgentApiClient
     public AgentApiClient()
     {
         _ownsHttpClient = true;
-        _http = CreateClient(new Uri("http://127.0.0.1:5050"));
+        _http = CreateLocalClient();
     }
 
     /// <summary>The service address as typed ("192.168.1.10", "pc-name:5050" or a full URL); null when it is not valid.</summary>
@@ -53,12 +54,12 @@ public sealed class AgentApiClient
     }
 
     private string _accessKey = string.Empty;
+    public AgentAccessRole Role { get; private set; }
+    public bool CanAdminister => Role == AgentAccessRole.Administrator;
+    public bool IsLocalTransport { get; private set; } = true;
+    public event Action? RoleChanged;
 
-    /// <summary>True when the service is on this computer, so secrets can be encrypted here for it.</summary>
-    public bool IsLocal => _http.BaseAddress is not { } address
-        || address.IsLoopback
-        || address.Host.Equals(Environment.MachineName, StringComparison.OrdinalIgnoreCase);
-
+    /// <summary>Selects authenticated OS IPC for loopback addresses.</summary>
     public void SetBaseAddress(string? url, string? accessKey = null)
     {
         if (ParseAddress(url) is not { } uri)
@@ -78,7 +79,10 @@ public sealed class AgentApiClient
         }
 
         _accessKey = key;
-        var replacement = CreateClient(uri);
+        IsLocalTransport = uri.IsLoopback;
+        Role = IsLocalTransport ? AgentAccessRole.None : AgentAccessRole.Viewer;
+        RoleChanged?.Invoke();
+        var replacement = IsLocalTransport ? CreateLocalClient() : CreateClient(uri);
         if (key.Length > 0)
         {
             replacement.DefaultRequestHeaders.Add(ApiRoutes.AccessKeyHeader, key);
@@ -175,6 +179,11 @@ public sealed class AgentApiClient
         }
         catch (HttpRequestException ex)
         {
+            for (Exception? cause = ex; cause is not null; cause = cause.InnerException)
+            {
+                if (cause is UnauthorizedAccessException) return "You are not allowed to connect. Ask an administrator to add you to the MonitorAgent groups, then sign out and in.";
+                if (cause is System.Security.SecurityException) return "The local endpoint identity could not be verified. Contact an administrator.";
+            }
             return $"No Agent service answers at {_http.BaseAddress}: {ex.Message}";
         }
         catch (TaskCanceledException)
@@ -184,11 +193,11 @@ public sealed class AgentApiClient
     }
 
     /// <summary>Tries the connection from the service's computer, the same way the monitor point will.</summary>
-    public async Task<DatabaseTestResultDto> TestDatabaseAsync(DatabaseLogin login, CancellationToken ct = default)
+    public async Task<DatabaseTestResultDto> TestDatabaseAsync(DatabaseLogin login, CancellationToken ct = default, string? monitorPointId = null)
     {
         try
         {
-            using var response = await _http.PostAsJsonAsync(ApiRoutes.DatabaseTest, login, ct);
+            using var response = await _http.PostAsJsonAsync(ApiRoutes.DatabaseTest, new DatabaseTestRequest(monitorPointId, login), ct);
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
                 return new DatabaseTestResultDto(false, "The Agent service is too old for this test; reinstall it.");
@@ -478,6 +487,23 @@ public sealed class AgentApiClient
         return addresses.FirstOrDefault() ?? throw new HttpRequestException($"The computer \"{host}\" was not found.");
     }
 
+    private HttpClient CreateLocalClient()
+    {
+        var handler = new SocketsHttpHandler
+        {
+            ConnectCallback = async (_, ct) =>
+            {
+                Stream connection;
+                AgentAccessRole role;
+                try { connection = await LocalIpc.ConnectAsync(AgentAccessRole.Administrator, ct); role = AgentAccessRole.Administrator; }
+                catch (Exception ex) when (ex is UnauthorizedAccessException or TimeoutException or FileNotFoundException)
+                { connection = await LocalIpc.ConnectAsync(AgentAccessRole.Viewer, ct); role = AgentAccessRole.Viewer; }
+                if (Role != role) { Role = role; RoleChanged?.Invoke(); }
+                return connection;
+            }
+        };
+        return new HttpClient(handler) { BaseAddress = new Uri("http://localhost"), Timeout = TimeSpan.FromSeconds(20) };
+    }
     private static SocketsHttpHandler CreateIpv4Handler()
     {
         return new SocketsHttpHandler
