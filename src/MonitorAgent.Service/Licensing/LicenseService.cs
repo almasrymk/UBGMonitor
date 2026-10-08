@@ -160,7 +160,7 @@ public sealed class LicenseService : BackgroundService, ILicenseState
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("[License] Device id {DeviceId}; licensing site {Url}", _deviceId, _options.PlatformUrl);
+        _logger.LogInformation("[License] License service started.");
         var heartbeat = false;
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -177,7 +177,7 @@ public sealed class LicenseService : BackgroundService, ILicenseState
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "[License] License check failed");
+                    _logger.LogError("[License] License check failed: {ErrorType}", ex.GetType().Name);
                     _nextCheckUtc = Now + FirstRetry;
                 }
             }
@@ -309,7 +309,7 @@ public sealed class LicenseService : BackgroundService, ILicenseState
         _nextCheckUtc = Now + Jitter(backoff);
         _stored = _stored with { LastSeenUtc = Later(_stored.LastSeenUtc, Now) };
         _store.Save(_stored);
-        _logger.LogWarning("[License] {Message}; next try at {Next:HH:mm}", reply.Message, _nextCheckUtc.Value.ToLocalTime());
+        _logger.LogWarning("[License] Request unavailable; next try at {Next:HH:mm}", _nextCheckUtc.Value.ToLocalTime());
         Publish();
     }
 

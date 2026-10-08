@@ -93,7 +93,7 @@ public sealed class ConfigPuller : BackgroundService, IConfigPuller
         catch (Exception ex)
         {
             _connectivity.SetCentral(false);
-            _logger.LogWarning(ex, "Central config is unavailable; using local cache");
+            _logger.LogWarning("Central config is unavailable; using local cache. Error type: {ErrorType}", ex.GetType().Name);
         }
     }
 }

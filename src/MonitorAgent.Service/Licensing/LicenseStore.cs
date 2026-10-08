@@ -74,7 +74,7 @@ public sealed class LicenseStore : ILicenseStore
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
         {
-            _logger.LogWarning("[License] Could not read {Path}: {Message}", _path, ex.Message);
+            _logger.LogWarning("[License] Could not read stored license: {ErrorType}", ex.GetType().Name);
             return new StoredLicense();
         }
     }
@@ -87,7 +87,7 @@ public sealed class LicenseStore : ILicenseStore
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            _logger.LogError("[License] Could not save {Path}: {Message}", _path, ex.Message);
+            _logger.LogError("[License] Could not save stored license: {ErrorType}", ex.GetType().Name);
         }
     }
 }

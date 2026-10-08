@@ -96,7 +96,7 @@ public sealed class LicensePlatformClient : ILicensePlatformClient
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !cancellationToken.IsCancellationRequested)
         {
-            _logger.LogWarning("[License] Could not download the signing keys: {Message}", ex.Message);
+            _logger.LogWarning("[License] Could not download the signing keys: {ErrorType}", ex.GetType().Name);
             return null;
         }
     }

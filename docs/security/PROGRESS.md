@@ -603,3 +603,10 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - التغيير: OfflineTelemetry test-only DispatchProxy يرجع fixtures دون بدء sensors أو network؛ ReportBuilder/ReportStore حقيقيان داخل testhost.
 - الاختبار: Licensed_viewer_can_read_every_read_route_with_offline_telemetry_and_real_report_store يمر على كل GET ذو Viewer metadata، يستبدل route parameters بقيم صحيحة، ويتحقق من success وJSON؛ لا مخارج سرية أو خدمة إنتاج.
 - التحقق: الاختبار المنفرد ناجح، والـsuite الكاملة نتيجتها في output هذا commit. Build السابق 0 warnings/errors. لا ادعاء بأن telemetry hardware الفعلية اختبرت.
+
+### R6-S07 — استكمال مراجعة logs الترخيص وrouting
+- الحالة: DONE-VERIFIED
+- التغيير: رسائل exception ونص رد المنصة غير الموثوق لا تسجل في LicensePlatformClient/LicenseService/LicenseStore أو ConfigPuller؛ تسجل error type أو رسالة ثابتة بلا body/URL credentials. المسار أو device id لا يطبعان في رسالة بدء الترخيص.
+- اختبار الأمان: Signing_key_failure_does_not_log_exception_secrets_and_next_request_can_succeed باستخدام HttpRequestException تحتوي fixture password وuserinfo؛ log sink لا يحتوي أي منها.
+- عدم الانكسار: طلب signing keys التالي ينجح من fake، licensing/routing regressions ناجحة؛ لا اتصال بالمنصة.
+- التحقق: أصلح تعارض اسم test logger الذي أظهره build الأول؛ إعادة Release build 0 warnings/errors، suite 158 نجاح/3 Unix skip/0 فشل. التحقق من log محتوى runtime لكل driver/OS ما زال مطلوبًا.
