@@ -34,6 +34,7 @@
         </DataTemplate>
     </UserControl.Resources>
     <UserControl.Styles>
+        <Style Selector="Border.settingscard"><Setter Property="CornerRadius" Value="10"/><Setter Property="Padding" Value="18"/><Setter Property="Margin" Value="0,0,0,12"/><Setter Property="BorderThickness" Value="1"/><Setter Property="BorderBrush" Value="{DynamicResource BorderColorBrush}"/><Setter Property="Background" Value="{DynamicResource SurfaceDarkBrush}"/></Style>
         <Style Selector="CheckBox">
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="RenderTransformOrigin" Value="0%,50%"/>
@@ -301,9 +302,12 @@
                         </StackPanel>
                     </Grid>
 
-                    <TextBlock Text="Service network access" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,22,0,2"/>
+                    <TextBlock Text="Secure Remote Access" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,22,0,2"/>
                     <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,12"
-                               Text="Remote access uses HTTPS. Create a viewer key, choose the listening address and port, then save. Save also applies the remote access and firewall options."/>
+                               Text="Configure secure remote access for this device. Choose the listening address and port; keys are prepared automatically. Changes to access and firewall options are applied when you click Save."/>
+                    <Border Classes="settingscard"><StackPanel Spacing="8">
+                    <TextBlock Text="Connection Endpoint" FontSize="16" FontWeight="SemiBold"/>
+                    <TextBlock Text="Choose the network interface and service port." FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
                     <Grid ColumnDefinitions="*,28,*">
                         <StackPanel Grid.Column="0">
                             <TextBlock Classes="flabel" Text="Service listens on"/>
@@ -320,13 +324,17 @@
                         <StackPanel IsVisible="{Binding NetworkIndicatorsVisible}" Orientation="Horizontal" Spacing="20" Margin="0,4,0,8">
                             <StackPanel Orientation="Horizontal" Spacing="5">
                                 <mi:MaterialIcon Kind="Check" Width="14" Height="14" Foreground="{DynamicResource AccentGreenBrush}" VerticalAlignment="Center"/>
-                                <TextBlock Text="HTTPS access" FontSize="12" Foreground="{DynamicResource AccentGreenBrush}" VerticalAlignment="Center"/>
+                                <TextBlock Text="HTTPS selected" FontSize="12" Foreground="{DynamicResource AccentGreenBrush}" VerticalAlignment="Center"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Spacing="5">
                                 <mi:MaterialIcon Kind="Check" Width="14" Height="14" Foreground="{DynamicResource AccentGreenBrush}" VerticalAlignment="Center"/>
-                                <TextBlock Text="Open firewall port" FontSize="12" Foreground="{DynamicResource AccentGreenBrush}" VerticalAlignment="Center"/>
+                                <TextBlock Text="Firewall port will open on Save" FontSize="12" Foreground="{DynamicResource AccentGreenBrush}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </StackPanel>
+                    </StackPanel></StackPanel></Border>
+                    <Border Classes="settingscard" IsVisible="{Binding NetworkIndicatorsVisible}"><StackPanel Spacing="8" IsEnabled="{Binding CanManageRemoteAccess}">
+                        <TextBlock Text="Access Permissions" FontSize="16" FontWeight="SemiBold"/>
+                        <TextBlock Text="Manage remote viewer and administrator permissions." FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
                         <CheckBox IsVisible="{Binding NetworkIndicatorsVisible}" Content="Allow remote administration with a separate admin key" IsChecked="{Binding RemoteKeyPanelOpen}"/>
                         <StackPanel IsVisible="{Binding NetworkIndicatorsVisible}" Spacing="6" Margin="16,0,0,6">
                             <Grid ColumnDefinitions="100,Auto,Auto" HorizontalAlignment="Left">
@@ -342,18 +350,24 @@
                                 <Button Grid.Column="2" Margin="8,0,0,0" Width="28" Height="24" MinWidth="0" MinHeight="0" Padding="2" FontSize="12" Content="↻" ToolTip.Tip="Regenerate admin key" Command="{Binding ManageRemoteAccessCommand}" CommandParameter="create-admin-key" Classes="footer"/>
                             </Grid>
                         </StackPanel>
+                    </StackPanel></Border>
+                    <Border Classes="settingscard"><StackPanel Spacing="8" IsEnabled="{Binding CanManageRemoteAccess}">
+                        <TextBlock Text="Certificate" FontSize="16" FontWeight="SemiBold"/>
                         <WrapPanel>
                             <Button Content="Regenerate certificate" Command="{Binding ManageRemoteAccessCommand}" CommandParameter="regenerate-certificate" Classes="footer"/>
                             <Button Content="Import customer PFX" Click="ImportCertificate_Click" Classes="footer"/>
                         </WrapPanel>
                         <TextBox IsVisible="{Binding HasTemporaryRemoteKey}" Text="{Binding NewRemoteKey}" IsReadOnly="True" Watermark="Temporary key if encrypted display storage fails."/>
-                        <TextBlock Text="{Binding RemoteFingerprint}" TextWrapping="Wrap" FontSize="11"/>
+                        <Border Background="{DynamicResource SurfaceDarkAltBrush}" CornerRadius="6" Padding="12"><StackPanel Spacing="6"><TextBlock Text="{Binding RemoteFingerprint}" TextWrapping="Wrap" FontSize="12"/><TextBlock Text="{Binding RemoteCertificateDetails}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/></StackPanel></Border>
                         <TextBlock Text="These actions require a local MonitorAgent Administrator connection." TextWrapping="Wrap" FontSize="11"/>
                     </StackPanel>
-                    <TextBlock Text="This app" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,10,0,2"/>
+                    </Border>
+                    <Border Classes="settingscard"><StackPanel Spacing="8">
+                    <TextBlock Text="Connect This App" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,10,0,2"/>
                     <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,12"
                                Text="The Agent service this app shows: the one on this computer (127.0.0.1) or one on another computer. Kept by this app only."/>
                     <ContentControl Content="{Binding}" ContentTemplate="{StaticResource ConnectFields}"/>
+                    </StackPanel></Border>
                 </StackPanel>
             </ScrollViewer>
 

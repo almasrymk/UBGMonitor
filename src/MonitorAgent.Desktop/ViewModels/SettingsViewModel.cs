@@ -114,6 +114,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _remoteAdministration;
     [ObservableProperty] private bool _openFirewallPort;
     [ObservableProperty] private string _remoteFingerprint = "Remote access has not been configured.";
+    [ObservableProperty] private string _remoteCertificateDetails = "No certificate details available.";
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasTemporaryRemoteKey))]
     private string _newRemoteKey = string.Empty;
@@ -270,6 +271,9 @@ public sealed partial class SettingsViewModel : ObservableObject
         }
         finally { _loadingRemoteStatus = false; }
         RemoteFingerprint = status.Fingerprint is null ? "No remote certificate yet." : "Certificate SHA-256: " + status.Fingerprint;
+        RemoteCertificateDetails = status.CertificateNotAfter is { } expires && status.CertificateNotBefore is { } starts
+            ? $"Validity: {(starts <= DateTime.Now && expires > DateTime.Now ? "Current" : "Outside validity period")}\nExpires on: {expires:yyyy/MM/dd HH:mm}\nSubject: {status.CertificateSubject}\nIssuer: {status.CertificateIssuer}\nSerial number: {status.CertificateSerialNumber}"
+            : "No certificate details available.";
         OnPropertyChanged(nameof(CanManageRemoteAccess));
         _savedFingerprints[SectionGeneral] = JsonSerializer.Serialize(_snapshot.General) + JsonSerializer.Serialize(new
         { RemoteEnabled = status.Enabled, RemoteAdministration = status.AllowAdministration, OpenFirewallPort = status.OpenFirewall });

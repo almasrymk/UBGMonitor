@@ -26,6 +26,12 @@ public sealed class RemoteAccessTests : IDisposable
         Assert.Throws<ArgumentException>(() => manager.Apply(new("import-certificate", Pfx: Convert.ToBase64String(future.Export(System.Security.Cryptography.X509Certificates.X509ContentType.Pkcs12)))));
         Assert.Equal(before, manager.Status().Fingerprint);
         using var current = manager.GetCertificate();
+        var metadata = manager.Status();
+        Assert.Equal(current.NotBefore, metadata.CertificateNotBefore);
+        Assert.Equal(current.NotAfter, metadata.CertificateNotAfter);
+        Assert.Equal(current.Subject, metadata.CertificateSubject);
+        Assert.Equal(current.Issuer, metadata.CertificateIssuer);
+        Assert.Equal(current.SerialNumber, metadata.CertificateSerialNumber);
         Assert.True(current.HasPrivateKey);
     }
     [Fact]

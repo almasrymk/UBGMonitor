@@ -51,7 +51,8 @@ public sealed class RemoteAccessManager
         {
             var state = Read();
             using var cert = Certificate(state);
-            return new(state.Enabled, state.AllowAdministration, state.OpenFirewall, state.ViewerHash is not null, state.AdminHash is not null, cert?.GetCertHashString(HashAlgorithmName.SHA256), state.ViewerHash, state.AdminHash);
+            return new(state.Enabled, state.AllowAdministration, state.OpenFirewall, state.ViewerHash is not null, state.AdminHash is not null, cert?.GetCertHashString(HashAlgorithmName.SHA256), state.ViewerHash, state.AdminHash,
+                cert?.NotBefore, cert?.NotAfter, cert?.Subject, cert?.Issuer, cert?.SerialNumber);
         }
     }
     public X509Certificate2 GetCertificate()

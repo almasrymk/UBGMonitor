@@ -820,3 +820,9 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - استبدال SelectableTextBlock بـTextBlock مثل قيمة Public IP وربط PointerReleased بدل PointerPressed لتفادي تفاعل تحديد النص. الضغط اليسار/اليمين ينسخ بعد تحقق hash وصلاحية المسؤول؛ تلميح Copied يظهر بعد نجاح الكتابة بالخط 12 وBold ولمدة 1200ms مثل Dashboard مع اللون الأخضر المطلوب سابقًا. حماية clipboard ومسحه تبقى موجودة.
 - Release build ناجح صفر أخطاء وتحذيرا SYSLIB0057 قائمان؛ 196 نجاح/4 SKIPPED/0 فشل. الفحص التفاعلي للتلميح لم يُنفذ؛ لا master/push/install.
+
+### R4-S05 — تنظيم الإعدادات العامة ببطاقات حسب المرجع
+- الحالة: DONE-VERIFIED
+- بطلب المالك إعادة تنظيم القسم إلى Secure Remote Access وبطاقات Connection Endpoint وAccess Permissions وCertificate وConnect This App؛ borders مستديرة وpadding/spacing وموارد Theme ديناميكية للوضعين. الخيارات العامة السابقة محفوظة، والوظائف والمفاتيح والنسخ والإخفاء بعد الموافقة لم تُحذف.
+- بطاقة الشهادة تعرض بيانات حقيقية من status: انتهاء الصلاحية وSubject وIssuer وSerial وFingerprint؛ Current يعني داخل فترة الصلاحية ولا يدّعي ثقة Windows أو استخدامها فعليًا. لا عرض بيانات أو مفاتيح المرجع كقيم ثابتة. علامات HTTPS/firewall تصف الاختيارات عند Save ولا تدعي اختبار وصول المنفذ.
+- الاختبار Invalid_certificate_import_does_not_replace_working_certificate يقارن metadata الجديدة بالشهادة الحقيقية. آخر Release build incremental 0 warnings/errors؛ 196 نجاح/4 SKIPPED/0 فشل. المظهر والتجاوب على أحجام شاشة مختلفة غير متحققين تفاعليًا؛ لا ادعاء مطابقة pixel-perfect ولا تغيير service-status العام أو sidebar. لا master/push/install.
