@@ -303,6 +303,8 @@
                             <ComboBox Classes="field wide" ItemsSource="{Binding ListenAddressOptions}"
                                       SelectedValueBinding="{Binding Address}" DisplayMemberBinding="{Binding Label}"
                                       SelectedValue="{Binding ServiceListenAddress}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
                             <TextBlock Classes="flabel" Text="Service port"/>
                             <TextBox Classes="field wide" Text="{Binding ServicePort}"/>
                         </StackPanel>

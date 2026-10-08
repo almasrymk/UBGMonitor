@@ -674,3 +674,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - التغيير: حذف عبارة Remote access stays closed until enabled with a viewer key والحاوية الفارغة التابعة لها من SettingsView.axaml؛ تعديل نص واجهة فقط.
 - التحقق: Release build بلا تحذيرات أو أخطاء؛ الاختبارات 160 نجاح/3 Unix-only skip/0 فشل. لم تُشغّل الواجهة تفاعليًا ولم تُنشر نسخة جديدة.
+
+### R4-S05 — البورت بجوار عنوان الاستماع بطلب المالك
+- الحالة: DONE-VERIFIED
+- التغيير: نقل Service port إلى العمود الثاني في Grid نفسها بجوار Service listens on، مع الحفاظ على bindings والتصميم الحالي.
+- التحقق: Release build بلا تحذيرات/أخطاء؛ 160 اختبار نجاح، 3 Unix-only متخطاة، 0 فشل. التحقق بصريًا أثناء تشغيل الواجهة لم يُنفذ؛ لا نشر.
