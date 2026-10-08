@@ -867,3 +867,9 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - أيقونة LinkVariant خضراء 28 إلى يسار محتوى البطاقة؛ العنوان والوصف في صف قابل للالتفاف. Service URL ومفتاح الاتصال في عمودين بفاصل 24، حقول ارتفاع 35 وزوايا 5 وأزرار نسخ 40 ملاصقة لكل حقل.
 - زر Connect أخضر بعرض 120 وأيقونة Play فعلية، وReset pairing بعرض 145 وأيقونة Refresh؛ الحفاظ على Commands ورسالة الاتصال وسلوك النسخ المحمي وتلميح Copied. قالب ConnectFields المشترك يستخدم نفس تنسيق الحقول في حالات الاتصال الأخرى.
 - بناء Release ناجح بصفر أخطاء وتحذيري SYSLIB0057 القائمين؛ الاختبارات 196 نجاح، 4 SKIPPED، صفر فشل. المطابقة البصرية الحرفية أثناء التشغيل DONE-UNVERIFIED. لا master/push/install.
+
+### R4-S05 — تصميم General Monitoring Settings حسب المرجع
+- الحالة: DONE-VERIFIED
+- عنوان General Monitoring Settings وأيقونة CogOutline كبيرة؛ بطاقة Monitoring Intervals بأيقونة ClockOutline وعمودين وصفوف ذات فواصل ووصف لكل إعداد. الحقول الرقمية NumericUpDown بقيم مرتبطة بنفس خصائص الإعدادات وحد أدنى 1، واختبار السرعة يسمح بصفر لتعطيله؛ لا نسخ لقيم المرجع الثابتة.
+- Data Retention وPreferences جنبًا إلى جنب مع أيقونات DatabaseOutline وTune؛ قائمة الاحتفاظ والشرح والتنبيه، واختيار Dark/Light مربوط بـ IsLightTheme، وإشعارات بنفس toggle الحالي. إعدادات الوصول البعيد السابقة محفوظة تحتها.
+- بناء Release ناجح بصفر أخطاء وتحذيري SYSLIB0057 القائمين؛ 196 نجاح و4 SKIPPED وصفر فشل. المطابقة البصرية التفاعلية DONE-UNVERIFIED. Service Status وMessages board العامة خارج هذه الشاشة لم تُنقل أو تُنسخ بيانات مشاكل وهمية من المرجع. لا master/push/install.
