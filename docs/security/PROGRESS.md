@@ -849,3 +849,9 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - تصغير Regenerate/Import إلى عرض 265/240 وpadding 10,6، وإضافة فاصل عمودي 1px خفيف بين عمود Fingerprint/Serial وعمود التاريخ/Issuer/Subject. استبدال MaterialIcon برسم Path vector لمستند ذي زاوية مطوية وقفل بحسب المرجع، بلون الثيم الأخضر وحجم 26. الرسم إعادة بناء من المرجع وليس ملف المصدر الأصلي؛ التطابق البصري الحرفي غير متحقق.
 - آخر Build incremental ناجح 0 warnings/errors؛ 196 نجاح/4 SKIPPED/0 فشل. العرض تفاعليًا غير متحقق؛ لا master/push/install.
+
+### R4-S05 — إصلاح فشل ترجمة XAML عند بدء الواجهة
+- الحالة: DONE-VERIFIED
+- السبب: رسم أيقونة الشهادة استخدم StrokeLineJoin وهي خاصية غير معروفة في Avalonia؛ إعادة بناء Debug كشفت AVLN2000. استبدالها بالخاصية الصحيحة StrokeJoin، دون تغيير التصميم أو وظائف الشاشة.
+- إعادة بناء الحل بالكامل باستخدام Rebuild نجحت في Debug وRelease بصفر أخطاء وتحذيري SYSLIB0057 القائمين. الاختبارات الفعلية في Debug: 195 نجاح، 4 SKIPPED، صفر فشل، إجمالي 199. هذه نتيجة التشغيل الحالي؛ لا اعتماد على نتائج البناء incremental السابقة لإثبات ترجمة XAML.
+- بدء الواجهة تفاعليًا داخل جلسة Visual Studio الخاصة بالمالك غير متحقق؛ لم يتم إيقاف جلسة التصحيح أو الاتصال بسيرفر الترخيص. لا master/push/install.

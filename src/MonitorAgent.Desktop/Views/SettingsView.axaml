@@ -353,7 +353,7 @@
                     </StackPanel></Border>
                     <Border Classes="settingscard">
                         <Grid ColumnDefinitions="32,16,*">
-                            <Viewbox Width="26" Height="26" VerticalAlignment="Top"><Canvas Width="32" Height="32"><Path Stroke="{DynamicResource AccentGreenBrush}" StrokeThickness="1.8" StrokeLineJoin="Round" Data="M 17,29 L 5,29 L 5,3 L 19,3 L 27,11 L 27,17 M 19,3 L 19,11 L 27,11 M 9,15 L 21,15 M 9,20 L 15,20 M 9,25 L 14,25 M 20,22 L 20,20 C 20,16 26,16 26,20 L 26,22 M 18,22 L 28,22 L 28,30 L 18,30 Z M 23,25 L 23,27"/></Canvas></Viewbox>
+                            <Viewbox Width="26" Height="26" VerticalAlignment="Top"><Canvas Width="32" Height="32"><Path Stroke="{DynamicResource AccentGreenBrush}" StrokeThickness="1.8" StrokeJoin="Round" Data="M 17,29 L 5,29 L 5,3 L 19,3 L 27,11 L 27,17 M 19,3 L 19,11 L 27,11 M 9,15 L 21,15 M 9,20 L 15,20 M 9,25 L 14,25 M 20,22 L 20,20 C 20,16 26,16 26,20 L 26,22 M 18,22 L 28,22 L 28,30 L 18,30 Z M 23,25 L 23,27"/></Canvas></Viewbox>
                             <StackPanel Grid.Column="2" Spacing="8" IsEnabled="{Binding CanManageRemoteAccess}">
                                 <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
                                     <TextBlock Text="Certificate" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/>
