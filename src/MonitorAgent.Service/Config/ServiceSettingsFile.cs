@@ -37,6 +37,7 @@ public static class ServiceSettingsFile
         lock (Gate)
         {
             Write(PrimaryPath, section);
+#if DEBUG
             foreach (var copy in DevelopmentCopies())
             {
                 try
@@ -48,6 +49,7 @@ public static class ServiceSettingsFile
                     // Source / bin copies only keep settings across rebuilds while developing.
                 }
             }
+#endif
         }
     }
 
@@ -75,6 +77,7 @@ public static class ServiceSettingsFile
         File.WriteAllText(path, root.ToJsonString(WriteOptions));
     }
 
+#if DEBUG
     /// <summary>When the service runs from a build folder, the project's appsettings.json (and its other build outputs) are updated too.</summary>
     private static IEnumerable<string> DevelopmentCopies()
     {
@@ -101,4 +104,5 @@ public static class ServiceSettingsFile
             yield break;
         }
     }
+#endif
 }

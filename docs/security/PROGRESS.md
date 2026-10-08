@@ -258,3 +258,13 @@
 - اختبار عدم الانكسار: Real_monitor_points_and_existing_settings_survive_cache_reload يحافظ على النقطة الحقيقية وDB/version/address؛ migration تحفظ الهوية والحدود.
 - غير المتحقق: تثبيت VM حقيقي غير منفذ؛ الاختبارات تستعمل مجلدات مؤقتة؛ legacy camera rule القديمة ظلت كما كانت.
 - اختلاف عن الخطة: dependency paths اختيارية لعزل الاختبارات فقط؛ samples لا تحذف من قائمة مخلوطة بنقاط عميل حقيقية.
+
+### R1-S05 — منع كتابة نسخ التطوير في Release
+- الحالة: DONE-VERIFIED
+- ماذا تغير ولماذا: DevelopmentCopies والنداء لها داخل DEBUG فقط؛ Release لا تحمل هذه الدالة وتكتب PrimaryPath فقط. Debug يبقى على السلوك التطويري السابق.
+- الملفات: ServiceSettingsFile.cs، ReleaseSettingsTests.cs.
+- الأوامر الفعلية: build Release0 أخطاء/0 تحذيرات؛ suite109pass/1skip/0fail.
+- اختبار الأمان: reflection يثبت غياب DevelopmentCopies من assembly Release.
+- اختبار عدم الانكسار: كتابة/قراءة settings الأساسية تنجح مع حفظ واسترجاع نسخة ملف الاختبار الأصلية في finally؛ لا لمس إعدادات عميل.
+- غير المتحقق: تثبيت VM غير منفذ؛ الاختبار Release-only مقصود، Debug لم يُختبر في هذه الخطوة.
+- اختلاف عن الخطة: لا شيء.
