@@ -120,7 +120,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     public bool HasTemporaryRemoteKey => NewRemoteKey.Length > 0;
     [ObservableProperty] private string _viewerKeyDisplay = "Key unavailable here; regenerate to display it.";
     [ObservableProperty] private string _adminKeyDisplay = "Key unavailable here; regenerate to display it.";
-    private readonly RemoteKeyDisplayStore _remoteKeyDisplayStore = new();
+    private readonly RemoteKeyDisplayStore _remoteKeyDisplayStore;
     private bool _loadingRemoteStatus;
     private bool _preparingRemoteKeys;
     [ObservableProperty] private bool _remoteKeyPanelOpen;
@@ -132,7 +132,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     }
     private async Task PrepareRemoteKeysAsync()
     {
-        if (_preparingRemoteKeys) return;
+        if (_preparingRemoteKeys || !CanManageRemoteAccess || CanEditNetworkOptions) return;
         _preparingRemoteKeys = true;
         try
         {
@@ -140,6 +140,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             if (status is null) { StatusMessage = "Could not read remote keys. Retry after connecting locally."; return; }
             if (!status.HasViewerKey) await ManageRemoteAccessAsync("create-viewer-key");
             if (!status.HasAdminKey) await ManageRemoteAccessAsync("create-admin-key");
+            if (await _client.GetRemoteAccessAsync() is { } current) LoadRemoteKeyDisplays(current);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.Cryptography.CryptographicException)
         { StatusMessage = "Could not save the encrypted key display. Regenerate the key locally to retry."; }
@@ -182,8 +183,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     }
     private async Task ConfirmNetworkSelectionAsync(string previous, string selected)
     {
-        if (ConfirmWarning is null) return;
-        var accepted = await ConfirmWarning("اختيار عنوان شبكة يعني أن اتصال الأجهزة الأخرى سيكون مشفرًا باستخدام HTTPS، وسيتم السماح بالبورت في جدار الحماية عند الضغط على Save. يجب إنشاء Viewer key أولًا. هل تريد المتابعة؟");
+        var accepted = ConfirmWarning is null || await ConfirmWarning("اختيار عنوان شبكة يعني أن اتصال الأجهزة الأخرى سيكون مشفرًا باستخدام HTTPS، وسيتم السماح بالبورت في جدار الحماية عند الضغط على Save. سيتم إنشاء المفاتيح الناقصة تلقائيًا مع الاحتفاظ بالموجودة. هل تريد المتابعة؟");
         if (!accepted && ServiceListenAddress == selected)
         {
             _loadingListenAddress = true;
@@ -192,6 +192,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             RemoteEnabled = !CanEditNetworkOptions;
             OpenFirewallPort = !CanEditNetworkOptions;
         }
+        if (accepted && ServiceListenAddress == selected) await PrepareRemoteKeysAsync();
     }
     [RelayCommand]
     private async Task ManageRemoteAccessAsync(string action)
@@ -235,13 +236,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     }
     private void ApplyRemoteStatus(RemoteAccessStatus status)
     {
-        if (CanManageRemoteAccess)
-        {
-            var viewer = _remoteKeyDisplayStore.Load("viewer", status.ViewerKeyHash);
-            var admin = _remoteKeyDisplayStore.Load("admin", status.AdminKeyHash);
-            ViewerKeyDisplay = viewer.Length > 0 ? viewer : "Key unavailable here; regenerate to display it.";
-            AdminKeyDisplay = admin.Length > 0 ? admin : "Key unavailable here; regenerate to display it.";
-        }
+        LoadRemoteKeyDisplays(status);
         _savedRemoteFlags = (status.Enabled, status.AllowAdministration, status.OpenFirewall);
         _loadingRemoteStatus = true;
         try
@@ -258,8 +253,17 @@ public sealed partial class SettingsViewModel : ObservableObject
         RefreshHasChanges();
     }
 
-    public SettingsViewModel(AgentApiClient client)
+    private void LoadRemoteKeyDisplays(RemoteAccessStatus status)
     {
+        if (!CanManageRemoteAccess) return;
+        var viewer = _remoteKeyDisplayStore.Load("viewer", status.ViewerKeyHash);
+        var admin = _remoteKeyDisplayStore.Load("admin", status.AdminKeyHash);
+        ViewerKeyDisplay = viewer.Length > 0 ? viewer : "Key unavailable here; regenerate to display it.";
+        AdminKeyDisplay = admin.Length > 0 ? admin : "Key unavailable here; regenerate to display it.";
+    }
+    public SettingsViewModel(AgentApiClient client, RemoteKeyDisplayStore? remoteKeyDisplayStore = null)
+    {
+        _remoteKeyDisplayStore = remoteKeyDisplayStore ?? new();
         _client = client;
         _client.RoleChanged += () => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
