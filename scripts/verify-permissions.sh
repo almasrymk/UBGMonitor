@@ -8,6 +8,13 @@ else
     roots=(/opt/monitoragent /opt/monitoragent-desktop /var/lib/monitoragent /var/log/monitoragent)
     state=/var/lib/monitoragent
 fi
+if [ "$#" -gt 0 ]; then
+    if [ "$#" != 4 ]; then echo 'Usage: verify-permissions.sh [install desktop state logs]'; exit 2; fi
+    roots=("$1" "$2" "$3" "$4"); state="$3"
+    for root in "${roots[@]}"; do
+        if [[ "$root" != /* || "$root" = / ]]; then echo 'FAIL roots must be absolute directories below /'; exit 2; fi
+    done
+fi
 for root in "${roots[@]}"; do
     if [ ! -d "$root" ]; then echo "FAIL missing $root"; failed=1; continue; fi
     while IFS= read -r -d '' path; do

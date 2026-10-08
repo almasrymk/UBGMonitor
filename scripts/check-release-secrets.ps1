@@ -1,12 +1,13 @@
 #requires -Version 7.0
 [CmdletBinding()]
-param([Parameter(Mandatory)][string]$PublishPath)
+param([Parameter(Mandatory)][string]$PublishPath, [switch]$Desktop)
 
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path -LiteralPath $PublishPath).Path
 if (-not (Test-Path -LiteralPath $root -PathType Container)) { throw 'PublishPath must be a directory.' }
 $settingsFiles = @(Get-ChildItem -LiteralPath $root -Filter 'appsettings*.json' -File -Recurse)
-if (-not ($settingsFiles | Where-Object Name -eq 'appsettings.json')) { throw 'Release has no appsettings.json; scan failed closed.' }
+if (-not $Desktop -and -not ($settingsFiles | Where-Object Name -eq 'appsettings.json')) { throw 'Release has no appsettings.json; scan failed closed.' }
+if ($Desktop -and -not (Test-Path -LiteralPath (Join-Path $root 'MonitorAgent.dll'))) { throw 'Desktop release has no MonitorAgent.dll; scan failed closed.' }
 $violations = [Collections.Generic.List[string]]::new()
 
 function Test-SettingsNode($Node, [string]$FieldPath, [string]$FileName) {

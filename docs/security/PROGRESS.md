@@ -589,3 +589,11 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - أصلح SettingsContract حفظ metadata الخاصة لنقاط غير قواعد البيانات، ويرفض Conditions غير الصحيحة بدل إسقاطها بصمت. PublicSettings يظل لا يكشف metadata.
 - الاختبارات: Ordinary_edit_preserves_non_database_metadata_and_rejects_malformed_conditions وCentral_request_timeout_cancels_transport_and_preserves_cached_configuration. لا شبكة فعلية؛ transport ينتظر cancellation.
 - التحقق: Release build بلا warnings/errors؛ 156 نجاح/3 Unix skip/0 فشل. لا تغييرات في تصميم الواجهة أو master.
+
+### R7-S03 — CI وفحص التوزيع والتبعيات
+- الحالة: DONE-UNVERIFIED
+- التغيير: CI runtime matrix win-x64/linux-x64/osx-arm64 مع self-contained service وDesktop publish؛ scans لكل توزيع؛ check-vulnerable-packages.ps1 يرفض High/Critical. أضيف isolated Linux permission fixture موجب وسالب، لا تشغيل خدمة أو اتصال ترخيص.
+- الملفات: ci.yml، check-vulnerable-packages.ps1، check-release-secrets.ps1 (Desktop صريح يتطلب MonitorAgent.dll)، verify-permissions.sh (roots اختبار اختيارية).
+- التحقق المحلي: vulnerable check PASS؛ scanner 9 حالات PASS؛ publish win-x64 Service وDesktop ناجحان والفحص PASS؛ bash syntax وPowerShell parser وgit diff --check ناجحة.
+- غير المتحقق: workflow غير منشور حسب طلبك؛ Unix runtime/permission fixture وCI الجديدة لم تُشغل. fixture لا تدعي scripted install كاملًا؛ installer يحتاج جهاز مخصص وصلاحيات.
+- توثيق التبعيات: DEPENDENCIES.md، sensor library ثابتة وDefender live result غير متاح.
