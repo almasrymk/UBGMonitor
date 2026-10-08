@@ -642,3 +642,9 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - RELEASE.md يوثق Windows Authenticode للملفات والسكربتات والتحقق، macOS Developer ID/notarization مع السطور الدقيقة لاستبدال ad-hoc/quarantine، Linux package/repository signatures وAV acceptance ومصفوفة OS/tested-by-date.
 - تحقق source line numbers بالـrg، ولا signing credentials متاحة. لا signtool/codesign/notarytool أو Defender driver test منفذ؛ لا ادعاء نجاح ولا bypass.
 - آخر suite: 160 نجاح/3 Unix skip/0 فشل، build بلا تحذيرات/أخطاء؛ documentation-only.
+
+### R7-S05 — إعلان تدفقات البيانات
+- الحالة: DONE-VERIFIED
+- DATA_FLOWS.md مأخوذ من NetworkService/InternetMonitor/InternetSpeedTester/LicensePlatformClient/ConfigPuller/MadkhalMonitor/WebsiteMonitor/SiteLogoCache/AgentApiClient؛ كل host ثابت والغرض وما يرسل والتعطيل الموجود أو عدم وجوده.
+- لا ادعاء بإيقاف public IP/connectivity ولا telemetry controls غير موجودة؛ default routing فارغة وspeedtest 0 يوقف التلقائي فقط. deviceName في activation موثق.
+- التحقق: rg/source review بدون تشغيل اتصالات؛ last suite 160 نجاح/3 skip/0 فشل. لا وثيقة تستبدل runtime consent controls؛ step document-only حسب الخطة.
