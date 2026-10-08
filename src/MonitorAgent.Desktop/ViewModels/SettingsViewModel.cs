@@ -114,7 +114,47 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _remoteAdministration;
     [ObservableProperty] private bool _openFirewallPort;
     [ObservableProperty] private string _remoteFingerprint = "Remote access has not been configured.";
-    [ObservableProperty] private string _newRemoteKey = string.Empty;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasTemporaryRemoteKey))]
+    private string _newRemoteKey = string.Empty;
+    public bool HasTemporaryRemoteKey => NewRemoteKey.Length > 0;
+    [ObservableProperty] private bool _remoteKeyPanelOpen;
+    [ObservableProperty] private string _viewerKeyDisplay = "Key unavailable here; regenerate to display it.";
+    [ObservableProperty] private string _adminKeyDisplay = "Key unavailable here; regenerate to display it.";
+    private readonly RemoteKeyDisplayStore _remoteKeyDisplayStore = new();
+    private bool _loadingRemoteStatus;
+    private bool _preparingRemoteKeys;
+    partial void OnRemoteKeyPanelOpenChanged(bool value)
+    {
+        if (_loadingRemoteStatus || !CanManageRemoteAccess) return;
+        RemoteAdministration = value;
+        if (value) _ = PrepareRemoteKeysAsync();
+    }
+    private async Task PrepareRemoteKeysAsync()
+    {
+        if (_preparingRemoteKeys) return;
+        _preparingRemoteKeys = true;
+        try
+        {
+            var status = await _client.GetRemoteAccessAsync();
+            if (status is null) { StatusMessage = "Could not read remote keys. Retry after connecting locally."; return; }
+            if (!status.HasViewerKey) await ManageRemoteAccessAsync("create-viewer-key");
+            if (!status.HasAdminKey) await ManageRemoteAccessAsync("create-admin-key");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.Cryptography.CryptographicException)
+        { StatusMessage = "Could not save the encrypted key display. Regenerate the key locally to retry."; }
+        finally { _preparingRemoteKeys = false; }
+    }
+    [RelayCommand]
+    private async Task CopyRemoteKeyAsync(string role)
+    {
+        if (!CanManageRemoteAccess) return;
+        var status = await _client.GetRemoteAccessAsync();
+        if (status is null) return;
+        var key = _remoteKeyDisplayStore.Load(role, role == "viewer" ? status.ViewerKeyHash : status.AdminKeyHash);
+        if (key.Length > 0) await UiPlatform.CopySensitiveTextAsync(key);
+        else StatusMessage = "This key is unavailable here or has changed; regenerate it locally.";
+    }
     public bool CanManageRemoteAccess => _client.CanAdminister && _client.IsLocalTransport;
     public bool CanEditNetworkOptions => string.IsNullOrWhiteSpace(ServiceListenAddress) || ServiceListenAddress.Trim() == LocalOnlyAddress;
     private bool _loadingListenAddress;
@@ -157,16 +197,53 @@ public sealed partial class SettingsViewModel : ObservableObject
     private async Task ManageRemoteAccessAsync(string action)
     {
         if (!CanManageRemoteAccess) return;
+        if (action is "create-viewer-key" or "create-admin-key")
+        {
+            var current = await _client.GetRemoteAccessAsync();
+            if (current is null) return;
+            if ((action == "create-viewer-key" ? current.HasViewerKey : current.HasAdminKey) &&
+                (ConfirmWarning is null || !await ConfirmWarning("Regenerating this key disconnects applications using the old key. Continue?"))) return;
+        }
         if (action is "regenerate-certificate" or "revoke-viewer-key" or "revoke-admin-key" &&
             (ConfirmWarning is null || !await ConfirmWarning("This changes remote access and can disconnect paired applications. Continue?"))) return;
         var result = await _client.ManageRemoteAccessAsync(new(action, RemoteEnabled, RemoteAdministration, OpenFirewallPort));
         if (result is null) { StatusMessage = "Remote action failed. Create the required keys and save the listening address/port first."; return; }
+        var pendingFlags = (RemoteEnabled, RemoteAdministration, OpenFirewallPort);
+        if (result.Key is not null)
+        {
+            try { _remoteKeyDisplayStore.Save(action == "create-viewer-key" ? "viewer" : "admin", result.Key); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.Cryptography.CryptographicException)
+            {
+                NewRemoteKey = result.Key;
+                StatusMessage = "Key created, but its encrypted display could not be saved. Copy it from the temporary field.";
+                return;
+            }
+        }
         ApplyRemoteStatus(result.Status);
-        NewRemoteKey = result.Key ?? string.Empty;
-        StatusMessage = result.Key is null ? "Remote access updated." : "Key returned once. Store it securely; the service keeps only its hash.";
+        if (result.Key is not null)
+        {
+            RemoteEnabled = pendingFlags.RemoteEnabled;
+            RemoteAdministration = pendingFlags.RemoteAdministration;
+            OpenFirewallPort = pendingFlags.OpenFirewallPort;
+        }
+        NewRemoteKey = string.Empty;
+        StatusMessage = result.Key is null ? "Remote access updated." : "Key created. Its display is encrypted for this local user. Save to apply access permissions.";
     }
     private void ApplyRemoteStatus(RemoteAccessStatus status)
     {
+        if (status.AllowAdministration && !RemoteKeyPanelOpen)
+        {
+            _loadingRemoteStatus = true;
+            try { RemoteKeyPanelOpen = true; }
+            finally { _loadingRemoteStatus = false; }
+        }
+        if (CanManageRemoteAccess)
+        {
+            var viewer = _remoteKeyDisplayStore.Load("viewer", status.ViewerKeyHash);
+            var admin = _remoteKeyDisplayStore.Load("admin", status.AdminKeyHash);
+            ViewerKeyDisplay = viewer.Length > 0 ? viewer : "Key unavailable here; regenerate to display it.";
+            AdminKeyDisplay = admin.Length > 0 ? admin : "Key unavailable here; regenerate to display it.";
+        }
         _savedRemoteFlags = (status.Enabled, status.AllowAdministration, status.OpenFirewall);
         RemoteEnabled = status.Enabled; RemoteAdministration = status.AllowAdministration; OpenFirewallPort = status.OpenFirewall;
         if (!CanEditNetworkOptions) { RemoteEnabled = true; OpenFirewallPort = true; }
@@ -185,6 +262,8 @@ public sealed partial class SettingsViewModel : ObservableObject
             OnPropertyChanged(nameof(CanAdminister));
             OnPropertyChanged(nameof(CanManageRemoteAccess));
             NewRemoteKey = string.Empty;
+            ViewerKeyDisplay = "Key unavailable here; regenerate to display it.";
+            AdminKeyDisplay = "Key unavailable here; regenerate to display it.";
             OnPropertyChanged(nameof(AccessExplanation));
             SaveCommand.NotifyCanExecuteChanged();
         });

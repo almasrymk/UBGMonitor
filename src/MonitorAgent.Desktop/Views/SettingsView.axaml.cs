@@ -61,6 +61,14 @@ public partial class SettingsView : UserControl
         if (password is null) { MonitorAgent.UI.Services.UiPlatform.ShowMessage("Copy password", "No saved password could be read. Save this monitor point first."); return; }
         await MonitorAgent.UI.Services.UiPlatform.CopySensitiveTextAsync(password);
     }
+    private async void RemoteKey_PointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e)
+    {
+        if (sender is not SelectableTextBlock label || !e.GetCurrentPoint(label).Properties.IsRightButtonPressed) return;
+        var settings = (DataContext as MainViewModel)?.Settings ?? DataContext as SettingsViewModel;
+        if (settings?.CanManageRemoteAccess != true || label.Tag is not string role) return;
+        e.Handled = true;
+        await settings.CopyRemoteKeyCommand.ExecuteAsync(role);
+    }
     private async void ImportCertificate_Click(object? sender, RoutedEventArgs e)
     {
         if (TopLevel.GetTopLevel(this) is not Window owner) return;
