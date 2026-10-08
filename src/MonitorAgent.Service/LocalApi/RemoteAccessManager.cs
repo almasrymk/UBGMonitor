@@ -103,7 +103,8 @@ public sealed class RemoteAccessManager
                     if (string.IsNullOrWhiteSpace(action.Pfx) || action.Pfx.Length > 2 * 1024 * 1024) throw new ArgumentException("Select a PFX certificate within the size limit.");
                     using (var certificate = new X509Certificate2(Convert.FromBase64String(action.Pfx), action.PfxPassword, X509KeyStorageFlags.EphemeralKeySet | X509KeyStorageFlags.Exportable))
                     {
-                        if (!certificate.HasPrivateKey || certificate.NotAfter <= DateTime.Now) throw new ArgumentException("The PFX needs a private key and a valid expiration date.");
+                        if (!certificate.HasPrivateKey || certificate.NotBefore > DateTime.Now || certificate.NotAfter <= DateTime.Now)
+                            throw new ArgumentException("The PFX needs a private key and a current validity period.");
                         state = state with { ProtectedPfx = SecretProtector.Protect(Convert.ToBase64String(certificate.Export(X509ContentType.Pkcs12))) };
                     }
                     break;

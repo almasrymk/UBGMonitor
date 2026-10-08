@@ -74,7 +74,7 @@ public sealed class LocalApiHost : BackgroundService
             }
         }
         }
-        catch (Exception ex) when (ex is IOException or CryptographicException or FormatException or System.Text.Json.JsonException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or CryptographicException or FormatException or System.Text.Json.JsonException)
         {
             _logger.LogError("[API] Remote state migration failed; local administration remains available. Error type: {ErrorType}", ex.GetType().Name);
         }
@@ -82,10 +82,10 @@ public sealed class LocalApiHost : BackgroundService
         {
             var general = cache.GetGeneral();
             var listen = Listening.From(general, _options.Port);
-            var revision = remote.Revision;
+            string revision;
             RemoteAccessStatus remoteStatus;
-            try { remoteStatus = remote.Status(); }
-            catch (Exception ex) when (ex is IOException or CryptographicException or FormatException or System.Text.Json.JsonException)
+            try { revision = remote.Revision; remoteStatus = remote.Status(); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or CryptographicException or FormatException or System.Text.Json.JsonException)
             {
                 await StopAppAsync();
                 _rootProvider.GetRequiredService<IFirewall>().Allow(null);
@@ -110,6 +110,10 @@ public sealed class LocalApiHost : BackgroundService
                     await Task.Delay(TimeSpan.FromSeconds(3), stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                _logger.LogWarning("[API] Remote state changed but cannot be read: {ErrorType}", ex.GetType().Name);
+            }
             await StopAppAsync();
         }
     }
@@ -117,7 +121,14 @@ public sealed class LocalApiHost : BackgroundService
     {
         var builder = WebApplication.CreateBuilder();
         builder.Logging.ClearProviders();
-        var certificate = _rootProvider.GetRequiredService<RemoteAccessManager>().GetCertificate();
+        X509Certificate2 certificate;
+        try { certificate = _rootProvider.GetRequiredService<RemoteAccessManager>().GetCertificate(); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or CryptographicException or FormatException or System.Text.Json.JsonException)
+        {
+            _rootProvider.GetRequiredService<IFirewall>().Allow(null);
+            _logger.LogError("[API] Remote certificate could not be loaded: {ErrorType}", ex.GetType().Name);
+            return false;
+        }
         if (certificate.NotAfter <= DateTime.Now) { certificate.Dispose(); _logger.LogError("[API] Remote certificate expired; regenerate it explicitly from the local Administrator connection."); return false; }
         RemoteTransport.Configure(builder, IPAddress.Parse(listen.Address), listen.Port, certificate);
         ConfigureServices(builder.Services, tcp: true);

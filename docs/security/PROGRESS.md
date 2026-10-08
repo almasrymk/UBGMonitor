@@ -610,3 +610,10 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - اختبار الأمان: Signing_key_failure_does_not_log_exception_secrets_and_next_request_can_succeed باستخدام HttpRequestException تحتوي fixture password وuserinfo؛ log sink لا يحتوي أي منها.
 - عدم الانكسار: طلب signing keys التالي ينجح من fake، licensing/routing regressions ناجحة؛ لا اتصال بالمنصة.
 - التحقق: أصلح تعارض اسم test logger الذي أظهره build الأول؛ إعادة Release build 0 warnings/errors، suite 158 نجاح/3 Unix skip/0 فشل. التحقق من log محتوى runtime لكل driver/OS ما زال مطلوبًا.
+
+### R4-S03 / R4-S05 — حالات فشل الشهادة والاستيراد
+- الحالة: DONE-UNVERIFIED
+- التغيير: corrupt/unreadable remote state أو فشل تحميل الشهادة يغلق TCP/firewall ويترك IPC متاحًا؛ لا fallback. PFX المستقبلي/المنتهي يرفض قبل تغيير الحالة؛ Desktop يرفض expired/future certificate حتى لو بصمتها معتمدة. استيراد PFX يقرأ bounded stream ولا يفترض Seek.
+- الاختبارات: Invalid_certificate_import_does_not_replace_working_certificate يثبت رفض مستقبلية وبقاء الشهادة الصالحة وprivate key؛ pin expired/future رفض، وباقي real HTTPS/regressions ناجحة.
+- التحقق: Release build 0 warnings/errors؛ suite 159 نجاح/3 Unix skip/0 فشل. خدمة LocalSystem وUI stream provider وفشل cert أثناء runtime غير متحققة فعليًا.
+- لا تغييرات اعتماد أو شهادات إنتاج؛ لا master/push/install.

@@ -11,6 +11,24 @@ public sealed class RemoteAccessTests : IDisposable
     private readonly string _folder = Path.Combine(TestEnvironment.Home, "remote-case-" + Guid.NewGuid().ToString("N"));
     private string FilePath => Path.Combine(_folder, "remote.json");
     [Fact]
+    public void Invalid_certificate_import_does_not_replace_working_certificate()
+    {
+        var manager = new RemoteAccessManager(FilePath);
+        manager.Apply(new("regenerate-certificate"));
+        var before = manager.Status().Fingerprint;
+        Assert.Throws<ArgumentException>(() => manager.Apply(new("import-certificate", Pfx: "")));
+        using var key = System.Security.Cryptography.ECDsa.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256);
+        var request = new System.Security.Cryptography.X509Certificates.CertificateRequest("CN=fixture", key, System.Security.Cryptography.HashAlgorithmName.SHA256);
+        using var future = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(1), DateTimeOffset.UtcNow.AddDays(2));
+        Assert.False(CertificateTrust.Accept(future, SslPolicyErrors.RemoteCertificateChainErrors, CertificateTrust.Fingerprint(future)));
+        using var expired = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-2), DateTimeOffset.UtcNow.AddDays(-1));
+        Assert.False(CertificateTrust.Accept(expired, SslPolicyErrors.RemoteCertificateChainErrors, CertificateTrust.Fingerprint(expired)));
+        Assert.Throws<ArgumentException>(() => manager.Apply(new("import-certificate", Pfx: Convert.ToBase64String(future.Export(System.Security.Cryptography.X509Certificates.X509ContentType.Pkcs12)))));
+        Assert.Equal(before, manager.Status().Fingerprint);
+        using var current = manager.GetCertificate();
+        Assert.True(current.HasPrivateKey);
+    }
+    [Fact]
     public void Keys_are_returned_once_hashed_separate_and_remote_admin_requires_explicit_enable()
     {
         var manager = new RemoteAccessManager(FilePath);
