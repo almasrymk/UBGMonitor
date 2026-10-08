@@ -70,7 +70,7 @@ public partial class SettingsView : UserControl
         if (sender is not Button { Tag: string kind } button) return;
         var settings = (DataContext as MainViewModel)?.Settings ?? DataContext as SettingsViewModel;
         if (settings is null) return;
-        var value = kind == "url" ? settings.ApiBaseUrl : settings.ClientAccessKey;
+        var value = kind switch { "url" => settings.ApiBaseUrl, "fingerprint" => settings.CertificateFingerprint, _ => settings.ClientAccessKey };
         if (string.IsNullOrWhiteSpace(value)) return;
         await MonitorAgent.UI.Services.UiPlatform.CopySensitiveTextAsync(value, () =>
         {

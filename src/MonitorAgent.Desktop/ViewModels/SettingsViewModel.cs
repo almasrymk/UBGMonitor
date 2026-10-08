@@ -120,6 +120,8 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string _certificateIssuer = "—";
     [ObservableProperty] private string _certificateSerial = "—";
     [ObservableProperty] private string _certificateValidity = "Not configured";
+    [ObservableProperty] private bool _certificateIsValid;
+    [ObservableProperty] private string _certificateFingerprint = "—";
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasTemporaryRemoteKey))]
     private string _newRemoteKey = string.Empty;
@@ -281,6 +283,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         CertificateIssuer = status.CertificateIssuer ?? "—";
         CertificateSerial = status.CertificateSerialNumber ?? "—";
         CertificateValidity = status.CertificateNotBefore <= DateTime.Now && status.CertificateNotAfter > DateTime.Now ? "Valid dates" : "Not current";
+        CertificateIsValid = status.CertificateNotBefore <= DateTime.Now && status.CertificateNotAfter > DateTime.Now;
+        CertificateFingerprint = status.Fingerprint ?? "—";
         RemoteCertificateDetails = status.CertificateNotAfter is { } expires && status.CertificateNotBefore is { } starts
             ? $"Validity: {(starts <= DateTime.Now && expires > DateTime.Now ? "Current" : "Outside validity period")}\nExpires on: {expires:yyyy/MM/dd HH:mm}\nSubject: {status.CertificateSubject}\nIssuer: {status.CertificateIssuer}\nSerial number: {status.CertificateSerialNumber}"
             : "No certificate details available.";

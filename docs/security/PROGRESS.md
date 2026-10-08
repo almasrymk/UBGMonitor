@@ -832,3 +832,9 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - إضافة ShieldCheck/Web/AccountGroup/CertificateOutline/LinkVariant لعناوين البطاقات بالأخضر. خيار الإدارة ToggleButton بأسلوب البرنامج؛ صفوف المفاتيح بأيقونة KeyVariant وحاوية bordered وأزرار ContentCopy وRefresh/Regenerate. بقيت checkboxs Viewer/Admin وسلوكها الموافق للتعليمات السابقة. أزرار الشهادة Refresh وUpload ووصف فرعي. زر Connect أخضر وSave Changes أخضر.
 - بيانات الشهادة في عمودين مع expiry/issuer/subject/serial/validity فعلية؛ Valid dates تعني فترة صلاحية فقط. أزرار نسخ عنوان الاتصال ومفتاح التطبيق تعمل مع تلميح Copied وتستخدم حماية clipboard. النصوص والقيم من الحالة الحالية وليس من لقطة المرجع. ثيم DynamicResource محفوظ.
 - التحقق: آخر Release build incremental 0 warnings/errors؛ كامل الاختبارات 196 نجاح/4 SKIPPED/0 فشل. تطابق المظهر pixel-perfect وclipboard والتفاعل الحقيقي لم يُختبرا في هذه البيئة؛ لا ادعاء بذلك. لم يتغير layout service-status/sidebar العام أو تُحذف الإعدادات العامة الموجودة. لا master/push/install.
+
+### R4-S05 — مطابقة ترتيب بطاقة الشهادة للمرجع
+- الحالة: DONE-VERIFIED
+- إعادة بناء البطاقة: أيقونة يسار مستقلة؛ Certificate وشارة Valid والوصف في صف أعلى، معلومات bordered في عمودين (Fingerprint وزر Copy ثم Serial يسار؛ Expires On/Issuer/Subject يمين)، وزرّا Regenerate Certificate/Import Customer PFX أسفل التفاصيل بعرض ووصف وأيقونات المرجع. حذف صف Validity من التفاصيل ونقل حالته للشارة. tooltip للبيانات الطويلة يحفظ إمكانية قراءتها ونسخ البصمة بلا prefix.
+- الشارة تتبع validity الفعلية ولا تستخدم بيانات المرجع ولا تدّعي trust أو اتصال فعلي. كل القيمة الفعلية من الخدمة.
+- Release build ناجح صفر أخطاء مع تحذيري SYSLIB0057 القائمين؛ 196 نجاح/4 SKIPPED/0 فشل. المطابقة البصرية النهائية أثناء تشغيل الواجهة غير متحققة، لا ادعاء pixel-perfect. لا master/push/install.
