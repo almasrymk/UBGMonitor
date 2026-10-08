@@ -78,7 +78,29 @@ public sealed class LocalApiHost : BackgroundService
         builder.Logging.ClearProviders();
         builder.WebHost.UseKestrel();
         builder.WebHost.UseUrls(listen.Urls);
-        builder.Services.AddCors(o => o.AddPolicy("localhost", p =>
+        ConfigureServices(builder.Services);
+        var app = builder.Build();
+        ConfigureApplication(app);
+
+        try
+        {
+            await app.StartAsync(stoppingToken);
+            _app = app;
+            _listening = listen;
+            _logger.LogInformation("[API] Listening on {Urls}", string.Join(", ", listen.Urls));
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or System.Net.Sockets.SocketException or InvalidOperationException or FormatException)
+        {
+            _logger.LogError("[API] Could not listen on {Urls}: {Message}", string.Join(", ", listen.Urls), ex.Message);
+            await app.DisposeAsync();
+            return false;
+        }
+    }
+
+    public static void ConfigureServices(IServiceCollection services)
+    {
+        services.AddCors(o => o.AddPolicy("localhost", p =>
             p.SetIsOriginAllowed(origin =>
                 {
                     if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri))
@@ -91,7 +113,11 @@ public sealed class LocalApiHost : BackgroundService
                 .AllowAnyHeader()
                 .AllowAnyMethod()));
 
-        var app = builder.Build();
+    }
+
+    public void ConfigureApplication(WebApplication app)
+    {
+
         app.UseCors("localhost");
         app.Use(async (context, next) =>
         {
@@ -128,20 +154,6 @@ public sealed class LocalApiHost : BackgroundService
         });
         MapEndpoints(app);
 
-        try
-        {
-            await app.StartAsync(stoppingToken);
-            _app = app;
-            _listening = listen;
-            _logger.LogInformation("[API] Listening on {Urls}", string.Join(", ", listen.Urls));
-            return true;
-        }
-        catch (Exception ex) when (ex is IOException or System.Net.Sockets.SocketException or InvalidOperationException or FormatException)
-        {
-            _logger.LogError("[API] Could not listen on {Urls}: {Message}", string.Join(", ", listen.Urls), ex.Message);
-            await app.DisposeAsync();
-            return false;
-        }
     }
 
     private async Task StopAppAsync()

@@ -336,3 +336,12 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 
 ### حالة Phase A
 خطة التنفيذ وتجربة Windows الجزئية مكتملتان. Run2 security fixes لم تنفذ بعد ولا ثغرة API مغلقة بمجرد PoC. بوابة0.3 تقول: "Do not write product code until the owner starts Phase B." لا deploy أو تغييرات حسابات/خدمة من Phase A. توضيح المرحلة للمراجعة قبل الانتقال لتنفيذ التغيير الذي يبدل الاتصال والصلاحيات.
+
+## تفويض الاستمرار دون توقف بين المراحل
+طلب صاحب المشروع تنفيذ كل ما يمكن إنجازه من الكود دون التوقف عند بوابات المراحل. هذا يفوض Phase B وعمليات Run التالية المحلية، ويتقدم على توقف0.3/PR لكل Run. تبقى بيانات الإنتاج الناقصة والتحقق على أنظمة غير متاحة موثقة، ولا نشر أو master أو تشغيل installer/customer service.
+
+### R2-S01 — جعل Pipeline قابلة للاختبار
+- الحالة: DONE-UNVERIFIED
+- الملفات: LocalApiHost.cs، LocalApiSecurityTests.cs، مشروع الاختبارات.
+- استخراج ConfigureServices/ConfigureApplication دون تغيير السلوك؛ TestHost8.0.26 test-only المذكورة في Phase A. اختبارات enumerate كل route غير مفتوحة بدون license وتثبت403/code، status/license JSON shape ومسارات invalid queries.
+- restore/build0 أخطاء/0 تحذيرات؛ suite112pass/1skip/0fail. فحوص القراءة الناجحة لكل telemetry/report route ليست مكتملة بعد؛ سنوسعها خلال التنفيذ، فلا ادعاء بكامل characterization net.
