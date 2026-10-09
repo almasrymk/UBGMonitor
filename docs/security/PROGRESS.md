@@ -990,3 +990,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - استبدال الأعمدة النصية الثلاث بقوالب CellEditingTemplate صريحة تحتوي TextBox بربط TwoWay وإعلان IsReadOnly=False على كل عمود. إضافة DoubleTapped لبدء تحرير العمود الحالي؛ ترتيب الأعمدة والفرز محفوظان. زر Save Changes يظل يثبت الخانة والصف ثم يحفظ كامل المجموعة.
 - Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 196 نجاح و4 SKIPPED وصفر فشل. التفاعل الحقيقي للدبل كليك داخل جلسة المستخدم DONE-UNVERIFIED؛ لا ادعاء تحديد سبب داخلي مثبت من تشغيل الواجهة. لا master/push/install.
+
+### R4-S05 — حذف How alerts work
+- الحالة: DONE-VERIFIED
+- حذف كارت How alerts work من رأس Device Specifications وإزالة أعمدته، ليستخدم العنوان والوصف المساحة المتاحة؛ جدول الحدود ووظائفه محفوظة.
+- Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 196 نجاح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
