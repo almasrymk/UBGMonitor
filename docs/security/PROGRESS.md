@@ -995,3 +995,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - حذف كارت How alerts work من رأس Device Specifications وإزالة أعمدته، ليستخدم العنوان والوصف المساحة المتاحة؛ جدول الحدود ووظائفه محفوظة.
 - Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 196 نجاح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
+
+### R4-S05 — إصلاح شرط الحفظ الصامت بعد تحرير الجدول
+- الحالة: DONE-VERIFIED
+- تتبع تحرير Cell/Row عبر PreparingCellForEdit وCellEditEnded وRowEditEnded؛ الحفظ يستدعي CommitEdit فقط عند وجود تحرير نشط بدل العودة الصامتة على نتيجة false دون تحرير. فشل تثبيت قيمة نشطة يعرض StatusMessage واضحًا؛ مسار SaveCommand الأصلي محفوظ.
+- Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 196 نجاح و4 SKIPPED وصفر فشل. تجربة الحفظ التفاعلية بالخدمة DONE-UNVERIFIED؛ الاختبارات لا تثبت نجاح زر الواجهة في جلسة المستخدم. لا master/push/install.

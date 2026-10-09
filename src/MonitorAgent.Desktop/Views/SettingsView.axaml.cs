@@ -6,9 +6,15 @@ namespace MonitorAgent.Desktop.Views;
 
 public partial class SettingsView : UserControl
 {
+    private bool _monitorCellEditing;
+    private bool _monitorRowEditing;
+
     public SettingsView()
     {
         InitializeComponent();
+        MonitorPointsGrid.PreparingCellForEdit += (_, _) => { _monitorCellEditing = true; _monitorRowEditing = true; };
+        MonitorPointsGrid.CellEditEnded += (_, _) => _monitorCellEditing = false;
+        MonitorPointsGrid.RowEditEnded += (_, _) => _monitorRowEditing = false;
     }
 
     private void MonitorPointsGrid_DoubleTapped(object? sender, Avalonia.Input.TappedEventArgs e)
@@ -20,9 +26,20 @@ public partial class SettingsView : UserControl
     private async void SaveSettings_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not SettingsViewModel settings) return;
-        if (settings.SelectedSection == SettingsViewModel.SectionMonitorPoints &&
-            (!MonitorPointsGrid.CommitEdit(DataGridEditingUnit.Cell, true) ||
-             !MonitorPointsGrid.CommitEdit(DataGridEditingUnit.Row, true))) return;
+        if (settings.SelectedSection == SettingsViewModel.SectionMonitorPoints)
+        {
+            // Commit only active edits; false also means there was no edit to commit.
+            if (_monitorCellEditing && !MonitorPointsGrid.CommitEdit(DataGridEditingUnit.Cell, true))
+            {
+                settings.StatusMessage = "Correct the value in the active cell before saving.";
+                return;
+            }
+            if (_monitorRowEditing && !MonitorPointsGrid.CommitEdit(DataGridEditingUnit.Row, true))
+            {
+                settings.StatusMessage = "Correct the values in the active row before saving.";
+                return;
+            }
+        }
         if (settings.SaveCommand.CanExecute(null)) await settings.SaveCommand.ExecuteAsync(null);
     }
     private async void Reset_Click(object? sender, RoutedEventArgs e)
