@@ -970,3 +970,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - تقليل العنوان الرئيسي من 22 إلى 20 وعناوين البطاقات من 16 إلى 15 والفرعية من 14 إلى 13؛ لا تغيير الحقول أو الوظائف أو المحاذاة.
 - Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 196 نجاح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
+
+### R4-S05 — إزاحة Older logs لليمين أكثر
+- الحالة: DONE-VERIFIED
+- زيادة إزاحة صف Older logs مع الأيقونة بمقدار 12 لليمين، بإزالة Margin السابق -12؛ باقي المحاذاة ثابتة.
+- Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 196 نجاح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
