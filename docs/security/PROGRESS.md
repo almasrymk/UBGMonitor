@@ -1042,3 +1042,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - ContentControl لحقول Minimum/Warning/Problem/Alert في صف Disk بمحاذاة Top مشتركة، لمنع رفع حقول الحدود بسبب وصف Remaining space أسفلها؛ النصوص داخل الحقول تبقى Center. عرض قائمة الوحدة 60.
 - DiskUnitOption يفرق Value/Label: Percent يعرض % وGB يعرض GB؛ SelectedValue يحفظ القيم السابقة دون تغيير JSON أو دلالة الحدود.
 - البناء واختبارات Release نجحت: 197 نجاح و4 SKIPPED وصفر فشل؛ تحذيرا الشهادة قائمان في البناء الكامل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
+
+### R4-S05 — استعادة الخيار الثالث في Monitor Points
+- الحالة: DONE-VERIFIED
+- إعادة Unknown إلى AlertOptions باسم Unknown & Warning & Problem ودائرة AccentGray؛ المعنى الأصلي يشمل الحالات الثلاث في NotificationRules، دون تغيير enum أو السلوك. Problem أحمر وWarning & Problem أصفر محفوظان؛ قائمة مواصفات الجهاز بقيت بخياريها.
+- بناء واختبارات Release نجحت: 197 نجاح و4 SKIPPED وصفر فشل؛ تحذيرا الشهادة قائمان. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.

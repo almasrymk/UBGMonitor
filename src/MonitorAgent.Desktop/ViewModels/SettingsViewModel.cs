@@ -773,7 +773,8 @@ public sealed partial class SettingsViewModel : ObservableObject
     public IReadOnlyList<MonitorPointAlertOption> AlertOptions { get; } =
     [
         new(MonitorPointAlert.Problem, "Problem", "AccentRedBrush"),
-        new(MonitorPointAlert.Warning, "Warning & Problem", "AccentYellowBrush")
+        new(MonitorPointAlert.Warning, "Warning & Problem", "AccentYellowBrush"),
+        new(MonitorPointAlert.Unknown, "Unknown & Warning & Problem", "AccentGrayBrush")
     ];
 
     public sealed record DiskUnitOption(string Value, string Label);
