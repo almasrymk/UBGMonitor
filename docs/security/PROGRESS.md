@@ -1021,3 +1021,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - دمج الوصفين تحت العنوان في TextBlock واحد مع NoWrap؛ عند ضيق العرض يظهر ellipsis والوصف الكامل في tooltip. بقية الإعدادات محفوظة.
 - Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 197 نجاح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
+
+### R4-S05 — تصغير رأس Threshold Configuration
+- الحالة: DONE-VERIFIED
+- أيقونة الترس من 40 إلى 20 وحاويتها من 64×64 إلى 36×36، وفاصل العنوان 12؛ العنوان 12 والوصف 11 وتقليل المسافة الرأسية إلى 3. الجدول والوظائف محفوظة.
+- Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 197 نجاح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
