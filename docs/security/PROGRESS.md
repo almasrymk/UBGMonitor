@@ -954,3 +954,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - Style محلي لجميع TextBox داخل SettingsView يضبط VerticalContentAlignment إلى Center، ويضع ScrollViewer الداخلي في الوسط رأسيًا؛ يشمل حقول الإعدادات الثلاث وحقول NumericUpDown الداخلية دون تغيير المحاذاة الأفقية.
 - Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 196 نجاح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
+
+### R4-S05 — محاذاة تنبيه Older logs مع وصف الاحتفاظ
+- الحالة: DONE-VERIFIED
+- إزاحة صف التنبيه مع الأيقونة -12 أفقيًا لتعويض عمود الأيقونة 24؛ يبدأ النص عند نفس إزاحة Keep data for ووصفها (12) مع الحفاظ على الأيقونة.
+- Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 196 نجاح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
