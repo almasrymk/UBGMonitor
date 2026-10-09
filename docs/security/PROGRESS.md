@@ -980,3 +980,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - إحاطة الجدول بـ Border بزوايا 10 مثل البانل وClipToBounds مع إطار 1؛ إزالة إطار DataGrid المربع الداخلي؛ وظائف التحرير والحفظ والتمرير محفوظة.
 - Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 196 نجاح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
+
+### R4-S05 — عناوين Settings › اسم الشاشة
+- الحالة: DONE-VERIFIED
+- عناوين الشاشات الثلاث بالشكل Settings › General Settings / Monitor Points / Device Specifications؛ Settings والعلامة بلون AccentGreen واسم الشاشة بلون النص الحالي. تسمية أول عنصر قائمة General Settings؛ مفاتيح الأقسام وCommands وخصائص JSON لم تتغير.
+- Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 196 نجاح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
