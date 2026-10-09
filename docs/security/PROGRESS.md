@@ -923,3 +923,9 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - زيادة عرض حقلي Viewer/Admin من 360 إلى 400 وارتفاعهما من 30 إلى 34 وpadding إلى 10,5؛ خط المفتاح وترتيب النسخ وRegenerate وcheckbox الأدمن محفوظان.
 - Release build ناجح مع تحذيري الشهادة القائمين؛ 196 اختبار ناجح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
+
+### R4-S05 — محاذاة Access Permissions حسب المرجع
+- الحالة: DONE-VERIFIED
+- أيقونة AccountGroup في عمود 32 وفاصل 16؛ العنوان والوصف وtoggle والصفوف في عمود محتوى موحد مطابق لمحاذاة بطاقات الاتصال والشهادة. إزالة الإزاحة الإضافية 16 لصفوف المفاتيح، وتوحيد عمود الاسم 130 وأزرار Copy/Regenerate 44/124 ومسافة 14. حقول المفاتيح مرنة ضمن عرض أقصى 950؛ ارتفاع الأزرار والحقول 34.
+- حذف Viewer checkbox ونقل Admin checkbox بعد Regenerate محفوظان حسب طلب المالك السابق، رغم عدم وجود الأخير في المرجع. الوظائف والقيم محفوظة.
+- Release build ناجح وتحذيرا الشهادة القائمان؛ 196 اختبار ناجح و4 SKIPPED وصفر فشل. المطابقة البصرية التامة أثناء التشغيل DONE-UNVERIFIED. لا master/push/install.
