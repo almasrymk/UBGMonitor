@@ -1016,3 +1016,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - السبب المثبت بالكود: SettingsView يرتبط بالسياق العام بينما DockPanel الداخلي DataContext={Binding Settings}؛ SaveSettings_Click كان يفحص DataContext الشاشة ويعود قبل التنفيذ. تصحيح القراءة من Control المرسل (زر الحفظ) للوصول إلى SettingsViewModel الحقيقي. التعديل السابق لتتبع تحرير الجدول لم يصلح هذا السبب الأساسي.
 - إضافة SettingsSaveButtonTests: زر بسياق SettingsViewModel إداري وحالة Loaded وتغيير منفذ غير صحيح يُرسل للـhandler مع سياق خارجي غير مستخدم؛ يثبت الوصول للتحقق الأصلي ورسالة المنفذ، دون اتصال خدمة أو كتابة preferences. نجح الاختبار الجديد؛ كامل الاختبارات 197 نجاح و4 SKIPPED وصفر فشل، وبناء Release ناجح. استمرار CommitEdit والتحقق وSaveCommand ومسار الخدمة الأصلي.
 - الحفظ التفاعلي عبر خدمة المالك DONE-UNVERIFIED؛ لا ادعاء تحقق كتابة الإنتاج. لا master/push/install.
+
+### R4-S05 — وصف General Settings في سطر واحد
+- الحالة: DONE-VERIFIED
+- دمج الوصفين تحت العنوان في TextBlock واحد مع NoWrap؛ عند ضيق العرض يظهر ellipsis والوصف الكامل في tooltip. بقية الإعدادات محفوظة.
+- Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 197 نجاح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
