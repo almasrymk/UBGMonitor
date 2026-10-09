@@ -1036,3 +1036,9 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - إزالة إطار سفلي 1px من صف Operating system الأخير، مع الحفاظ على الفواصل الداخلية وإطار الكارت.
 - Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 197 نجاح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
+
+### R4-S05 — محاذاة حقول Disk ومسميات وحداتها
+- الحالة: DONE-VERIFIED
+- ContentControl لحقول Minimum/Warning/Problem/Alert في صف Disk بمحاذاة Top مشتركة، لمنع رفع حقول الحدود بسبب وصف Remaining space أسفلها؛ النصوص داخل الحقول تبقى Center. عرض قائمة الوحدة 60.
+- DiskUnitOption يفرق Value/Label: Percent يعرض % وGB يعرض GB؛ SelectedValue يحفظ القيم السابقة دون تغيير JSON أو دلالة الحدود.
+- البناء واختبارات Release نجحت: 197 نجاح و4 SKIPPED وصفر فشل؛ تحذيرا الشهادة قائمان في البناء الكامل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.

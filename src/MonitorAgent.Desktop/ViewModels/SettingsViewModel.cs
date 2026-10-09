@@ -776,7 +776,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         new(MonitorPointAlert.Warning, "Warning & Problem", "AccentYellowBrush")
     ];
 
-    public IReadOnlyList<string> DiskUnitOptions { get; } = ["Percent", "GB"];
+    public sealed record DiskUnitOption(string Value, string Label);
+    public IReadOnlyList<DiskUnitOption> DiskUnitOptions { get; } = [new("Percent", "%"), new("GB", "GB")];
 
     public IReadOnlyList<YesNoOption> YesNoOptions { get; } = [new(true, "Yes"), new(false, "No")];
 
