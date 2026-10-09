@@ -25,7 +25,7 @@ public partial class SettingsView : UserControl
     }
     private async void SaveSettings_Click(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not SettingsViewModel settings) return;
+        if ((sender as Control)?.DataContext is not SettingsViewModel settings) return;
         if (settings.SelectedSection == SettingsViewModel.SectionMonitorPoints)
         {
             // Commit only active edits; false also means there was no edit to commit.

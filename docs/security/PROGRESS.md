@@ -1010,3 +1010,9 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - أيقونة قائمة النقاط من 40 إلى 20 وحاويتها من 70×68 إلى 36×36، وفاصل العنوان 12؛ العنوان 12 والوصف 11، وتقليل المسافات الرأسية. حجم الجدول ووظائفه محفوظان.
 - Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 196 نجاح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
+
+### R4-S05 — السبب الأساسي لتعطل زر الحفظ: سياق الشاشة بدل الزر
+- الحالة: DONE-VERIFIED
+- السبب المثبت بالكود: SettingsView يرتبط بالسياق العام بينما DockPanel الداخلي DataContext={Binding Settings}؛ SaveSettings_Click كان يفحص DataContext الشاشة ويعود قبل التنفيذ. تصحيح القراءة من Control المرسل (زر الحفظ) للوصول إلى SettingsViewModel الحقيقي. التعديل السابق لتتبع تحرير الجدول لم يصلح هذا السبب الأساسي.
+- إضافة SettingsSaveButtonTests: زر بسياق SettingsViewModel إداري وحالة Loaded وتغيير منفذ غير صحيح يُرسل للـhandler مع سياق خارجي غير مستخدم؛ يثبت الوصول للتحقق الأصلي ورسالة المنفذ، دون اتصال خدمة أو كتابة preferences. نجح الاختبار الجديد؛ كامل الاختبارات 197 نجاح و4 SKIPPED وصفر فشل، وبناء Release ناجح. استمرار CommitEdit والتحقق وSaveCommand ومسار الخدمة الأصلي.
+- الحفظ التفاعلي عبر خدمة المالك DONE-UNVERIFIED؛ لا ادعاء تحقق كتابة الإنتاج. لا master/push/install.
