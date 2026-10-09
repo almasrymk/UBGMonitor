@@ -11,6 +11,43 @@ public sealed class RemoteAccessTests : IDisposable
     private readonly string _folder = Path.Combine(TestEnvironment.Home, "remote-case-" + Guid.NewGuid().ToString("N"));
     private string FilePath => Path.Combine(_folder, "remote.json");
     [Fact]
+    public void Unchanged_status_reuses_metadata_and_certificate_rotation_invalidates_it()
+    {
+        var manager = new RemoteAccessManager(FilePath);
+        manager.Apply(new("regenerate-certificate"));
+        var first = manager.Status();
+        Assert.Same(first, manager.Status());
+        var revision = manager.Revision;
+        manager.Apply(new("regenerate-certificate"));
+        var next = manager.Status();
+        Assert.NotSame(first, next);
+        Assert.NotEqual(first.Fingerprint, next.Fingerprint);
+        Assert.NotEqual(revision, manager.Revision);
+        using var certificate = manager.GetCertificate();
+        Assert.True(certificate.HasPrivateKey);
+        Assert.Equal(next.Fingerprint, CertificateTrust.Fingerprint(certificate));
+    }
+
+    [Fact]
+    public void Cached_authentication_detects_external_revocation_even_with_same_timestamp_and_length()
+    {
+        var manager = new RemoteAccessManager(FilePath);
+        var key = manager.Apply(new("create-viewer-key")).Key!;
+        manager.Apply(new("configure", Enabled: true));
+        Assert.Equal(AgentAccessRole.Viewer, manager.Authenticate(key));
+        var timestamp = File.GetLastWriteTimeUtc(FilePath);
+        var json = File.ReadAllText(FilePath);
+        var hash = manager.Status().ViewerKeyHash!;
+        File.WriteAllText(FilePath, json.Replace(hash, new string('0', hash.Length)));
+        File.SetLastWriteTimeUtc(FilePath, timestamp);
+        Assert.Equal(AgentAccessRole.None, manager.Authenticate(key));
+        File.WriteAllText(FilePath, "invalid JSON");
+        Assert.Throws<System.Text.Json.JsonException>(() => manager.Authenticate(key));
+        File.Delete(FilePath);
+        Assert.Equal(AgentAccessRole.None, manager.Authenticate(key));
+        Assert.False(manager.Status().Enabled);
+    }
+    [Fact]
     public void Invalid_certificate_import_does_not_replace_working_certificate()
     {
         var manager = new RemoteAccessManager(FilePath);

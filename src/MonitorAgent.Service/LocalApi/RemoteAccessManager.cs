@@ -14,11 +14,30 @@ public sealed class RemoteAccessManager
         string? ViewerHash = null, string? AdminHash = null, string? ProtectedPfx = null, bool LegacyMigrated = false);
     private readonly string _path;
     private readonly object _gate = new();
+    private byte[]? _cachedBytes;
+    private State? _cachedState;
+    private RemoteAccessStatus? _cachedStatus;
+    private string _cachedRevision = "";
     public RemoteAccessManager() : this(Path.Combine(AgentPaths.StateFolder, "remote-access.json")) { }
     public RemoteAccessManager(string path) => _path = path;
-    private State Read() => File.Exists(_path) ? JsonSerializer.Deserialize<State>(File.ReadAllText(_path)) ?? throw new IOException("Remote state is invalid.") : new();
+    private State Read()
+    {
+        // Compare the actual contents: timestamps alone can miss externally revoked keys.
+        var bytes = File.Exists(_path) ? File.ReadAllBytes(_path) : [];
+        if (_cachedState is not null && _cachedBytes is not null && bytes.AsSpan().SequenceEqual(_cachedBytes))
+            return _cachedState;
+        _cachedState = null;
+        _cachedStatus = null;
+        _cachedBytes = null;
+        _cachedRevision = "";
+        var state = bytes.Length == 0 && !File.Exists(_path) ? new State()
+            : JsonSerializer.Deserialize<State>(bytes) ?? throw new IOException("Remote state is invalid.");
+        _cachedRevision = bytes.Length == 0 ? "" : Convert.ToHexString(SHA256.HashData(bytes));
+        _cachedBytes = bytes;
+        return _cachedState = state;
+    }
     private void Save(State state) => PrivateFile.WriteAllText(_path, JsonSerializer.Serialize(state));
-    public string Revision { get { lock (_gate) { return File.Exists(_path) ? Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(_path))) : ""; } } }
+    public string Revision { get { lock (_gate) { Read(); return _cachedRevision; } } }
     public bool MigrateLegacy(string key, bool enabled)
     {
         lock (_gate)
@@ -50,8 +69,9 @@ public sealed class RemoteAccessManager
         lock (_gate)
         {
             var state = Read();
+            if (_cachedStatus is not null) return _cachedStatus;
             using var cert = Certificate(state);
-            return new(state.Enabled, state.AllowAdministration, state.OpenFirewall, state.ViewerHash is not null, state.AdminHash is not null, cert?.GetCertHashString(HashAlgorithmName.SHA256), state.ViewerHash, state.AdminHash,
+            return _cachedStatus = new(state.Enabled, state.AllowAdministration, state.OpenFirewall, state.ViewerHash is not null, state.AdminHash is not null, cert?.GetCertHashString(HashAlgorithmName.SHA256), state.ViewerHash, state.AdminHash,
                 cert?.NotBefore, cert?.NotAfter, cert?.Subject, cert?.Issuer, cert?.SerialNumber);
         }
     }
