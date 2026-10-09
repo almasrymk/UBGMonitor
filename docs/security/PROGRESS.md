@@ -1005,3 +1005,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - أيقونات رأس General Settings وMonitor Points وDevice Specifications بمقاس موحد 30×30 داخل حاوية 52×52 وزوايا 8 وفاصل 14 إلى العنوان؛ أيقونات المنيو محفوظة دون تعديل.
 - Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 196 نجاح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
+
+### R4-S05 — تصغير رأس Configured Monitor Points
+- الحالة: DONE-VERIFIED
+- أيقونة قائمة النقاط من 40 إلى 20 وحاويتها من 70×68 إلى 36×36، وفاصل العنوان 12؛ العنوان 12 والوصف 11، وتقليل المسافات الرأسية. حجم الجدول ووظائفه محفوظان.
+- Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 196 نجاح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
