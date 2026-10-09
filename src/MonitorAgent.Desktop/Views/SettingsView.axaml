@@ -594,12 +594,12 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
                         <DataGridTextColumn Header="Interval" Binding="{Binding IntervalSeconds}" Width="80"/>
-                        <DataGridTemplateColumn Header="Actions" Width="120" CanUserResize="False" CanUserSort="False">
+                        <DataGridTemplateColumn Header="Actions" Width="44" CanUserResize="False" CanUserSort="False">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <StackPanel Orientation="Horizontal" Spacing="6"><Button Click="EditMonitorPoint_Click" Padding="6" MinWidth="0" ToolTip.Tip="Edit monitor point"><mi:MaterialIcon Kind="Pencil" Width="16" Height="16"/></Button><Button Click="SaveSettings_Click" Padding="6" MinWidth="0" ToolTip.Tip="Save changes"><mi:MaterialIcon Kind="ContentSaveOutline" Width="16" Height="16"/></Button><Button Classes="bin" ToolTip.Tip="Delete this monitor point"
+                                    <Button Classes="bin" ToolTip.Tip="Delete this monitor point"
                                             Command="{Binding $parent[DataGrid].DataContext.RemoveMonitorPointCommand}"
-                                            CommandParameter="{Binding}"/></StackPanel>
+                                            CommandParameter="{Binding}"/>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>

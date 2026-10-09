@@ -11,20 +11,6 @@ public partial class SettingsView : UserControl
         InitializeComponent();
     }
 
-    private void EditMonitorPoint_Click(object? sender, RoutedEventArgs e)
-    {
-        if (sender is not Button button) return;
-        if (!MonitorPointsGrid.CommitEdit(DataGridEditingUnit.Row, true)) return;
-        MonitorPointsGrid.SelectedItem = button.DataContext;
-        MonitorPointsGrid.CurrentColumn = MonitorPointsGrid.Columns[1];
-        MonitorPointsGrid.ScrollIntoView(button.DataContext, MonitorPointsGrid.CurrentColumn);
-        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-        {
-            MonitorPointsGrid.Focus();
-            MonitorPointsGrid.BeginEdit();
-        }, Avalonia.Threading.DispatcherPriority.Input);
-    }
-
     private async void SaveSettings_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not SettingsViewModel settings) return;

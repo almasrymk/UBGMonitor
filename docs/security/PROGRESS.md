@@ -959,3 +959,9 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - إزاحة صف التنبيه مع الأيقونة -12 أفقيًا لتعويض عمود الأيقونة 24؛ يبدأ النص عند نفس إزاحة Keep data for ووصفها (12) مع الحفاظ على الأيقونة.
 - Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 196 نجاح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
+
+### R4-S05 — الرجوع لتحرير الخلايا والحفظ الرئيسي في Monitor Points
+- الحالة: DONE-VERIFIED
+- حذف زرّي Pencil وSave من صفوف الجدول وإزالة EditMonitorPoint_Click، مع إبقاء زر الحذف. DataGrid قابل للتحرير وقوالب CellEditingTemplate محفوظة للعمل الطبيعي بالدبل كليك على الخانات.
+- زر Save Changes الرئيسي ما زال يثبت Cell/Row قبل تنفيذ SaveCommand ويحفظ المجموعة الكاملة بما فيها النقاط المخفية بفلتر؛ Commands والتحقق والرسائل ومسارات الحفظ السابقة محفوظة.
+- Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 196 نجاح و4 SKIPPED وصفر فشل. الدبل كليك والحفظ عبر الخدمة تفاعليًا DONE-UNVERIFIED. لا master/push/install.
