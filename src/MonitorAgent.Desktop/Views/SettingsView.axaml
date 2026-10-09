@@ -585,7 +585,7 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Header="Alert Level" Width="140">
+                        <DataGridTemplateColumn Header="Alert Level" Width="175">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <ComboBox Classes="cell" Margin="4,0" ItemsSource="{Binding $parent[DataGrid].DataContext.AlertOptions}"

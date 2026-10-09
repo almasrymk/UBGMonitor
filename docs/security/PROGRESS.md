@@ -1026,3 +1026,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - أيقونة الترس من 40 إلى 20 وحاويتها من 64×64 إلى 36×36، وفاصل العنوان 12؛ العنوان 12 والوصف 11 وتقليل المسافة الرأسية إلى 3. الجدول والوظائف محفوظة.
 - Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 197 نجاح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
+
+### R4-S05 — خيارات Alert Level أوضح في الشاشتين
+- الحالة: DONE-VERIFIED
+- خيارات مواصفات الجهاز وMonitor Points: Problem بدائرة حمراء وWarning & Problem بدائرة صفراء؛ إزالة Unknown من قائمة الاختيار فقط، دون تغيير enum أو القيم المخزنة. NotificationRules الحالي يثبت أن Warning يشمل التحذير والمشكلة. توسيع عمود Alert Level إلى 175 لاستيعاب النص.
+- Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 197 نجاح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.

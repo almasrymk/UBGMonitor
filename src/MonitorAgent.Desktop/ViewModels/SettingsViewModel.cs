@@ -773,8 +773,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     public IReadOnlyList<MonitorPointAlertOption> AlertOptions { get; } =
     [
         new(MonitorPointAlert.Problem, "Problem", "AccentRedBrush"),
-        new(MonitorPointAlert.Warning, "Warning", "AccentYellowBrush"),
-        new(MonitorPointAlert.Unknown, "Unknown", "AccentGrayBrush")
+        new(MonitorPointAlert.Warning, "Warning & Problem", "AccentYellowBrush")
     ];
 
     public IReadOnlyList<string> DiskUnitOptions { get; } = ["Percent", "GB"];
@@ -784,7 +783,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     public IReadOnlyList<MonitorPointAlertOption> SpecAlertOptions { get; } =
     [
         new(MonitorPointAlert.Problem, "Problem", "AccentRedBrush"),
-        new(MonitorPointAlert.Warning, "Warning", "AccentYellowBrush")
+        new(MonitorPointAlert.Warning, "Warning & Problem", "AccentYellowBrush")
     ];
 
     public ObservableCollection<string> OperatingSystemOptions { get; } =
