@@ -985,3 +985,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - عناوين الشاشات الثلاث بالشكل Settings › General Settings / Monitor Points / Device Specifications؛ Settings والعلامة بلون AccentGreen واسم الشاشة بلون النص الحالي. تسمية أول عنصر قائمة General Settings؛ مفاتيح الأقسام وCommands وخصائص JSON لم تتغير.
 - Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 196 نجاح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
+
+### R4-S05 — تحرير صريح للكود والاسم وزمن اختبار Monitor Points
+- الحالة: DONE-VERIFIED
+- استبدال الأعمدة النصية الثلاث بقوالب CellEditingTemplate صريحة تحتوي TextBox بربط TwoWay وإعلان IsReadOnly=False على كل عمود. إضافة DoubleTapped لبدء تحرير العمود الحالي؛ ترتيب الأعمدة والفرز محفوظان. زر Save Changes يظل يثبت الخانة والصف ثم يحفظ كامل المجموعة.
+- Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 196 نجاح و4 SKIPPED وصفر فشل. التفاعل الحقيقي للدبل كليك داخل جلسة المستخدم DONE-UNVERIFIED؛ لا ادعاء تحديد سبب داخلي مثبت من تشغيل الواجهة. لا master/push/install.

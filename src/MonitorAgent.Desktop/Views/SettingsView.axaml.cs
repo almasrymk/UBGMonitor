@@ -11,6 +11,12 @@ public partial class SettingsView : UserControl
         InitializeComponent();
     }
 
+    private void MonitorPointsGrid_DoubleTapped(object? sender, Avalonia.Input.TappedEventArgs e)
+    {
+        if (MonitorPointsGrid.CurrentColumn is null || MonitorPointsGrid.SelectedItem is null) return;
+        if (MonitorPointsGrid.CurrentColumn.IsReadOnly) return;
+        MonitorPointsGrid.BeginEdit();
+    }
     private async void SaveSettings_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not SettingsViewModel settings) return;

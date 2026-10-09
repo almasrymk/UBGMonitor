@@ -463,11 +463,11 @@
                 <Border Grid.Row="1" Classes="settingscard" Margin="0,0,12,8" Padding="14"><Grid RowDefinitions="Auto,*">
                     <Grid ColumnDefinitions="70,20,*" Margin="0,0,0,18"><Border Width="70" Height="68" CornerRadius="10" Background="{DynamicResource InputBrush}" BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1"><mi:MaterialIcon Kind="FormatListBulleted" Width="40" Height="40" Foreground="{DynamicResource AccentGreenBrush}"/></Border><StackPanel Grid.Column="2" Spacing="8" VerticalAlignment="Center"><TextBlock Text="Configured Monitor Points" FontSize="15" FontWeight="SemiBold"/><TextBlock Text="View and manage all monitor points for this device. Edit a monitor point to change its settings." FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/></StackPanel></Grid>
                 <Border Grid.Row="1" CornerRadius="10" ClipToBounds="True" BorderThickness="1" BorderBrush="{DynamicResource BorderColorBrush}">
-                <controls:AppDataGrid Name="MonitorPointsGrid" ItemsSource="{Binding FilteredMonitorPoints}" SelectedItem="{Binding SelectedMonitorPoint}"
+                <controls:AppDataGrid Name="MonitorPointsGrid" DoubleTapped="MonitorPointsGrid_DoubleTapped" ItemsSource="{Binding FilteredMonitorPoints}" SelectedItem="{Binding SelectedMonitorPoint}"
                                       IsReadOnly="False" RowHeight="42" FontSize="13" BorderThickness="0">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Id" Binding="{Binding MonitorPointId}" Width="72"/>
-                        <DataGridTextColumn Header="Name" Binding="{Binding DisplayName}" Width="1.4*" MinWidth="100"/>
+                        <DataGridTemplateColumn Header="Id" Width="72" IsReadOnly="False" SortMemberPath="MonitorPointId"><DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding MonitorPointId}" VerticalAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellTemplate><DataGridTemplateColumn.CellEditingTemplate><DataTemplate><TextBox Text="{Binding MonitorPointId, Mode=TwoWay}" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellEditingTemplate></DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Name" Width="1.4*" MinWidth="100" IsReadOnly="False" SortMemberPath="DisplayName"><DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellTemplate><DataGridTemplateColumn.CellEditingTemplate><DataTemplate><TextBox Text="{Binding DisplayName, Mode=TwoWay}" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellEditingTemplate></DataGridTemplateColumn>
                         <DataGridTemplateColumn Header="Type" Width="90">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
@@ -594,7 +594,7 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTextColumn Header="Interval" Binding="{Binding IntervalSeconds}" Width="80"/>
+                        <DataGridTemplateColumn Header="Interval" Width="80" IsReadOnly="False" SortMemberPath="IntervalSeconds"><DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding IntervalSeconds}" VerticalAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellTemplate><DataGridTemplateColumn.CellEditingTemplate><DataTemplate><TextBox Text="{Binding IntervalSeconds, Mode=TwoWay}" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellEditingTemplate></DataGridTemplateColumn>
                         <DataGridTemplateColumn Header="Actions" Width="44" CanUserResize="False" CanUserSort="False">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
