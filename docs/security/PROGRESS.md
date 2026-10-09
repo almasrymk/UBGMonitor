@@ -1031,3 +1031,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - خيارات مواصفات الجهاز وMonitor Points: Problem بدائرة حمراء وWarning & Problem بدائرة صفراء؛ إزالة Unknown من قائمة الاختيار فقط، دون تغيير enum أو القيم المخزنة. NotificationRules الحالي يثبت أن Warning يشمل التحذير والمشكلة. توسيع عمود Alert Level إلى 175 لاستيعاب النص.
 - Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 197 نجاح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
+
+### R4-S05 — إزالة الخط بعد آخر صف مواصفات
+- الحالة: DONE-VERIFIED
+- إزالة إطار سفلي 1px من صف Operating system الأخير، مع الحفاظ على الفواصل الداخلية وإطار الكارت.
+- Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 197 نجاح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
