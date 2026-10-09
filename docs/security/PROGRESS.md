@@ -918,3 +918,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - شريط الإضافة والبحث وفلتر النوع بارتفاع 34 وخط 12؛ زر إضافة عرض 180 وفلتر 180؛ صف الجدول 42 بدل 62، وcheckbox بمقياس 0.95 بدل 0.85 المحلي السابق.
 - زر القلم يثبت الصف السابق ثم يحدد النقطة ويعرضها ويبدأ التحرير بعد نقل التركيز عبر Dispatcher. إضافة زر ContentSaveOutline بجوار القلم؛ زر الصف وزر Save Changes يثبتان Cell/Row عبر CommitEdit قبل استدعاء SaveCommand؛ عند فشل تحقق الخلية لا يتم الحفظ. زر حفظ الصف يحفظ تغييرات التابة كلها باستخدام المسار الحالي.
 - Release build ناجح وتحذيرا الشهادة القائمان؛ اختبارات الرجوع 196 نجاح و4 SKIPPED وصفر فشل. تشغيل التحرير والحفظ تفاعليًا مع خدمة المالك DONE-UNVERIFIED؛ لا ادعاء اختبار فعلي للحفظ عبر الخدمة. لا master/push/install.
+
+### R4-S05 — تكبير حقول مفاتيح Access Permissions قليلًا
+- الحالة: DONE-VERIFIED
+- زيادة عرض حقلي Viewer/Admin من 360 إلى 400 وارتفاعهما من 30 إلى 34 وpadding إلى 10,5؛ خط المفتاح وترتيب النسخ وRegenerate وcheckbox الأدمن محفوظان.
+- Release build ناجح مع تحذيري الشهادة القائمين؛ 196 اختبار ناجح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
