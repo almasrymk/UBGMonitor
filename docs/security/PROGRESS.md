@@ -1000,3 +1000,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - تتبع تحرير Cell/Row عبر PreparingCellForEdit وCellEditEnded وRowEditEnded؛ الحفظ يستدعي CommitEdit فقط عند وجود تحرير نشط بدل العودة الصامتة على نتيجة false دون تحرير. فشل تثبيت قيمة نشطة يعرض StatusMessage واضحًا؛ مسار SaveCommand الأصلي محفوظ.
 - Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 196 نجاح و4 SKIPPED وصفر فشل. تجربة الحفظ التفاعلية بالخدمة DONE-UNVERIFIED؛ الاختبارات لا تثبت نجاح زر الواجهة في جلسة المستخدم. لا master/push/install.
+
+### R4-S05 — توحيد وتصغير أيقونات عناوين الشاشات
+- الحالة: DONE-VERIFIED
+- أيقونات رأس General Settings وMonitor Points وDevice Specifications بمقاس موحد 30×30 داخل حاوية 52×52 وزوايا 8 وفاصل 14 إلى العنوان؛ أيقونات المنيو محفوظة دون تعديل.
+- Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 196 نجاح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
