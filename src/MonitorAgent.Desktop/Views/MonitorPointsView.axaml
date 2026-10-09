@@ -3,15 +3,22 @@
              xmlns:controls="using:MonitorAgent.Desktop.Controls"
              xmlns:mi="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="MonitorAgent.Desktop.Views.MonitorPointsView">
-    <Border Classes="card" Margin="10">
-        <DockPanel>
-            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
-                <TextBlock Text="Monitor Points" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
-                <TextBlock Text="Double-click a monitor point to open its detailed report." Margin="16,0,0,0" FontSize="12"
-                           VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
-            </DockPanel>
-            <controls:AppDataGrid ItemsSource="{Binding MonitorPoints}" HorizontalScrollBarVisibility="Auto"
-                                  DoubleTapped="Grid_DoubleTapped">
+    <UserControl.Styles>
+        <Style Selector="Button.pointfilter"><Setter Property="Padding" Value="12,6"/><Setter Property="CornerRadius" Value="6"/><Setter Property="FontSize" Value="12"/></Style>
+        <Style Selector="Button.pointfilter.selected"><Setter Property="Background" Value="{DynamicResource AccentGreenBrush}"/></Style>
+    </UserControl.Styles>
+    <Grid Margin="12" RowDefinitions="Auto,*">
+        <Grid ColumnDefinitions="72,18,*,24,540" Margin="12,18,12,24">
+            <mi:MaterialIcon Kind="Lan" Width="52" Height="52" Foreground="{DynamicResource AccentGreenBrush}" VerticalAlignment="Center"/>
+            <StackPanel Grid.Column="2" Spacing="8" VerticalAlignment="Center"><TextBlock Text="Monitor Points" FontSize="24" FontWeight="SemiBold"/><TextBlock Text="Monitor devices, services, applications and more." FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}"/></StackPanel>
+            <StackPanel Grid.Column="4" Spacing="8">
+                <Grid ColumnDefinitions="*,12,140"><Border CornerRadius="6" BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1" Background="{DynamicResource InputBrush}" Height="38"><Grid ColumnDefinitions="34,*"><mi:MaterialIcon Kind="Magnify" Width="18" Height="18"/><TextBox Name="PointSearch" Grid.Column="1" Watermark="Search monitor points..." TextChanged="Filters_Changed" Background="Transparent" BorderThickness="0" VerticalContentAlignment="Center" FontSize="12"/></Grid></Border><ComboBox Name="PointTypeFilter" Grid.Column="2" Height="38" CornerRadius="6" HorizontalAlignment="Stretch" SelectionChanged="Filters_Changed"/></Grid>
+                <StackPanel Orientation="Horizontal" Spacing="4"><Button Name="AllFilter" Classes="pointfilter selected" Tag="All" Click="StatusFilter_Click" Content="All"/><Button Name="HealthyFilter" Classes="pointfilter" Tag="Healthy" Click="StatusFilter_Click"><StackPanel Orientation="Horizontal" Spacing="5"><Ellipse Width="9" Height="9" Fill="{DynamicResource AccentGreenBrush}"/><TextBlock Name="HealthyCount" Text="Healthy"/></StackPanel></Button><Button Name="WarningFilter" Classes="pointfilter" Tag="Warning" Click="StatusFilter_Click"><StackPanel Orientation="Horizontal" Spacing="5"><Ellipse Width="9" Height="9" Fill="{DynamicResource AccentYellowBrush}"/><TextBlock Name="WarningCount" Text="Warning"/></StackPanel></Button><Button Name="ProblemFilter" Classes="pointfilter" Tag="Problem" Click="StatusFilter_Click"><StackPanel Orientation="Horizontal" Spacing="5"><Ellipse Width="9" Height="9" Fill="{DynamicResource AccentRedBrush}"/><TextBlock Name="ProblemCount" Text="Problem"/></StackPanel></Button></StackPanel>
+            </StackPanel>
+        </Grid>
+        <Border Grid.Row="1" CornerRadius="10" BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1" Background="{DynamicResource SurfaceDarkBrush}"><Grid RowDefinitions="*,Auto">
+            <Border Margin="10" CornerRadius="8" ClipToBounds="True" BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1">
+            <controls:AppDataGrid Name="PointsGrid" HorizontalScrollBarVisibility="Auto" RowHeight="58" IsReadOnly="True" BorderThickness="0" DoubleTapped="Grid_DoubleTapped">
                 <DataGrid.Columns>
                     <DataGridTemplateColumn Width="46">
                         <DataGridTemplateColumn.CellTemplate>
@@ -80,6 +87,4 @@
                     <DataGridTextColumn Header="Interval" Binding="{Binding IntervalSeconds, Converter={StaticResource MonitorPointFieldConverter}, ConverterParameter=Seconds}" Width="70"/>
                 </DataGrid.Columns>
             </controls:AppDataGrid>
-        </DockPanel>
-    </Border>
-</UserControl>
+        </Border><Border Grid.Row="1" BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="0,1,0,0" Padding="20,14"><TextBlock Name="PointSummary" Text="Showing monitor points" FontSize="12"/></Border></Grid></Border></Grid></UserControl>

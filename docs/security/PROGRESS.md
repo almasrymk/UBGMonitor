@@ -1047,3 +1047,9 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - إعادة Unknown إلى AlertOptions باسم Unknown & Warning & Problem ودائرة AccentGray؛ المعنى الأصلي يشمل الحالات الثلاث في NotificationRules، دون تغيير enum أو السلوك. Problem أحمر وWarning & Problem أصفر محفوظان؛ قائمة مواصفات الجهاز بقيت بخياريها.
 - بناء واختبارات Release نجحت: 197 نجاح و4 SKIPPED وصفر فشل؛ تحذيرا الشهادة قائمان. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
+
+### واجهة Monitor Points الرئيسية — تصميم حسب المرجع دون إضافة
+- الحالة: DONE-VERIFIED
+- عنوان Monitor Points وأيقونة Lan ووصف، بحث وفلتر نوع وفلاتر All/Healthy/Warning/Problem بأعداد حقيقية، جدول بحاوية مستديرة وصفوف 58 وشارة Status بدائرة ملونة، وعدد النقاط الظاهرة مقابل الإجمالي أسفل الكارت. لا زر إضافة. الأعمدة السابقة ودبل كليك التقرير محفوظان؛ لم تضاف أزرار كتابة/حذف أو بيانات المرجع الثابتة أو pagination وهمية.
+- الاشتراك في MonitorPoints.CollectionChanged عند ربط السياق/عرض الشاشة وإلغاؤه عند فصلها، لتحديث البحث والأعداد مع البيانات الحية. البحث في المعرف والاسم والهدف والموقع دون حساسية لحالة الأحرف. Unknown يبقى ضمن All.
+- بناء Release والاختبارات نجحت: 197 نجاح و4 SKIPPED وصفر فشل. المطابقة البصرية الحرفية والتفاعل أثناء التشغيل DONE-UNVERIFIED؛ الاختبارات الحالية لا تغطي فلترة هذه الواجهة تفاعليًا. لا master/push/install.
