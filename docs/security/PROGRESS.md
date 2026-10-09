@@ -934,3 +934,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - تقليل العناوين الرئيسية من 24 إلى 22 وعناوين البطاقات من 18 إلى 16 والفرعية من 15 إلى 14، دون تغيير الحقول أو المحاذاة أو الوظائف.
 - Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 196 نجاح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
+
+### R4-S05 — إزالة فاصل زائد أسفل آخر صف للمراقبة
+- الحالة: DONE-VERIFIED
+- إزالة BorderThickness السفلي من صفّي Programs وUsers الأخيرين في عمودي Monitoring Intervals؛ الإبقاء على الفواصل الداخلية وإطار الكارت. تفسير الخط المقصود هو فاصل آخر صف الظاهر في اللقطة؛ لا تغيير الإعدادات أو الوظائف.
+- Release build ناجح وتحذيرا الشهادة القائمان؛ 196 اختبار ناجح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
