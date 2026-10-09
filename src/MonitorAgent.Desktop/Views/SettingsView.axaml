@@ -272,11 +272,11 @@
                 Padding="12,10">
             <StackPanel>
             <StackPanel Orientation="Horizontal">
-                <Button Background="{DynamicResource AccentGreenBrush}" Content="Save Changes" Click="SaveSettings_Click" Classes="footer" Margin="0,0,8,0" Padding="18,6"
-                        ToolTip.Tip="Save the changes in this tab" ToolTip.ShowOnDisabled="True"/>
-                <Button Content="Reset" Click="Reset_Click" Classes="footer" Margin="0" Padding="18,6"
+                <Button Background="{DynamicResource AccentGreenBrush}" Click="SaveSettings_Click" Classes="footer" Margin="0,0,8,0" Padding="18,6"
+                        ToolTip.Tip="Save the changes in this tab" ToolTip.ShowOnDisabled="True"><StackPanel Orientation="Horizontal" Spacing="9"><mi:MaterialIcon Kind="ContentSaveOutline" Width="18" Height="18" VerticalAlignment="Center"/><TextBlock Text="Save Changes" VerticalAlignment="Center"/></StackPanel></Button>
+                <Button Click="Reset_Click" Classes="footer" Margin="0" Padding="18,6"
                         IsEnabled="{Binding HasChanges}" ToolTip.Tip="Undo the unsaved changes in this tab"
-                        ToolTip.ShowOnDisabled="True"/>
+                        ToolTip.ShowOnDisabled="True"><StackPanel Orientation="Horizontal" Spacing="9"><mi:MaterialIcon Kind="Refresh" Width="18" Height="18" VerticalAlignment="Center"/><TextBlock Text="Reset" VerticalAlignment="Center"/></StackPanel></Button>
                 <Panel Width="22" Height="22" Margin="12,0,0,0" VerticalAlignment="Center" ToolTip.Tip="Saved"
                        IsVisible="{Binding IsSavedBadgeVisible}">
                     <Ellipse Fill="{DynamicResource AccentGreenBrush}"/>

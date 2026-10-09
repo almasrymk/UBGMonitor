@@ -944,3 +944,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - إضافة Margin يسار 12 إلى مجموعة Theme ووصفها وخياراتها، وإلى Keep data for ووصفها؛ دون تحريك قائمة مدة الاحتفاظ أو مجموعة Notifications.
 - Release build ناجح وتحذيرا الشهادة القائمان؛ 196 نجاح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
+
+### R4-S05 — أيقونات زرّي Save Changes وReset
+- الحالة: DONE-VERIFIED
+- إضافة ContentSaveOutline وRefresh بحجم 18 بجوار نص الحفظ وإعادة الضبط في footer المشترك للشاشات الثلاث، ومسافة 9 ومحاذاة وسطية؛ handlers وحالة Reset محفوظة.
+- Release build ناجح وتحذيرا الشهادة القائمان؛ 196 نجاح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
