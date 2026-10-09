@@ -975,3 +975,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - زيادة إزاحة صف Older logs مع الأيقونة بمقدار 12 لليمين، بإزالة Margin السابق -12؛ باقي المحاذاة ثابتة.
 - Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 196 نجاح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
+
+### R4-S05 — تدوير زوايا جدول Monitor Points
+- الحالة: DONE-VERIFIED
+- إحاطة الجدول بـ Border بزوايا 10 مثل البانل وClipToBounds مع إطار 1؛ إزالة إطار DataGrid المربع الداخلي؛ وظائف التحرير والحفظ والتمرير محفوظة.
+- Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 196 نجاح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
