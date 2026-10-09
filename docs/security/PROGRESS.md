@@ -939,3 +939,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - الحالة: DONE-VERIFIED
 - إزالة BorderThickness السفلي من صفّي Programs وUsers الأخيرين في عمودي Monitoring Intervals؛ الإبقاء على الفواصل الداخلية وإطار الكارت. تفسير الخط المقصود هو فاصل آخر صف الظاهر في اللقطة؛ لا تغيير الإعدادات أو الوظائف.
 - Release build ناجح وتحذيرا الشهادة القائمان؛ 196 اختبار ناجح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
+
+### R4-S05 — إزاحة Theme وKeep data for لليمين
+- الحالة: DONE-VERIFIED
+- إضافة Margin يسار 12 إلى مجموعة Theme ووصفها وخياراتها، وإلى Keep data for ووصفها؛ دون تحريك قائمة مدة الاحتفاظ أو مجموعة Notifications.
+- Release build ناجح وتحذيرا الشهادة القائمان؛ 196 نجاح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
