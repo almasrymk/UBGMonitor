@@ -965,3 +965,8 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - حذف زرّي Pencil وSave من صفوف الجدول وإزالة EditMonitorPoint_Click، مع إبقاء زر الحذف. DataGrid قابل للتحرير وقوالب CellEditingTemplate محفوظة للعمل الطبيعي بالدبل كليك على الخانات.
 - زر Save Changes الرئيسي ما زال يثبت Cell/Row قبل تنفيذ SaveCommand ويحفظ المجموعة الكاملة بما فيها النقاط المخفية بفلتر؛ Commands والتحقق والرسائل ومسارات الحفظ السابقة محفوظة.
 - Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 196 نجاح و4 SKIPPED وصفر فشل. الدبل كليك والحفظ عبر الخدمة تفاعليًا DONE-UNVERIFIED. لا master/push/install.
+
+### R4-S05 — تصغير عناوين الإعدادات درجة إضافية
+- الحالة: DONE-VERIFIED
+- تقليل العنوان الرئيسي من 22 إلى 20 وعناوين البطاقات من 16 إلى 15 والفرعية من 14 إلى 13؛ لا تغيير الحقول أو الوظائف أو المحاذاة.
+- Release build ناجح وتحذيرا الشهادة القائمان؛ الاختبارات 196 نجاح و4 SKIPPED وصفر فشل. المعاينة البصرية DONE-UNVERIFIED. لا master/push/install.
