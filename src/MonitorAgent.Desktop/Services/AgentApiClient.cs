@@ -58,6 +58,56 @@ public sealed class AgentApiClient
     public AgentAccessRole Role { get; private set; }
     public bool CanAdminister => Role == AgentAccessRole.Administrator;
     public bool IsLocalTransport { get; private set; } = true;
+
+    /// <summary>Moves a connection to this computer's network address onto verified OS IPC before changing its listener.</summary>
+    public async Task<bool> TryUseLocalAdministrationAsync(CancellationToken ct = default)
+    {
+        if (IsLocalTransport) return CanAdminister;
+        if (!_ownsHttpClient || !CanAdminister || _http.BaseAddress is not { } address) return false;
+        try
+        {
+            var addresses = IPAddress.TryParse(address.Host, out var ip) ? new[] { ip }
+                : await Dns.GetHostAddressesAsync(address.Host, ct);
+            var localAddresses = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
+                .SelectMany(adapter => adapter.GetIPProperties().UnicastAddresses).Select(item => item.Address).ToHashSet();
+            if (addresses.Length == 0 || addresses.Any(item => !IPAddress.IsLoopback(item) && !localAddresses.Contains(item))) return false;
+            var localRole = AgentAccessRole.None;
+            var adopted = false;
+            var local = CreateLocalClient(role =>
+            {
+                localRole = role;
+                if (adopted && Role != role) { Role = role; RoleChanged?.Invoke(); }
+            });
+            try
+            {
+                adopted = await TryAdoptLocalAdministrationAsync(local, () => localRole, ct);
+                return adopted;
+            }
+            finally { if (!adopted) local.Dispose(); }
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or SocketException
+            or System.Net.NetworkInformation.NetworkInformationException or UnauthorizedAccessException or JsonException)
+        { return false; }
+    }
+
+    private async Task<bool> TryAdoptLocalAdministrationAsync(HttpClient local, Func<AgentAccessRole> localRole, CancellationToken ct)
+    {
+        // Do not replace a working HTTPS connection until IPC identity, OS role and service identity are checked.
+        var remoteStatus = await GetStatusAsync(ct);
+        var localStatus = await local.GetFromJsonAsync<AgentStatusDto>(ApiRoutes.Status, JsonOptions, ct);
+        if (!CanAdminister || localRole() != AgentAccessRole.Administrator || localStatus is null || remoteStatus is null
+            || string.IsNullOrWhiteSpace(remoteStatus.AgentId) || remoteStatus.AgentId != localStatus.AgentId) return false;
+        var previous = _http;
+        _http = local;
+        IsLocalTransport = true;
+        _accessKey = string.Empty;
+        PendingCertificateFingerprint = null;
+        CertificateError = null;
+        Role = AgentAccessRole.Administrator;
+        RoleChanged?.Invoke();
+        if (_ownsHttpClient) previous.Dispose();
+        return true;
+    }
     public event Action? RoleChanged;
     public string? PendingCertificateFingerprint { get; private set; }
     public string? CertificateError { get; private set; }
@@ -562,7 +612,7 @@ public sealed class AgentApiClient
         return addresses.FirstOrDefault() ?? throw new HttpRequestException($"The computer \"{host}\" was not found.");
     }
 
-    private HttpClient CreateLocalClient()
+    private HttpClient CreateLocalClient(Action<AgentAccessRole>? roleObserved = null)
     {
         var handler = new SocketsHttpHandler
         {
@@ -573,7 +623,8 @@ public sealed class AgentApiClient
                 try { connection = await LocalIpc.ConnectAsync(AgentAccessRole.Administrator, ct); role = AgentAccessRole.Administrator; }
                 catch (Exception ex) when (ex is UnauthorizedAccessException or TimeoutException or FileNotFoundException)
                 { connection = await LocalIpc.ConnectAsync(AgentAccessRole.Viewer, ct); role = AgentAccessRole.Viewer; }
-                if (Role != role) { Role = role; RoleChanged?.Invoke(); }
+                if (roleObserved is not null) roleObserved(role);
+                else if (Role != role) { Role = role; RoleChanged?.Invoke(); }
                 return connection;
             }
         };

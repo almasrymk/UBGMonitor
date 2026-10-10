@@ -615,6 +615,8 @@ public sealed partial class SettingsViewModel : ObservableObject
     /// The argument is the section title shown to the user.
     /// </summary>
     public Func<string, Task<bool?>>? ConfirmSaveChanges { get; set; }
+    /// <summary>The visible editor commits pending grid cells before save or navigation.</summary>
+    public Func<bool>? CommitPendingEdits { get; set; }
 
     public string SelectedSectionTitle => SectionTitle(SelectedSection);
 
@@ -724,6 +726,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     /// </summary>
     public async Task<bool> TryLeaveSectionAsync()
     {
+        if (CommitPendingEdits?.Invoke() == false) return false;
         if (SaveCommand.IsRunning || IsSavedBadgeVisible)
         {
             return false;
@@ -868,6 +871,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task Save()
     {
+        if (CommitPendingEdits?.Invoke() == false) return;
         var section = SelectedSection;
         try
         {
@@ -879,6 +883,7 @@ public sealed partial class SettingsViewModel : ObservableObject
 
             var current = Capture();
             var saved = Clone(_snapshot);
+            var switchedToLocal = false;
             if (section == SectionGeneral)
             {
                 if (!IsListenAddress(current.General.ServiceListenAddress))
@@ -897,6 +902,16 @@ public sealed partial class SettingsViewModel : ObservableObject
                 {
                     return;
                 }
+                if (current.General.ServiceListenAddress == LocalOnlyAddress
+                    && current.General.ServiceListenAddress != saved.General.ServiceListenAddress && !_client.IsLocalTransport)
+                {
+                    if (!await _client.TryUseLocalAdministrationAsync())
+                    {
+                        StatusMessage = "Could not verify local Administrator access to this service. Nothing was saved. Connect locally as an Administrator to return to 127.0.0.1.";
+                        return;
+                    }
+                    switchedToLocal = true;
+                }
             }
 
             var settings = new UiAppSettings
@@ -913,6 +928,11 @@ public sealed partial class SettingsViewModel : ObservableObject
                 ? new RemoteAccessAction("configure", RemoteEnabled, RemoteAdministration, OpenFirewallPort) : null);
             if (section == SectionGeneral)
             {
+                if (switchedToLocal)
+                {
+                    ApiBaseUrl = $"http://127.0.0.1:{current.General.ServicePort}";
+                    ClientAccessKey = string.Empty;
+                }
                 FollowServicePort(current.General, saved.General);
                 _savedRemoteFlags = (RemoteEnabled, RemoteAdministration, OpenFirewallPort);
             }

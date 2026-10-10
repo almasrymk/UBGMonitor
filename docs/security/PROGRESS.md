@@ -1064,3 +1064,13 @@ Service LocalApiHost/LocalApi pipeline/policies/IPC + Config settings writer/val
 - اختبار عدم الانكسار المضاف: Unchanged_status_reuses_metadata_and_certificate_rotation_invalidates_it يثبت إعادة استخدام نفس DTO وتجديد metadata وRevision بعد rotation، والحصول على شهادة بمفتاح خاص وبصمة مطابقة.
 - ما لم يتم التحقق منه ولماذا: مقدار تحسن CPU/RAM على نسخة الخدمة الشغالة DONE-UNVERIFIED؛ لم يتم إيقاف أو إعادة تشغيل عمليات المالك ولم ينفذ قياس مقارنة بعد تشغيل النسخة الجديدة.
 - اختلاف عن الخطة: تحسين أداء محدود بطلب المالك لمسارات Run 4 المنفذة، دون تغيير صلاحيات أو TLS أو صيغ JSON أو نشر.
+
+### R4-S05 — الرجوع إلى 127 من اتصال Admin بعنوان شبكة نفس الجهاز
+- الحالة: DONE-VERIFIED
+- ماذا تغيّر ولماذا: السبب المثبت بالكود أن PUT settings عبر TCP يرفض تغيير عنوان الاستماع، حتى بمفتاح Admin، لأن التغيير محلي فقط. عند موافقة المالك على الرجوع إلى 127.0.0.1، يتحقق Desktop أن عنوان الاتصال يعود لواجهة شبكة هذا الجهاز، ويجرب IPC المستند إلى هوية OS وصلاحية Administrator، ويطابق AgentId للخدمة المحلية والحالية قبل استبدال الاتصال. إذا فشل التحقق لا تحفظ إعدادات ولا يستبدل الاتصال الحالي. بعد النجاح يحفظ عنوان الخدمة ويغلق الوصول البعيد عبر المسار المحلي القائم، ويحدث عنوان التطبيق/preferences إلى 127 مع المنفذ الحالي دون مفتاح TCP.
+- الملفات: AgentApiClient.cs وSettingsViewModel.cs وLocalAdministrationHandoffTests.cs. ملف SettingsViewModel يحتفظ كذلك بخطاف CommitPendingEdits من تعديل الحفظ/التنقل السابق؛ لا حذف للتغييرات المصرح بها في المحرر.
+- الأوامر التي نُفذت ونتيجتها الفعلية: dotnet build MonitorAgent.sln -c Release نجح دون أخطاء أو تحذيرات. الاختبارات الموجهة LocalAdministrationHandoffTests: 5 نجاح. dotnet test MonitorAgent.sln -c Release --no-build --no-restore: 212 نجاح و4 SKIPPED وصفر فشل.
+- اختبار الأمان المضاف: Untrusted_local_role_or_different_service_preserves_working_remote_connection يرفض Viewer/None حتى لو JSON يدعي Administrator، ويرفض AgentId مختلفًا ويبقي الاتصال البعيد دون كتابة. Another_computers_address_does_not_switch_to_this_computers_IPC يمنع التحويل لعنوان جهاز مختلف.
+- اختبار عدم الانكسار المضاف: Same_service_admin_moves_to_IPC_before_saving_loopback_and_disabling_remote_access يثبت إرسال PUT settings ثم POST remote-access للاتصال المحلي فقط، وإبقاء الاتصال البعيد دون كتابة، مع دور Administrator موثق عبر OS في المنتج.
+- ما لم يتم التحقق منه ولماذا: تجربة الرجوع من زر Save في خدمة المالك المفتوحة بصلاحيات Windows الفعلية DONE-UNVERIFIED؛ الاختبارات تستخدم HttpClient وهميًا وتختبر اعتماد قناة IPC ودورها، ولا تتصل بالخدمة الحقيقية أو الإنتاج. لم تُغير إعدادات التشغيل الحالية أو تُوقف عمليات المالك.
+- اختلاف عن الخطة: إصلاح انحدار محدود في R4-S05 بطلب المالك بعد تأكيد أن التطبيق والخدمة على نفس الجهاز. سياسة رفض تعديل عنوان الاستماع عبر TCP ومصادقة IPC والتحقق من شهادات HTTPS لم تُضعف. لا نشر أو push.
