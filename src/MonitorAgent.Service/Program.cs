@@ -111,6 +111,7 @@ try
     // Monitor Cloud connector (off unless Cloud:Enabled or MONITORAGENT_CLOUDURL is set).
     builder.Services.AddSingleton<ICloudAgentSource, MonitorAgent.Service.Cloud.ServiceCloudSource>();
     builder.Services.AddSingleton<ICloudConfigApplier, MonitorAgent.Service.Cloud.ServiceConfigApplier>();
+    builder.Services.AddSingleton<ICloudCommandExecutor, MonitorAgent.Service.Cloud.ServiceCommandExecutor>();
     builder.Services.AddMonitorCloud(CloudOptions.FromConfiguration(builder.Configuration, AgentPaths.StateFolder));
 
     var host = builder.Build();

@@ -22,6 +22,9 @@ public sealed record CloudState
 
     public string? LicenseToken { get; init; }
 
+    /// <summary>The cloud's public command-signing keys (JWK set) from enrollment; not secret.</summary>
+    public string? CommandSigningKeys { get; init; }
+
     public bool IsEnrolled => DeviceId != Guid.Empty && !string.IsNullOrEmpty(ProtectedDeviceSecret);
 }
 
@@ -75,5 +78,6 @@ public sealed class CloudStateStore
         EnrolledAt = DateTimeOffset.UtcNow,
         LicenseState = result.LicenseState,
         LicenseToken = result.LicenseToken,
+        CommandSigningKeys = result.CommandSigningKeys ?? previous.CommandSigningKeys,
     };
 }

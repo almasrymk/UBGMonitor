@@ -14,7 +14,7 @@ namespace MonitorAgent.Cloud;
 /// </summary>
 public sealed partial class GatewaySession(
     GrpcChannel channel, string token, Outbox outbox, ICloudAgentSource source, ICloudLicenseSink license, ICloudConfigApplier configs, CloudStatus status, ILogger logger,
-    TimeProvider clock)
+    TimeProvider clock, CommandRunner? commands = null)
 {
     public static readonly TimeSpan WelcomeTimeout = TimeSpan.FromSeconds(15);
     public static readonly TimeSpan SnapshotInterval = TimeSpan.FromSeconds(60);
@@ -177,6 +177,18 @@ public sealed partial class GatewaySession(
                     LogConfig(logger, update.Version, success, error ?? string.Empty);
                     outbox.Enqueue(Outbox.Config, new AgentMessage { ConfigApplied = new ConfigApplied { Version = update.Version, Success = success, Error = error ?? string.Empty } });
                     break;
+                case CloudMessage.BodyOneofCase.Command:
+                    // Runs beside the stream (a service restart can take a while); the result goes through the outbox.
+                    var command = message.Command;
+                    if (commands is null)
+                        outbox.Enqueue(Outbox.Command, new AgentMessage { CommandResult = new CommandResult { CommandId = command.CommandId, Status = CommandStatus.Rejected, Output = "Remote actions are not available on this agent.", CompletedAt = Timestamp.FromDateTimeOffset(clock.GetUtcNow()) } });
+                    else
+                        _ = Task.Run(async () =>
+                        {
+                            var result = await commands.RunAsync(command, CancellationToken.None);
+                            LogCommand(logger, command.Type, command.CommandId, result.Status);
+                        }, CancellationToken.None);
+                    break;
                 case CloudMessage.BodyOneofCase.RequestInventory:
                     InventoryRequested?.Invoke();
                     break;
@@ -258,6 +270,9 @@ public sealed partial class GatewaySession(
 
     [LoggerMessage(Level = LogLevel.Information, Message = "[Cloud] Configuration version {Version}: applied={Success} {Error}")]
     private static partial void LogConfig(ILogger logger, int version, bool success, string error);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[Cloud] Remote action {Type} ({CommandId}): {Status}")]
+    private static partial void LogCommand(ILogger logger, string type, string commandId, CommandStatus status);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "[Cloud] Snapshot not sent: {Message}")]
     private static partial void LogSnapshotFailed(ILogger logger, string message);

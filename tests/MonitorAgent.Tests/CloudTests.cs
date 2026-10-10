@@ -347,7 +347,7 @@ public sealed class CloudEndToEndTests
         var client = new CloudHttpClient(http);
         var status = new CloudStatus();
         var service = new CloudAgentService(
-            Microsoft.Extensions.Options.Options.Create(options), source, new NoopLicense(), new AcceptAll(), new CloudStateStore(folder), client, new DeviceTokenProvider(client, TimeProvider.System),
+            Microsoft.Extensions.Options.Options.Create(options), source, new NoopLicense(), new AcceptAll(), new NoCommands(), new CloudStateStore(folder), client, new DeviceTokenProvider(client, TimeProvider.System),
             status, TimeProvider.System, NullLogger<CloudAgentService>.Instance);
 
         using var stop = new CancellationTokenSource();
@@ -379,6 +379,11 @@ public sealed class CloudEndToEndTests
     private sealed class AcceptAll : ICloudConfigApplier
     {
         public Task<(bool Success, string? Error)> ApplyAsync(int version, string json, CancellationToken cancellationToken) => Task.FromResult((true, (string?)null));
+    }
+
+    private sealed class NoCommands : ICloudCommandExecutor
+    {
+        public Task<(bool Success, string Output)> ExecuteAsync(string type, string? service, CancellationToken cancellationToken) => Task.FromResult((false, "not in this test"));
     }
 
     private sealed class NoopLicense : ICloudLicenseSink

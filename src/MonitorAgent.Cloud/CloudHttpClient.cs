@@ -5,7 +5,8 @@ using System.Text.Json;
 namespace MonitorAgent.Cloud;
 
 public sealed record EnrollmentResult(
-    Guid DeviceId, string DeviceSecret, string GatewayUrl, string? TenantName, string? LocationName, string? LicenseState, string? LicenseToken, DateTimeOffset? LicenseCheckAfter);
+    Guid DeviceId, string DeviceSecret, string GatewayUrl, string? TenantName, string? LocationName, string? LicenseState, string? LicenseToken, DateTimeOffset? LicenseCheckAfter,
+    string? CommandSigningKeys = null);
 
 public sealed record DeviceToken(string AccessToken, DateTimeOffset ExpiresAt);
 
@@ -48,7 +49,9 @@ public sealed class CloudHttpClient(HttpClient http)
             root.TryGetProperty("locationName", out var n) ? n.GetString() : null,
             license.ValueKind == JsonValueKind.Object && license.TryGetProperty("state", out var s) ? s.GetString() : null,
             license.ValueKind == JsonValueKind.Object && license.TryGetProperty("token", out var tk) ? tk.GetString() : null,
-            license.ValueKind == JsonValueKind.Object && license.TryGetProperty("checkAfter", out var c) && c.ValueKind == JsonValueKind.String ? c.GetDateTimeOffset() : null);
+            license.ValueKind == JsonValueKind.Object && license.TryGetProperty("checkAfter", out var c) && c.ValueKind == JsonValueKind.String ? c.GetDateTimeOffset() : null,
+            // Public keys only (JWK set): they verify remote actions (AG-13).
+            root.TryGetProperty("commandSigningKeys", out var k) && k.ValueKind == JsonValueKind.Object ? k.GetRawText() : null);
     }
 
     public async Task<DeviceToken> TokenAsync(Guid deviceId, string deviceSecret, CancellationToken cancellationToken)
