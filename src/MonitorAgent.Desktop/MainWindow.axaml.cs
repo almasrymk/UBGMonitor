@@ -30,11 +30,15 @@ public partial class MainWindow : Window
     private readonly AutoHidePanel _status;
     private readonly MainViewModel _viewModel;
     private PanelPins _pins = new();
+    private MonitorPointsView.FilterState? _pointFilters;
+    private string? _activeTab;
 
-    public MainWindow()
+    public MainWindow() : this(new MainViewModel()) { }
+
+    public MainWindow(MainViewModel viewModel)
     {
         InitializeComponent();
-        _viewModel = new MainViewModel();
+        _viewModel = viewModel;
         _viewModel.Settings.ConfirmSaveChanges = async section => await ThemedDialog.ShowAsync(
                 this,
                 "Unsaved changes",
@@ -60,6 +64,7 @@ public partial class MainWindow : Window
                     new DialogButton("Cancel", DialogResult.Cancel, IsPrimary: true)
                 ]) == DialogResult.Yes;
         DataContext = _viewModel;
+        ShowActivePage();
         _viewModel.PropertyChanged += ViewModel_PropertyChanged;
         UpdateStatusColumns();
 
@@ -121,11 +126,38 @@ public partial class MainWindow : Window
 
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(MainViewModel.SelectedTab)) ShowActivePage();
         if (e.PropertyName is nameof(MainViewModel.HasMonitorPoints) or nameof(MainViewModel.ShowNotifications))
         {
             UpdateStatusColumns();
         }
     }
+
+    private void ShowActivePage()
+    {
+        if (_activeTab == _viewModel.SelectedTab) return;
+        // View models retain edits and results. Only the visible page retains its visual tree.
+        var previous = ActivePage.Content as Control;
+        if (previous is MonitorPointsView points) _pointFilters = points.CaptureFilters();
+        ActivePage.Content = null;
+        if (previous is not null) previous.DataContext = null;
+        Control next = _viewModel.SelectedTab switch
+        {
+            "Dashboard" => new DashboardView(),
+            "Monitor Points" => new MonitorPointsView(),
+            "Settings" => new SettingsView(),
+            "Applications" => new ApplicationsView(),
+            "Reports" => new ReportsView(),
+            "About" => new AboutView(),
+            _ => new DashboardView()
+        };
+        next.DataContext = _viewModel;
+        if (next is MonitorPointsView newPoints && _pointFilters is not null) newPoints.RestoreFilters(_pointFilters);
+        ActivePage.Content = next;
+        _activeTab = _viewModel.SelectedTab;
+    }
+
+    private DashboardView Dashboard => ActivePage.Content as DashboardView ?? new DashboardView();
 
     private void UpdateStatusColumns()
     {

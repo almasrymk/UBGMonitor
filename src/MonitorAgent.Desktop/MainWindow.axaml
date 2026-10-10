@@ -328,18 +328,7 @@
             </Border>
 
             <Grid Grid.Row="1">
-                <views:DashboardView x:Name="Dashboard"
-                                     IsVisible="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter=Dashboard}"/>
-                <views:MonitorPointsView
-                    IsVisible="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter=Monitor Points}"/>
-                <views:SettingsView
-                    IsVisible="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter=Settings}"/>
-                <views:ApplicationsView
-                    IsVisible="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter=Applications}"/>
-                <views:ReportsView
-                    IsVisible="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter=Reports}"/>
-                <views:AboutView
-                    IsVisible="{Binding SelectedTab, Converter={StaticResource EqualsConverter}, ConverterParameter=About}"/>
+                <ContentControl x:Name="ActivePage" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"/>
 
                 <Border ZIndex="10" Background="{DynamicResource SurfaceDarkBrush}" IsVisible="{Binding ShowLicenseOverlay}">
                     <Border Classes="card" DataContext="{Binding License}" MaxWidth="600" Margin="20" Padding="28,24"

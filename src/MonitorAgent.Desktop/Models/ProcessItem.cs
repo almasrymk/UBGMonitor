@@ -1,21 +1,26 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+
 namespace MonitorAgent.UI.Models;
 
-public sealed class ProcessItem
+public sealed partial class ProcessItem : ObservableObject
 {
-    public int Rank { get; init; }
+    [ObservableProperty] private int _rank;
+    [ObservableProperty] private string _name = string.Empty;
+    [ObservableProperty] private int _pid;
+    [ObservableProperty] private double _value;
+    [ObservableProperty] private string _unit = string.Empty;
+    [ObservableProperty] private double _percent;
+    [ObservableProperty] private string _displayValue = string.Empty;
+    [ObservableProperty] private object? _icon;
 
-    public string Name { get; init; } = string.Empty;
-
-    public int Pid { get; init; }
-
-    public double Value { get; init; }
-
-    public string Unit { get; init; } = string.Empty;
-
-    public double Percent { get; init; }
-
-    public string DisplayValue { get; init; } = string.Empty;
-
-    /// <summary>The UI framework's image of the program icon.</summary>
-    public object? Icon { get; init; }
+    public void UpdateFrom(ProcessItem item)
+    {
+        Rank = item.Rank;
+        Name = item.Name;
+        Value = item.Value;
+        Unit = item.Unit;
+        Percent = item.Percent;
+        DisplayValue = item.DisplayValue;
+        Icon = item.Icon;
+    }
 }

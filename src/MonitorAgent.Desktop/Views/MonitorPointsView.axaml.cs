@@ -12,10 +12,21 @@ public partial class MonitorPointsView : UserControl
 {
     private MainViewModel? _main;
     private string _statusFilter = "All";
+    public sealed record FilterState(string Search, string Type, string Status);
+    public FilterState CaptureFilters() => new(PointSearch.Text ?? "", PointTypeFilter.SelectedItem as string ?? "All Types", _statusFilter);
+    public void RestoreFilters(FilterState state)
+    {
+        PointSearch.Text = state.Search;
+        PointTypeFilter.SelectedItem = state.Type;
+        _statusFilter = state.Status;
+        foreach (var item in new[] { AllFilter, HealthyFilter, WarningFilter, ProblemFilter })
+            item.Classes.Set("selected", Equals(item.Tag, state.Status));
+        RefreshPoints();
+    }
     public MonitorPointsView()
     {
         InitializeComponent();
-        PointTypeFilter.ItemsSource = new[] { "All Types", "Website", "Device", "Application", "Database" };
+        PointTypeFilter.ItemsSource = new[] { "All Types", "Website/API", "Device", "Application", "Database" };
         PointTypeFilter.SelectedIndex = 0;
         AttachedToVisualTree += (_, _) => ConnectSource();
         DetachedFromVisualTree += (_, _) => { if (_main is not null) _main.MonitorPoints.CollectionChanged -= Points_Changed; _main = null; };
@@ -47,6 +58,7 @@ public partial class MonitorPointsView : UserControl
         var all = _main?.MonitorPoints.ToArray() ?? [];
         var search = PointSearch.Text?.Trim() ?? "";
         var type = PointTypeFilter.SelectedItem as string ?? "All Types";
+        if (type == "Website/API") type = "Website";
         var filtered = all.Where(point => (type == "All Types" || point.Type.ToString() == type)
             && (_statusFilter == "All" || StatusGroup(point.Status) == _statusFilter)
             && (search.Length == 0 || new[] { point.MonitorPointId, point.DisplayName, point.Target, point.Location }

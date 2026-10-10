@@ -12,6 +12,7 @@ public sealed partial class HardwareOsViewModel : ObservableObject, IDisposable
     private readonly UiTimer _staticTimer;
     private readonly UiTimer _sensorsTimer;
     private readonly UiTimer _networkTimer;
+    public Func<bool>? IsActive { get; set; }
 
     [ObservableProperty] private bool _isLevel1Expanded;
     [ObservableProperty] private bool _isLevel2Expanded;
@@ -37,9 +38,9 @@ public sealed partial class HardwareOsViewModel : ObservableObject, IDisposable
         _staticTimer = new UiTimer(TimeSpan.FromSeconds(30));
         _sensorsTimer = new UiTimer(CollapsedSensorsInterval);
         _networkTimer = new UiTimer(TimeSpan.FromSeconds(3));
-        _staticTimer.Tick += async (_, _) => await RefreshStaticAsync();
+        _staticTimer.Tick += async (_, _) => { if (IsActive?.Invoke() != false) await RefreshStaticAsync(); };
         _sensorsTimer.Tick += async (_, _) => await RefreshLevelAsync(3);
-        _networkTimer.Tick += async (_, _) => await RefreshLevelAsync(5);
+        _networkTimer.Tick += async (_, _) => { if (IsActive?.Invoke() != false) await RefreshLevelAsync(5); };
         _staticTimer.Start();
         _sensorsTimer.Start();
         _ = RefreshStaticAsync();

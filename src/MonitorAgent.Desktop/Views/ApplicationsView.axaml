@@ -1,8 +1,9 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mi="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:controls="using:MonitorAgent.Desktop.Controls"
              x:Class="MonitorAgent.Desktop.Views.ApplicationsView">
-    <UserControl.Styles>
+    <UserControl.Styles><Style Selector="RadioButton.side:checked"><Setter Property="Foreground" Value="{DynamicResource AccentGreenBrush}"/></Style><Style Selector="RadioButton.side:checked TextBlock"><Setter Property="Foreground" Value="{DynamicResource AccentGreenBrush}"/></Style><Style Selector="RadioButton.side:checked mi|MaterialIcon"><Setter Property="Foreground" Value="{DynamicResource AccentGreenBrush}"/></Style>
         <Style Selector="TextBlock.label">
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
@@ -13,46 +14,11 @@
         </Style>
     </UserControl.Styles>
 
-    <DockPanel DataContext="{Binding Applications}" Margin="8,4,16,12">
-        <Border DockPanel.Dock="Left" Width="230"
-                Background="{DynamicResource SurfaceDarkBrush}"
-                BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="0,0,1,0"
-                Margin="0,0,12,0" Padding="8">
-            <StackPanel>
-                <RadioButton Classes="side" GroupName="AppsSection"
-                             IsChecked="{Binding SelectedSection, Converter={StaticResource EqualsConverter}, ConverterParameter=Programs}">
-                    <StackPanel>
-                        <TextBlock Text="Programs" FontWeight="SemiBold" FontSize="13"/>
-                        <TextBlock Text="{Binding ProgramsSummary}" TextWrapping="Wrap" FontSize="11" Margin="0,3,0,0"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
-                    </StackPanel>
-                </RadioButton>
-                <RadioButton Classes="side" GroupName="AppsSection"
-                             IsChecked="{Binding SelectedSection, Converter={StaticResource EqualsConverter}, ConverterParameter=Users}">
-                    <StackPanel>
-                        <TextBlock Text="Users" FontWeight="SemiBold" FontSize="13"/>
-                        <TextBlock Text="{Binding UsersSummary}" TextWrapping="Wrap" FontSize="11" Margin="0,3,0,0"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
-                    </StackPanel>
-                </RadioButton>
-                <RadioButton Classes="side" GroupName="AppsSection"
-                             IsChecked="{Binding SelectedSection, Converter={StaticResource EqualsConverter}, ConverterParameter=Services}">
-                    <StackPanel>
-                        <TextBlock Text="Services" FontWeight="SemiBold" FontSize="13"/>
-                        <TextBlock Text="{Binding ServicesSummary}" TextWrapping="Wrap" FontSize="11" Margin="0,3,0,0"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
-                    </StackPanel>
-                </RadioButton>
-            </StackPanel>
-        </Border>
-
-        <Border DockPanel.Dock="Top" Classes="card" Padding="12,10" Margin="0,0,0,10">
+    <DockPanel DataContext="{Binding Applications}" Margin="12"><Grid DockPanel.Dock="Top" ColumnDefinitions="44,14,*,20,Auto" Margin="12,12,12,20"><mi:MaterialIcon Kind="ViewGridOutline" Width="36" Height="36" Foreground="{DynamicResource AccentGreenBrush}"/><StackPanel Grid.Column="2" Spacing="4"><TextBlock Text="Applications" FontSize="22" FontWeight="SemiBold"/><TextBlock Text="All installed applications and their current status on this device." FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/></StackPanel><Border Grid.Column="4" Background="Transparent" Padding="0" VerticalAlignment="Center">
             <DockPanel>
-                <Button DockPanel.Dock="Right" Content="Refresh" Command="{Binding RefreshCommand}" Classes="footer"
-                        Padding="14,6" Margin="12,0,0,0" VerticalAlignment="Center"/>
+
                 <WrapPanel VerticalAlignment="Center">
-                    <TextBox Width="260" Margin="0,0,12,0" Padding="8,6" VerticalAlignment="Center"
-                             Text="{Binding SearchText}" Watermark="Search by name..."/>
+                    <Border Width="250" Height="36" Margin="0,0,18,0" CornerRadius="6" Background="{DynamicResource InputBrush}" BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1"><Grid ColumnDefinitions="34,*"><mi:MaterialIcon Kind="Magnify" Width="18" Height="18"/><TextBox Grid.Column="1" Text="{Binding SearchText}" Watermark="{Binding SearchWatermark}" Background="Transparent" BorderThickness="0" FontSize="12" VerticalContentAlignment="Center"/></Grid></Border>
                     <CheckBox Content="Running only" IsChecked="{Binding OnlyRunning}" IsVisible="{Binding IsPrograms}"
                               Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,12,0" VerticalAlignment="Center"/>
                     <CheckBox Content="Signed in only" IsChecked="{Binding OnlySignedIn}" IsVisible="{Binding IsUsers}"
@@ -62,12 +28,45 @@
                     <TextBlock Classes="label" Text="{Binding StatusMessage}" TextWrapping="Wrap"/>
                 </WrapPanel>
             </DockPanel>
+        </Border></Grid>
+        <Border DockPanel.Dock="Left" Width="230"
+                Background="{DynamicResource SurfaceDarkBrush}"
+                BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1" CornerRadius="8"
+                Margin="0,0,12,0" Padding="8">
+            <StackPanel>
+                <RadioButton Classes="side" GroupName="AppsSection" Padding="12,14" Margin="0,0,0,6"
+                             IsChecked="{Binding SelectedSection, Converter={StaticResource EqualsConverter}, ConverterParameter=Programs}">
+                    <Grid ColumnDefinitions="28,12,*"><mi:MaterialIcon Kind="ViewGridOutline" Width="28" Height="28" VerticalAlignment="Center"/><StackPanel Grid.Column="2">
+                        <TextBlock Text="Programs" FontWeight="SemiBold" FontSize="13"/>
+                        <TextBlock Text="{Binding ProgramsSummary}" TextWrapping="Wrap" FontSize="11" Margin="0,3,0,0"
+                                   />
+                    </StackPanel></Grid>
+                </RadioButton>
+                <RadioButton Classes="side" GroupName="AppsSection" Padding="12,14" Margin="0,0,0,6"
+                             IsChecked="{Binding SelectedSection, Converter={StaticResource EqualsConverter}, ConverterParameter=Users}">
+                    <Grid ColumnDefinitions="28,12,*"><mi:MaterialIcon Kind="AccountOutline" Width="28" Height="28" VerticalAlignment="Center"/><StackPanel Grid.Column="2">
+                        <TextBlock Text="Users" FontWeight="SemiBold" FontSize="13"/>
+                        <TextBlock Text="{Binding UsersSummary}" TextWrapping="Wrap" FontSize="11" Margin="0,3,0,0"
+                                   />
+                    </StackPanel></Grid>
+                </RadioButton>
+                <RadioButton Classes="side" GroupName="AppsSection" Padding="12,14" Margin="0,0,0,6"
+                             IsChecked="{Binding SelectedSection, Converter={StaticResource EqualsConverter}, ConverterParameter=Services}">
+                    <Grid ColumnDefinitions="28,12,*"><mi:MaterialIcon Kind="CogOutline" Width="28" Height="28" VerticalAlignment="Center"/><StackPanel Grid.Column="2">
+                        <TextBlock Text="Services" FontWeight="SemiBold" FontSize="13"/>
+                        <TextBlock Text="{Binding ServicesSummary}" TextWrapping="Wrap" FontSize="11" Margin="0,3,0,0"
+                                   />
+                    </StackPanel></Grid>
+                </RadioButton>
+            </StackPanel>
         </Border>
 
-        <Border Classes="card" Padding="8">
+
+
+        <Panel DockPanel.Dock="Top" Margin="0,0,0,8"><Grid HorizontalAlignment="Left" ColumnDefinitions="270,10,270" IsVisible="{Binding IsPrograms}"><Border Grid.Column="0" MinHeight="64" CornerRadius="6" ClipToBounds="True" Opacity="1" BorderThickness="1" BorderBrush="#2487C5" Background="#245C80" Padding="10,7"><Grid ColumnDefinitions="36,10,*"><Border Width="34" Height="34" CornerRadius="17" BorderBrush="#2487C5" BorderThickness="1.5"><mi:MaterialIcon Kind="ViewGrid" Width="19" Height="19" Foreground="White"/></Border><StackPanel Grid.Column="2" Spacing="1" VerticalAlignment="Center"><TextBlock Foreground="White" Text="Total" FontSize="11" TextWrapping="Wrap"/><TextBlock Foreground="White" Text="{Binding ProgramsTotal}" FontSize="18" FontWeight="Bold"/><TextBlock Text="Installed applications" FontSize="10" TextWrapping="Wrap" Foreground="White"/></StackPanel></Grid></Border><Border Grid.Column="2" MinHeight="64" CornerRadius="6" ClipToBounds="True" Opacity="1" BorderThickness="1" BorderBrush="#69A82C" Background="#426A2A" Padding="10,7"><Grid ColumnDefinitions="36,10,*"><Border Width="34" Height="34" CornerRadius="17" BorderBrush="#69A82C" BorderThickness="1.5"><mi:MaterialIcon Kind="PlayCircleOutline" Width="19" Height="19" Foreground="White"/></Border><StackPanel Grid.Column="2" Spacing="1" VerticalAlignment="Center"><TextBlock Foreground="White" Text="Not running" FontSize="11" TextWrapping="Wrap"/><TextBlock Foreground="White" Text="{Binding ProgramsNotRunning}" FontSize="18" FontWeight="Bold"/><TextBlock Text="Installed but not running" FontSize="10" TextWrapping="Wrap" Foreground="White"/></StackPanel></Grid></Border></Grid><Grid HorizontalAlignment="Left" ColumnDefinitions="260,10,260,10,260,10,260" IsVisible="{Binding IsServices}"><Border Grid.Column="0" MinHeight="64" CornerRadius="6" ClipToBounds="True" Opacity="1" BorderThickness="1" BorderBrush="#2487C5" Background="#245C80" Padding="10,7"><Grid ColumnDefinitions="36,10,*"><Border Width="34" Height="34" CornerRadius="17" BorderBrush="#2487C5" BorderThickness="1.5"><mi:MaterialIcon Kind="CubeOutline" Width="19" Height="19" Foreground="White"/></Border><StackPanel Grid.Column="2" Spacing="1" VerticalAlignment="Center"><TextBlock Foreground="White" Text="Total Services" FontSize="11" TextWrapping="Wrap"/><TextBlock Foreground="White" Text="{Binding ServicesTotal}" FontSize="18" FontWeight="Bold"/><TextBlock Text="Services on this device" FontSize="10" TextWrapping="Wrap" Foreground="White"/></StackPanel></Grid></Border><Border Grid.Column="2" MinHeight="64" CornerRadius="6" ClipToBounds="True" Opacity="1" BorderThickness="1" BorderBrush="#38B552" Background="#286B42" Padding="10,7"><Grid ColumnDefinitions="36,10,*"><Border Width="34" Height="34" CornerRadius="17" BorderBrush="#38B552" BorderThickness="1.5"><mi:MaterialIcon Kind="Play" Width="19" Height="19" Foreground="White"/></Border><StackPanel Grid.Column="2" Spacing="1" VerticalAlignment="Center"><TextBlock Foreground="White" Text="Running" FontSize="11" TextWrapping="Wrap"/><TextBlock Foreground="White" Text="{Binding ServicesRunning}" FontSize="18" FontWeight="Bold"/><TextBlock Text="Services are running" FontSize="10" TextWrapping="Wrap" Foreground="White"/></StackPanel></Grid></Border><Border Grid.Column="4" MinHeight="64" CornerRadius="6" ClipToBounds="True" Opacity="1" BorderThickness="1" BorderBrush="#D9A219" Background="#87651F" Padding="10,7"><Grid ColumnDefinitions="36,10,*"><Border Width="34" Height="34" CornerRadius="17" BorderBrush="#D9A219" BorderThickness="1.5"><mi:MaterialIcon Kind="Stop" Width="19" Height="19" Foreground="White"/></Border><StackPanel Grid.Column="2" Spacing="1" VerticalAlignment="Center"><TextBlock Foreground="White" Text="Stopped" FontSize="11" TextWrapping="Wrap"/><TextBlock Foreground="White" Text="{Binding ServicesStopped}" FontSize="18" FontWeight="Bold"/><TextBlock Text="Services are stopped" FontSize="10" TextWrapping="Wrap" Foreground="White"/></StackPanel></Grid></Border><Border Grid.Column="6" MinHeight="64" CornerRadius="6" ClipToBounds="True" Opacity="1" BorderThickness="1" BorderBrush="#CB363D" Background="#8B343F" Padding="10,7"><Grid ColumnDefinitions="36,10,*"><Border Width="34" Height="34" CornerRadius="17" BorderBrush="#CB363D" BorderThickness="1.5"><mi:MaterialIcon Kind="AlertCircle" Width="19" Height="19" Foreground="White"/></Border><StackPanel Grid.Column="2" Spacing="1" VerticalAlignment="Center"><TextBlock Foreground="White" Text="With Problems" FontSize="11" TextWrapping="Wrap"/><TextBlock Foreground="White" Text="{Binding ServicesProblems}" FontSize="18" FontWeight="Bold"/><TextBlock Text="Services with issues" FontSize="10" TextWrapping="Wrap" Foreground="White"/></StackPanel></Grid></Border></Grid><Grid HorizontalAlignment="Left" ColumnDefinitions="260,10,260,10,260,10,260" IsVisible="{Binding IsUsers}"><Border Grid.Column="0" MinHeight="64" CornerRadius="6" ClipToBounds="True" Opacity="1" BorderThickness="1" BorderBrush="#2487C5" Background="#245C80" Padding="10,7"><Grid ColumnDefinitions="36,10,*"><Border Width="34" Height="34" CornerRadius="17" BorderBrush="#2487C5" BorderThickness="1.5"><mi:MaterialIcon Kind="AccountGroup" Width="19" Height="19" Foreground="White"/></Border><StackPanel Grid.Column="2" Spacing="1" VerticalAlignment="Center"><TextBlock Foreground="White" Text="Total Accounts" FontSize="11" TextWrapping="Wrap"/><TextBlock Foreground="White" Text="{Binding UsersTotal}" FontSize="18" FontWeight="Bold"/><TextBlock Text="User accounts" FontSize="10" TextWrapping="Wrap" Foreground="White"/></StackPanel></Grid></Border><Border Grid.Column="2" MinHeight="64" CornerRadius="6" ClipToBounds="True" Opacity="1" BorderThickness="1" BorderBrush="#38B552" Background="#286B42" Padding="10,7"><Grid ColumnDefinitions="36,10,*"><Border Width="34" Height="34" CornerRadius="17" BorderBrush="#38B552" BorderThickness="1.5"><mi:MaterialIcon Kind="Account" Width="19" Height="19" Foreground="White"/></Border><StackPanel Grid.Column="2" Spacing="1" VerticalAlignment="Center"><TextBlock Foreground="White" Text="Signed In" FontSize="11" TextWrapping="Wrap"/><TextBlock Foreground="White" Text="{Binding UsersSignedIn}" FontSize="18" FontWeight="Bold"/><TextBlock Text="Currently signed in" FontSize="10" TextWrapping="Wrap" Foreground="White"/></StackPanel></Grid></Border><Border Grid.Column="4" MinHeight="64" CornerRadius="6" ClipToBounds="True" Opacity="1" BorderThickness="1" BorderBrush="#CB363D" Background="#8B343F" Padding="10,7"><Grid ColumnDefinitions="36,10,*"><Border Width="34" Height="34" CornerRadius="17" BorderBrush="#CB363D" BorderThickness="1.5"><mi:MaterialIcon Kind="AccountOff" Width="19" Height="19" Foreground="White"/></Border><StackPanel Grid.Column="2" Spacing="1" VerticalAlignment="Center"><TextBlock Foreground="White" Text="Disabled" FontSize="11" TextWrapping="Wrap"/><TextBlock Foreground="White" Text="{Binding UsersDisabled}" FontSize="18" FontWeight="Bold"/><TextBlock Text="Accounts disabled" FontSize="10" TextWrapping="Wrap" Foreground="White"/></StackPanel></Grid></Border><Border Grid.Column="6" MinHeight="64" CornerRadius="6" ClipToBounds="True" Opacity="1" BorderThickness="1" BorderBrush="#D9A219" Background="#87651F" Padding="10,7"><Grid ColumnDefinitions="36,10,*"><Border Width="34" Height="34" CornerRadius="17" BorderBrush="#D9A219" BorderThickness="1.5"><mi:MaterialIcon Kind="ShieldAccount" Width="19" Height="19" Foreground="White"/></Border><StackPanel Grid.Column="2" Spacing="1" VerticalAlignment="Center"><TextBlock Foreground="White" Text="Administrators" FontSize="11" TextWrapping="Wrap"/><TextBlock Foreground="White" Text="{Binding UsersAdministrators}" FontSize="18" FontWeight="Bold"/><TextBlock Text="Administrator accounts" FontSize="10" TextWrapping="Wrap" Foreground="White"/></StackPanel></Grid></Border></Grid></Panel><Border DockPanel.Dock="Bottom" CornerRadius="0,0,8,8" Background="{DynamicResource SurfaceDarkBrush}" BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1" Padding="16,10"><TextBlock Text="{Binding VisibleRowsSummary}" FontSize="12"/></Border><Border CornerRadius="8,8,0,0" ClipToBounds="True" BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1,1,1,0" Background="{DynamicResource SurfaceDarkBrush}" Padding="6,6,6,0">
             <Panel>
                 <controls:AppDataGrid ItemsSource="{Binding Programs}" IsVisible="{Binding IsPrograms}"
-                                      HorizontalScrollBarVisibility="Auto" IsReadOnly="True">
+                                      HorizontalScrollBarVisibility="Auto" IsReadOnly="True" RowHeight="38" ColumnHeaderHeight="38" FontSize="12" BorderThickness="0">
                     <DataGrid.Columns>
                         <DataGridTemplateColumn Width="40">
                             <DataGridTemplateColumn.CellTemplate>
@@ -112,7 +111,7 @@
                 </controls:AppDataGrid>
 
                 <controls:AppDataGrid ItemsSource="{Binding Users}" IsVisible="{Binding IsUsers}"
-                                      HorizontalScrollBarVisibility="Auto" IsReadOnly="True">
+                                      HorizontalScrollBarVisibility="Auto" IsReadOnly="True" RowHeight="38" ColumnHeaderHeight="38" FontSize="12" BorderThickness="0">
                     <DataGrid.Columns>
                         <DataGridTemplateColumn Width="40">
                             <DataGridTemplateColumn.CellTemplate>
@@ -165,7 +164,7 @@
                 </controls:AppDataGrid>
 
                 <controls:AppDataGrid ItemsSource="{Binding Services}" IsVisible="{Binding IsServices}"
-                                      HorizontalScrollBarVisibility="Auto" IsReadOnly="True">
+                                      HorizontalScrollBarVisibility="Auto" IsReadOnly="True" RowHeight="38" ColumnHeaderHeight="38" FontSize="12" BorderThickness="0">
                     <DataGrid.Columns>
                         <DataGridTemplateColumn Header="Service" Width="*" MinWidth="220" SortMemberPath="DisplayName">
                             <DataGridTemplateColumn.CellTemplate>

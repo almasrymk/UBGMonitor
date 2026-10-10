@@ -13,6 +13,8 @@ public sealed partial class ProcessListCardViewModel : ObservableObject, IDispos
     private readonly AgentApiClient _client;
     private readonly CancellationTokenSource _cts = new();
     private bool _disposed;
+    /// <summary>Hidden dashboard cards keep their last result without polling or rebuilding rows.</summary>
+    public Func<bool>? IsActive { get; set; }
 
     [ObservableProperty] private string _title = string.Empty;
     [ObservableProperty] private ProcessSortBy _sortBy;
@@ -65,18 +67,30 @@ public sealed partial class ProcessListCardViewModel : ObservableObject, IDispos
             }
 
             var selectedPid = SelectedItem?.Pid;
-            Items.Clear();
             if (result.Error is not null)
             {
+                Items.Clear();
+                SelectedItem = null;
                 ErrorMessage = result.Error;
                 OnPropertyChanged(nameof(HasError));
                 return;
             }
 
             ErrorMessage = null;
-            foreach (var item in result.Items.Take(5))
+            var incoming = result.Items.Take(5).ToArray();
+            for (var i = Items.Count - 1; i >= 0; i--)
+                if (!incoming.Any(item => item.Pid == Items[i].Pid)) Items.RemoveAt(i);
+            for (var i = 0; i < incoming.Length; i++)
             {
-                Items.Add(item);
+                var item = incoming[i];
+                var existing = Items.FirstOrDefault(row => row.Pid == item.Pid);
+                if (existing is null) Items.Insert(i, item);
+                else
+                {
+                    existing.UpdateFrom(item);
+                    var at = Items.IndexOf(existing);
+                    if (at != i) Items.Move(at, i);
+                }
             }
 
             if (selectedPid is int pid)
@@ -149,7 +163,10 @@ public sealed partial class ProcessListCardViewModel : ObservableObject, IDispos
         {
             while (!_cts.IsCancellationRequested)
             {
-                await RefreshAsync();
+                if (IsActive?.Invoke() != false)
+                {
+                    await RefreshAsync();
+                }
                 var delay = HasError ? TimeSpan.FromSeconds(10) : TimeSpan.FromSeconds(3);
                 await Task.Delay(delay, _cts.Token);
             }

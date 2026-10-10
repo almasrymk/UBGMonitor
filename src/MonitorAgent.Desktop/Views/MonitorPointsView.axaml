@@ -1,44 +1,46 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="using:MonitorAgent.Desktop.Converters"
              xmlns:controls="using:MonitorAgent.Desktop.Controls"
              xmlns:mi="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="MonitorAgent.Desktop.Views.MonitorPointsView">
+    <UserControl.Resources><converters:MonitorPointBadgeConverter x:Key="PointBadge"/><DataTemplate x:Key="PointSortHeader"><StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="{Binding}" VerticalAlignment="Center"/><StackPanel Spacing="2" VerticalAlignment="Center" Opacity="0.65"><Path Data="M 0,3 L 3,0 L 6,3 Z" Fill="{DynamicResource TextSecondaryBrush}" Width="6" Height="3"/><Path Data="M 0,0 L 3,3 L 6,0 Z" Fill="{DynamicResource TextSecondaryBrush}" Width="6" Height="3"/></StackPanel></StackPanel></DataTemplate></UserControl.Resources>
     <UserControl.Styles>
         <Style Selector="Button.pointfilter"><Setter Property="Padding" Value="12,6"/><Setter Property="CornerRadius" Value="6"/><Setter Property="FontSize" Value="12"/></Style>
         <Style Selector="Button.pointfilter.selected"><Setter Property="Background" Value="{DynamicResource AccentGreenBrush}"/></Style>
     </UserControl.Styles>
     <Grid Margin="12" RowDefinitions="Auto,*">
-        <Grid ColumnDefinitions="72,18,*,24,540" Margin="12,18,12,24">
-            <mi:MaterialIcon Kind="Lan" Width="52" Height="52" Foreground="{DynamicResource AccentGreenBrush}" VerticalAlignment="Center"/>
+        <Grid ColumnDefinitions="72,18,*,24,Auto" Margin="12,18,12,24">
+            <controls:GlyphIcon Glyph="&#xE707;" Size="52" Foreground="{DynamicResource AccentGreenBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             <StackPanel Grid.Column="2" Spacing="8" VerticalAlignment="Center"><TextBlock Text="Monitor Points" FontSize="24" FontWeight="SemiBold"/><TextBlock Text="Monitor devices, services, applications and more." FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}"/></StackPanel>
-            <StackPanel Grid.Column="4" Spacing="8">
-                <Grid ColumnDefinitions="*,12,140"><Border CornerRadius="6" BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1" Background="{DynamicResource InputBrush}" Height="38"><Grid ColumnDefinitions="34,*"><mi:MaterialIcon Kind="Magnify" Width="18" Height="18"/><TextBox Name="PointSearch" Grid.Column="1" Watermark="Search monitor points..." TextChanged="Filters_Changed" Background="Transparent" BorderThickness="0" VerticalContentAlignment="Center" FontSize="12"/></Grid></Border><ComboBox Name="PointTypeFilter" Grid.Column="2" Height="38" CornerRadius="6" HorizontalAlignment="Stretch" SelectionChanged="Filters_Changed"/></Grid>
-                <StackPanel Orientation="Horizontal" Spacing="4"><Button Name="AllFilter" Classes="pointfilter selected" Tag="All" Click="StatusFilter_Click" Content="All"/><Button Name="HealthyFilter" Classes="pointfilter" Tag="Healthy" Click="StatusFilter_Click"><StackPanel Orientation="Horizontal" Spacing="5"><Ellipse Width="9" Height="9" Fill="{DynamicResource AccentGreenBrush}"/><TextBlock Name="HealthyCount" Text="Healthy"/></StackPanel></Button><Button Name="WarningFilter" Classes="pointfilter" Tag="Warning" Click="StatusFilter_Click"><StackPanel Orientation="Horizontal" Spacing="5"><Ellipse Width="9" Height="9" Fill="{DynamicResource AccentYellowBrush}"/><TextBlock Name="WarningCount" Text="Warning"/></StackPanel></Button><Button Name="ProblemFilter" Classes="pointfilter" Tag="Problem" Click="StatusFilter_Click"><StackPanel Orientation="Horizontal" Spacing="5"><Ellipse Width="9" Height="9" Fill="{DynamicResource AccentRedBrush}"/><TextBlock Name="ProblemCount" Text="Problem"/></StackPanel></Button></StackPanel>
+            <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                <Grid ColumnDefinitions="230,12,140"><Border CornerRadius="6" BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1" Background="{DynamicResource InputBrush}" Height="38"><Grid ColumnDefinitions="34,*"><mi:MaterialIcon Kind="Magnify" Width="18" Height="18"/><TextBox Name="PointSearch" Grid.Column="1" Watermark="Search monitor points..." TextChanged="Filters_Changed" Background="Transparent" BorderThickness="0" VerticalContentAlignment="Center" FontSize="12"/></Grid></Border><ComboBox Name="PointTypeFilter" Grid.Column="2" Height="38" CornerRadius="6" HorizontalAlignment="Stretch" SelectionChanged="Filters_Changed"/></Grid>
+                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center"><Button Name="AllFilter" Classes="pointfilter selected" Tag="All" Click="StatusFilter_Click" Content="All"/><Button Name="HealthyFilter" Classes="pointfilter" Tag="Healthy" Click="StatusFilter_Click"><StackPanel Orientation="Horizontal" Spacing="5"><Ellipse Width="9" Height="9" Fill="{DynamicResource AccentGreenBrush}"/><TextBlock Name="HealthyCount" Text="Healthy"/></StackPanel></Button><Button Name="WarningFilter" Classes="pointfilter" Tag="Warning" Click="StatusFilter_Click"><StackPanel Orientation="Horizontal" Spacing="5"><Ellipse Width="9" Height="9" Fill="{DynamicResource AccentYellowBrush}"/><TextBlock Name="WarningCount" Text="Warning"/></StackPanel></Button><Button Name="ProblemFilter" Classes="pointfilter" Tag="Problem" Click="StatusFilter_Click"><StackPanel Orientation="Horizontal" Spacing="5"><Ellipse Width="9" Height="9" Fill="{DynamicResource AccentRedBrush}"/><TextBlock Name="ProblemCount" Text="Problem"/></StackPanel></Button></StackPanel>
             </StackPanel>
         </Grid>
-        <Border Grid.Row="1" CornerRadius="10" BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1" Background="{DynamicResource SurfaceDarkBrush}"><Grid RowDefinitions="*,Auto">
-            <Border Margin="10" CornerRadius="8" ClipToBounds="True" BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1">
-            <controls:AppDataGrid Name="PointsGrid" HorizontalScrollBarVisibility="Auto" RowHeight="58" IsReadOnly="True" BorderThickness="0" DoubleTapped="Grid_DoubleTapped">
+        <Grid Grid.Row="1" RowDefinitions="*,Auto">
+            <Border CornerRadius="8,8,0,0" ClipToBounds="True" BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1,1,1,0">
+            <controls:AppDataGrid Name="PointsGrid" CanUserSortColumns="True" HorizontalScrollBarVisibility="Auto" RowHeight="48" ColumnHeaderHeight="48" IsReadOnly="True" BorderThickness="0" DoubleTapped="Grid_DoubleTapped">
                 <DataGrid.Columns>
-                    <DataGridTemplateColumn Width="46">
+                    <DataGridTemplateColumn Width="Auto">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <Panel Width="28" Height="28" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                    <controls:GlyphIcon Glyph="{Binding Glyph}" Size="16" HorizontalAlignment="Center"
+                                <Panel Width="34" Height="34" Margin="10,6" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <controls:GlyphIcon Glyph="{Binding Glyph}" Size="24" HorizontalAlignment="Center"
                                                      Foreground="{DynamicResource TextPrimaryBrush}"
                                                      IsVisible="{Binding #PointIcon.Source, Converter={x:Static ObjectConverters.IsNull}}"/>
-                                    <Image x:Name="PointIcon" Width="22" Height="22" Stretch="Uniform"
+                                    <Image x:Name="PointIcon" Width="30" Height="30" Stretch="Uniform"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"
                                            Source="{Binding Icon, Converter={StaticResource IconToImageConverter}}"/>
                                 </Panel>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTextColumn Header="Id" Binding="{Binding MonitorPointId}" Width="72"/>
-                    <DataGridTextColumn Header="Name" Binding="{Binding DisplayName}" Width="*" MinWidth="170"/>
-                    <DataGridTextColumn Header="Type" Binding="{Binding Type, Converter={StaticResource MonitorPointTypeLabelConverter}}" Width="100"/>
-                    <DataGridTextColumn Header="Device kind" Binding="{Binding DeviceKind, Converter={StaticResource MonitorPointFieldConverter}, ConverterParameter=DeviceKind}" Width="95"/>
-                    <DataGridTemplateColumn Header="Address / Target" Width="210" SortMemberPath="Target">
+                    <DataGridTextColumn Header="Id" HeaderTemplate="{StaticResource PointSortHeader}" Binding="{Binding MonitorPointId}" Width="Auto"/>
+                    <DataGridTextColumn Header="Name" HeaderTemplate="{StaticResource PointSortHeader}" Binding="{Binding DisplayName}" Width="Auto" CanUserResize="True"/>
+                    <DataGridTemplateColumn Header="Type" HeaderTemplate="{StaticResource PointSortHeader}" Width="Auto" SortMemberPath="Type"><DataGridTemplateColumn.CellTemplate><DataTemplate><Border CornerRadius="7" Padding="12,7" HorizontalAlignment="Left" VerticalAlignment="Center" Background="{Binding Type, Converter={StaticResource PointBadge}, ConverterParameter=Type}"><TextBlock Text="{Binding Type, Converter={StaticResource MonitorPointTypeLabelConverter}}" Foreground="White" FontWeight="SemiBold" FontSize="12"/></Border></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+                    <DataGridTextColumn Header="Device kind" HeaderTemplate="{StaticResource PointSortHeader}" Binding="{Binding DeviceKind, Converter={StaticResource MonitorPointFieldConverter}, ConverterParameter=DeviceKind}" Width="Auto"/>
+                    <DataGridTemplateColumn Header="Address / Target" HeaderTemplate="{StaticResource PointSortHeader}" Width="Auto" SortMemberPath="Target">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal" ToolTip.Tip="{Binding Target}" VerticalAlignment="Center">
@@ -48,43 +50,42 @@
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTextColumn Header="Location" Binding="{Binding Location}" Width="100"/>
-                    <DataGridTextColumn Header="Model" Binding="{Binding Model}" Width="100"/>
-                    <DataGridTemplateColumn Header="Status" Width="80" SortMemberPath="Status">
+                    <DataGridTextColumn Header="Location" HeaderTemplate="{StaticResource PointSortHeader}" Binding="{Binding Location}" Width="Auto"/>
+                    <DataGridTextColumn Header="Model" HeaderTemplate="{StaticResource PointSortHeader}" Binding="{Binding Model}" Width="Auto"/>
+                    <DataGridTemplateColumn Header="Status" HeaderTemplate="{StaticResource PointSortHeader}" Width="Auto" SortMemberPath="Status">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding Status}" FontWeight="SemiBold" VerticalAlignment="Center"
-                                           Foreground="{Binding Status, Converter={StaticResource HealthToBrushConverter}}"/>
+                                <Border CornerRadius="7" Padding="10,7" HorizontalAlignment="Left" VerticalAlignment="Center" Background="{Binding Status, Converter={StaticResource PointBadge}}" ToolTip.Tip="{Binding Status}"><StackPanel Orientation="Horizontal" Spacing="6"><Ellipse Width="8" Height="8" Fill="White" VerticalAlignment="Center"/><TextBlock Text="{Binding Status, Converter={StaticResource PointBadge}, ConverterParameter=Label}" Foreground="White" FontSize="12" FontWeight="SemiBold"/></StackPanel></Border>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTextColumn Header="For" Binding="{Binding StatusSinceUtc, Converter={StaticResource MonitorPointFieldConverter}, ConverterParameter=Since}" Width="70"/>
-                    <DataGridTextColumn Header="Response" Binding="{Binding ResponseMs, Converter={StaticResource MonitorPointFieldConverter}, ConverterParameter=Response}" Width="80"/>
-                    <DataGridTextColumn Header="Last check" Binding="{Binding LastCheckedUtc, Converter={StaticResource MonitorPointFieldConverter}, ConverterParameter=Time}" Width="140"/>
-                    <DataGridTemplateColumn Header="Result" Width="220" SortMemberPath="Message">
+                    <DataGridTextColumn Header="For" HeaderTemplate="{StaticResource PointSortHeader}" Binding="{Binding StatusSinceUtc, Converter={StaticResource MonitorPointFieldConverter}, ConverterParameter=Since}" Width="Auto"/>
+                    <DataGridTextColumn Header="Response" HeaderTemplate="{StaticResource PointSortHeader}" Binding="{Binding ResponseMs, Converter={StaticResource MonitorPointFieldConverter}, ConverterParameter=Response}" Width="Auto"/>
+                    <DataGridTextColumn Header="Last check" HeaderTemplate="{StaticResource PointSortHeader}" Binding="{Binding LastCheckedUtc, Converter={StaticResource MonitorPointFieldConverter}, ConverterParameter=Time}" Width="Auto"/>
+                    <DataGridTemplateColumn Header="Result" HeaderTemplate="{StaticResource PointSortHeader}" Width="Auto" SortMemberPath="Message">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding Message}" ToolTip.Tip="{Binding Message}" VerticalAlignment="Center"
+                                <TextBlock Text="{Binding Message}" ToolTip.Tip="{Binding Message}" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="12" Foreground="{Binding Status, Converter={StaticResource PointBadge}, ConverterParameter=Result}" TextWrapping="Wrap" MaxHeight="48"
                                            TextTrimming="CharacterEllipsis"/>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTemplateColumn Header="Enabled" Width="70" SortMemberPath="Enabled">
+                    <DataGridTemplateColumn Header="Enabled" HeaderTemplate="{StaticResource PointSortHeader}" Width="Auto" SortMemberPath="Enabled">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <Path Classes="yesno" Classes.yes="{Binding Enabled}"/>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTemplateColumn Header="Shortcut" Width="72" SortMemberPath="ShowInShortcut">
+                    <DataGridTemplateColumn Header="Shortcut" HeaderTemplate="{StaticResource PointSortHeader}" Width="Auto" SortMemberPath="ShowInShortcut">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <Path Classes="yesno" Classes.yes="{Binding ShowInShortcut}"/>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTextColumn Header="Alert" Binding="{Binding Alert, Converter={StaticResource MonitorPointFieldConverter}, ConverterParameter=Alert}" Width="70"/>
-                    <DataGridTextColumn Header="Interval" Binding="{Binding IntervalSeconds, Converter={StaticResource MonitorPointFieldConverter}, ConverterParameter=Seconds}" Width="70"/>
+                    <DataGridTemplateColumn Header="Alert" HeaderTemplate="{StaticResource PointSortHeader}" Width="Auto" SortMemberPath="Alert"><DataGridTemplateColumn.CellTemplate><DataTemplate><Border CornerRadius="7" Padding="10,7" HorizontalAlignment="Left" VerticalAlignment="Center" Background="{Binding Alert, Converter={StaticResource PointBadge}}"><StackPanel Orientation="Horizontal" Spacing="6"><Ellipse Width="8" Height="8" Fill="White" VerticalAlignment="Center"/><TextBlock Text="{Binding Alert, Converter={StaticResource MonitorPointFieldConverter}, ConverterParameter=Alert}" Foreground="White" FontSize="12" FontWeight="SemiBold"/></StackPanel></Border></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+                    <DataGridTextColumn Header="Interval" HeaderTemplate="{StaticResource PointSortHeader}" Binding="{Binding IntervalSeconds, Converter={StaticResource MonitorPointFieldConverter}, ConverterParameter=Seconds}" Width="Auto"/>
                 </DataGrid.Columns>
             </controls:AppDataGrid>
-        </Border><Border Grid.Row="1" BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="0,1,0,0" Padding="20,14"><TextBlock Name="PointSummary" Text="Showing monitor points" FontSize="12"/></Border></Grid></Border></Grid></UserControl>
+        </Border><Border Grid.Row="1" CornerRadius="0,0,8,8" Background="{DynamicResource SurfaceDarkBrush}" BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1" Padding="20,14"><TextBlock Name="PointSummary" Text="Showing monitor points" FontSize="12"/></Border></Grid></Grid></UserControl>

@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+
 using System.Diagnostics;
 using Avalonia;
 using Avalonia.Media.Imaging;
@@ -15,8 +15,8 @@ internal static class ProcessIconCache
 {
     private const int Size = 16;
     private static readonly Lazy<Bitmap?> Fallback = new(CreateFallback);
-    private static readonly ConcurrentDictionary<string, Bitmap?> ByPath = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly ConcurrentDictionary<int, Bitmap?> ByPid = new();
+    private static readonly BoundedWeakCache<Bitmap> ByPath = new(256);
+    private static readonly BoundedWeakCache<Bitmap> ByPid = new(128);
 
     public static object? Get(int pid, string name)
     {
@@ -25,18 +25,14 @@ internal static class ProcessIconCache
             return Fallback.Value;
         }
 
-        if (ByPid.TryGetValue(pid, out var cached))
+        // Time buckets prevent a reused PID from keeping the icon of a process that already exited.
+        var key = $"{pid}:{name}:{Environment.TickCount64 / 30000}";
+        return ByPid.Get(key, _ =>
         {
-            return cached;
-        }
-
-        var path = TryGetPath(pid, name);
-        var icon = string.IsNullOrWhiteSpace(path) ? null : ByPath.GetOrAdd(path, LoadFromPath);
-        icon ??= Fallback.Value;
-        ByPid[pid] = icon;
-        return icon;
+            var path = TryGetPath(pid, name);
+            return (string.IsNullOrWhiteSpace(path) ? null : ByPath.Get(path, LoadFromPath)) ?? Fallback.Value;
+        });
     }
-
     /// <summary>The icon of an executable on this computer; null when there is none (or the system's executables carry none).</summary>
     public static Bitmap? ForPath(string? path)
     {
@@ -45,7 +41,7 @@ internal static class ProcessIconCache
             return null;
         }
 
-        return ByPath.GetOrAdd(path, LoadFromPath);
+        return ByPath.Get(path, LoadFromPath);
     }
 
     private static string? TryGetPath(int pid, string name)

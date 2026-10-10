@@ -1,9 +1,11 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mi="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:converters="using:MonitorAgent.Desktop.Converters"
              xmlns:controls="using:MonitorAgent.Desktop.Controls"
              xmlns:views="using:MonitorAgent.Desktop.Views"
              x:Class="MonitorAgent.Desktop.Views.ReportsView">
-    <UserControl.Resources>
+    <UserControl.Resources><converters:ReportTypeIconConverter x:Key="ReportTypeIcon"/>
         <DataTemplate x:Key="ChartCard">
             <Border Margin="4" Padding="10,8" CornerRadius="6"
                     Background="{DynamicResource SurfaceDarkAltBrush}"
@@ -36,7 +38,7 @@
             </Border>
         </DataTemplate>
     </UserControl.Resources>
-    <UserControl.Styles>
+    <UserControl.Styles><Style Selector="ListBox.types ListBoxItem:selected"><Setter Property="Foreground" Value="{DynamicResource AccentGreenBrush}"/></Style><Style Selector="ListBox.types ListBoxItem:selected TextBlock"><Setter Property="Foreground" Value="{DynamicResource AccentGreenBrush}"/></Style><Style Selector="ListBox.types ListBoxItem:selected mi|MaterialIcon"><Setter Property="Foreground" Value="{DynamicResource AccentGreenBrush}"/></Style>
         <Style Selector="ListBox.types ListBoxItem">
             <Setter Property="Margin" Value="0,0,0,6"/>
             <Setter Property="Padding" Value="0"/>
@@ -129,12 +131,12 @@
                 </ListBox.ItemsPanel>
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <StackPanel>
+                        <Grid ColumnDefinitions="24,12,*"><mi:MaterialIcon Kind="{Binding Id, Converter={StaticResource ReportTypeIcon}}" Width="22" Height="22" VerticalAlignment="Center"/><StackPanel Grid.Column="2">
                             <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="13"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                       />
                             <TextBlock Text="{Binding Description}" TextWrapping="Wrap" FontSize="11" Margin="0,3,0,0"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
-                        </StackPanel>
+                                       />
+                        </StackPanel></Grid>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
@@ -185,8 +187,7 @@
             <Panel>
                 <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding HasReport}">
                     <StackPanel Margin="18,14,18,20">
-                        <TextBlock Text="{Binding ReportTitle}" FontSize="22" FontWeight="Bold"
-                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <StackPanel Orientation="Horizontal" Spacing="12"><mi:MaterialIcon Kind="{Binding ReportTypeId, Converter={StaticResource ReportTypeIcon}}" Width="30" Height="30" Foreground="{DynamicResource AccentGreenBrush}" VerticalAlignment="Center"/><TextBlock Text="{Binding ReportTitle}" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}"/></StackPanel>
                         <TextBlock Text="{Binding ReportDescription}" TextWrapping="Wrap" Margin="0,4,0,0"
                                    Foreground="{DynamicResource TextSecondaryBrush}"/>
                         <TextBlock Text="{Binding ReportPeriod}" Margin="0,4,0,0" FontSize="12"

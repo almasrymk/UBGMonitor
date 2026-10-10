@@ -466,9 +466,9 @@
                 <controls:AppDataGrid Name="MonitorPointsGrid" DoubleTapped="MonitorPointsGrid_DoubleTapped" ItemsSource="{Binding FilteredMonitorPoints}" SelectedItem="{Binding SelectedMonitorPoint}"
                                       IsReadOnly="False" RowHeight="42" FontSize="13" BorderThickness="0">
                     <DataGrid.Columns>
-                        <DataGridTemplateColumn Header="Id" Width="72" IsReadOnly="False" SortMemberPath="MonitorPointId"><DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding MonitorPointId}" VerticalAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellTemplate><DataGridTemplateColumn.CellEditingTemplate><DataTemplate><TextBox Text="{Binding MonitorPointId, Mode=TwoWay}" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellEditingTemplate></DataGridTemplateColumn>
-                        <DataGridTemplateColumn Header="Name" Width="1.4*" MinWidth="100" IsReadOnly="False" SortMemberPath="DisplayName"><DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellTemplate><DataGridTemplateColumn.CellEditingTemplate><DataTemplate><TextBox Text="{Binding DisplayName, Mode=TwoWay}" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellEditingTemplate></DataGridTemplateColumn>
-                        <DataGridTemplateColumn Header="Type" Width="90">
+                        <DataGridTemplateColumn Header="Id" Width="Auto" IsReadOnly="False" SortMemberPath="MonitorPointId"><DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding MonitorPointId}" VerticalAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellTemplate><DataGridTemplateColumn.CellEditingTemplate><DataTemplate><TextBox Text="{Binding MonitorPointId, Mode=TwoWay}" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellEditingTemplate></DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Name" Width="Auto" CanUserResize="True" IsReadOnly="False" SortMemberPath="DisplayName"><DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellTemplate><DataGridTemplateColumn.CellEditingTemplate><DataTemplate><TextBox Text="{Binding DisplayName, Mode=TwoWay}" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellEditingTemplate></DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Type" Width="Auto">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <TextBlock Text="{Binding TypeLabel}" VerticalAlignment="Center"/>
@@ -482,7 +482,7 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellEditingTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Header="Device" Width="120">
+                        <DataGridTemplateColumn Header="Device" Width="Auto">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal" IsVisible="{Binding IsDevice}">
@@ -510,7 +510,7 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellEditingTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Header="Application" Width="110">
+                        <DataGridTemplateColumn Header="Application" Width="Auto">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal" IsVisible="{Binding IsApplication}">
@@ -538,7 +538,7 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellEditingTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Header="Database" Width="110">
+                        <DataGridTemplateColumn Header="Database" Width="Auto">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel>
@@ -555,7 +555,7 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Header="Address" Width="90">
+                        <DataGridTemplateColumn Header="Address" Width="Auto">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal">
@@ -571,21 +571,21 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellEditingTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Header="Enabled" Width="80" SortMemberPath="Enabled">
+                        <DataGridTemplateColumn Header="Enabled" Width="Auto" SortMemberPath="Enabled">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <CheckBox Classes="grid" RenderTransformOrigin="50%,50%" RenderTransform="scale(0.95)" ToolTip.Tip="Check this monitor point" IsChecked="{Binding Enabled}"/>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Header="Short" Width="70" SortMemberPath="ShowInShortcut">
+                        <DataGridTemplateColumn Header="Short" Width="Auto" SortMemberPath="ShowInShortcut">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <CheckBox Classes="grid" RenderTransformOrigin="50%,50%" RenderTransform="scale(0.95)" ToolTip.Tip="Show this monitor point on the dashboard" IsChecked="{Binding ShowInShortcut}"/>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Header="Alert Level" Width="175">
+                        <DataGridTemplateColumn Header="Alert Level" Width="Auto">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <ComboBox Classes="cell" Margin="4,0" ItemsSource="{Binding $parent[DataGrid].DataContext.AlertOptions}"
@@ -594,8 +594,8 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Header="Interval" Width="80" IsReadOnly="False" SortMemberPath="IntervalSeconds"><DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding IntervalSeconds}" VerticalAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellTemplate><DataGridTemplateColumn.CellEditingTemplate><DataTemplate><TextBox Text="{Binding IntervalSeconds, Mode=TwoWay}" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellEditingTemplate></DataGridTemplateColumn>
-                        <DataGridTemplateColumn Header="Actions" Width="44" CanUserResize="False" CanUserSort="False">
+                        <DataGridTemplateColumn Header="Interval" Width="Auto" IsReadOnly="False" SortMemberPath="IntervalSeconds"><DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding IntervalSeconds}" VerticalAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellTemplate><DataGridTemplateColumn.CellEditingTemplate><DataTemplate><TextBox Text="{Binding IntervalSeconds, Mode=TwoWay}" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellEditingTemplate></DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Actions" Width="SizeToHeader" CanUserResize="False" CanUserSort="False">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Button Classes="bin" ToolTip.Tip="Delete this monitor point"

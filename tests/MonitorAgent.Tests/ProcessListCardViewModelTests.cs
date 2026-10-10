@@ -10,6 +10,31 @@ namespace MonitorAgent.Tests;
 public sealed class ProcessListCardViewModelTests
 {
     [Fact]
+    public async Task Refresh_updates_existing_rows_and_keeps_selection_when_ranking_changes()
+    {
+        var handler = new StubHandler { Json = """[{"name":"one","pid":1234,"value":45,"unit":"%"},{"name":"two","pid":5678,"value":22,"unit":"%"}]""" };
+        using var vm = CreateViewModel(handler, ProcessSortBy.Cpu);
+        await vm.RefreshAsync();
+        var one = vm.Items[0];
+        var two = vm.Items[1];
+        vm.SelectedItem = one;
+        var resets = 0;
+        vm.Items.CollectionChanged += (_, e) => { if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset) resets++; };
+        handler.Json = """[{"name":"two","pid":5678,"value":80,"unit":"%"},{"name":"one","pid":1234,"value":30,"unit":"%"}]""";
+        await vm.RefreshAsync();
+        Assert.Same(two, vm.Items[0]);
+        Assert.Same(one, vm.Items[1]);
+        Assert.Same(one, vm.SelectedItem);
+        Assert.Equal(2, one.Rank);
+        Assert.Equal("30%", one.DisplayValue);
+        Assert.Equal(0, resets);
+        handler.Json = """[{"name":"three","pid":9012,"value":90,"unit":"%"}]""";
+        await vm.RefreshAsync();
+        Assert.Single(vm.Items);
+        Assert.Equal(9012, vm.Items[0].Pid);
+        Assert.Null(vm.SelectedItem);
+    }
+    [Fact]
     public async Task RefreshAsync_MapsRankedCpuProcesses()
     {
         var handler = new StubHandler
@@ -107,7 +132,7 @@ public sealed class ProcessListCardViewModelTests
     {
         public HttpStatusCode Status { get; init; } = HttpStatusCode.OK;
 
-        public string Json { get; init; } = "[]";
+        public string Json { get; set; } = "[]";
 
         public Exception? Throw { get; init; }
 

@@ -67,6 +67,6 @@ public sealed class SystemInfoServiceTests
         var hardware = new HardwareService(config, new WindowsInventoryCollector(), NullLogger<HardwareService>.Instance);
         var sensors = new SensorsService(reader);
         var network = new NetworkService(config, NullLogger<NetworkService>.Instance);
-        return new SystemInfoService(NullLogger<SystemInfoService>.Instance, new WindowsSystemProbe(), hardware, sensors, network);
+        return new SystemInfoService(NullLogger<SystemInfoService>.Instance, new WindowsSystemProbe(), hardware, sensors, network, new ProcessUsageSampler(new WindowsSystemProbe(), new MonitorAgent.Service.Platform.BasicHostInventory(), NullLogger<ProcessUsageSampler>.Instance));
     }
 }

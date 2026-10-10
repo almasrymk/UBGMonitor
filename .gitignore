@@ -27,3 +27,4 @@ client.json
 appsettings.*.local.json
 /Data/
 /Reports/
+.tools/performance/

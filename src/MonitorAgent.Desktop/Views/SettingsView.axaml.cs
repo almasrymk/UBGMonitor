@@ -8,6 +8,7 @@ public partial class SettingsView : UserControl
 {
     private bool _monitorCellEditing;
     private bool _monitorRowEditing;
+    private SettingsViewModel? _settings;
 
     public SettingsView()
     {
@@ -15,6 +16,28 @@ public partial class SettingsView : UserControl
         MonitorPointsGrid.PreparingCellForEdit += (_, _) => { _monitorCellEditing = true; _monitorRowEditing = true; };
         MonitorPointsGrid.CellEditEnded += (_, _) => _monitorCellEditing = false;
         MonitorPointsGrid.RowEditEnded += (_, _) => _monitorRowEditing = false;
+        AttachedToVisualTree += (_, _) =>
+        {
+            _settings = (DataContext as MainViewModel)?.Settings;
+            if (_settings is not null) _settings.CommitPendingEdits = CommitPendingEdits;
+        };
+        DetachedFromVisualTree += (_, _) =>
+        {
+            if (_settings?.CommitPendingEdits?.Target == this) _settings.CommitPendingEdits = null;
+            _settings = null;
+        };
+    }
+
+    private bool CommitPendingEdits()
+    {
+        if (_settings?.SelectedSection != SettingsViewModel.SectionMonitorPoints) return true;
+        if (_monitorCellEditing && !MonitorPointsGrid.CommitEdit(DataGridEditingUnit.Cell, true)
+            || _monitorRowEditing && !MonitorPointsGrid.CommitEdit(DataGridEditingUnit.Row, true))
+        {
+            _settings.StatusMessage = "Correct the active monitor point value before saving or leaving.";
+            return false;
+        }
+        return true;
     }
 
     private void MonitorPointsGrid_DoubleTapped(object? sender, Avalonia.Input.TappedEventArgs e)

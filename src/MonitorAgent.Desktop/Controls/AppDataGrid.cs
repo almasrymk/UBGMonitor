@@ -2,6 +2,8 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
+using Avalonia.Controls.Templates;
+using Avalonia.Media;
 
 namespace MonitorAgent.Desktop.Controls;
 
@@ -19,7 +21,7 @@ public class AppDataGrid : DataGrid
 
     public AppDataGrid()
     {
-        LoadingRow += (_, e) => e.Row.Classes.Set("alt", e.Row.Index % 2 == 1);
+        LoadingRow += (_, e) => { e.Row.Classes.Set("alt", e.Row.Index % 2 == 1); AddSortHeaders(); };
 
         // The column edges are snapped in display order, so a moved column needs them worked out again.
         ColumnReordered += (_, _) =>
@@ -34,6 +36,7 @@ public class AppDataGrid : DataGrid
     protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
     {
         base.OnApplyTemplate(e);
+        AddSortHeaders();
         if (_verticalScrollBar is not null)
         {
             _verticalScrollBar.PropertyChanged -= OnScrollBarPropertyChanged;
@@ -43,6 +46,23 @@ public class AppDataGrid : DataGrid
         if (_verticalScrollBar is not null)
         {
             _verticalScrollBar.PropertyChanged += OnScrollBarPropertyChanged;
+        }
+    }
+
+    private void AddSortHeaders()
+    {
+        foreach (var column in Columns.Where(c => c.CanUserSort && c.Header is not null && c.HeaderTemplate is null))
+        {
+            column.HeaderTemplate = new FuncDataTemplate<object>((header, _) =>
+            {
+                var arrows = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center, Opacity = 0.65 };
+                foreach (var geometry in new[] { "M 0,3 L 3,0 L 6,3 Z", "M 0,0 L 3,3 L 6,0 Z" })
+                    arrows.Children.Add(new Avalonia.Controls.Shapes.Path { Data = Geometry.Parse(geometry), Width = 6, Height = 3, Fill = Brushes.Gray });
+                var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+                panel.Children.Add(new TextBlock { Text = header?.ToString(), VerticalAlignment = VerticalAlignment.Center });
+                panel.Children.Add(arrows);
+                return panel;
+            });
         }
     }
 

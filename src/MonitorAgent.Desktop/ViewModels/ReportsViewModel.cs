@@ -27,6 +27,7 @@ public sealed partial class ReportsViewModel : ObservableObject
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private bool _hasReport;
     [ObservableProperty] private string _statusMessage = "Choose a report and a period, then press Generate.";
+    [ObservableProperty] private string _reportTypeId = string.Empty;
     [ObservableProperty] private string _reportTitle = string.Empty;
     [ObservableProperty] private string _reportDescription = string.Empty;
     [ObservableProperty] private string _reportPeriod = string.Empty;
@@ -238,6 +239,7 @@ public sealed partial class ReportsViewModel : ObservableObject
     private void Show(ReportDto report)
     {
         _report = report;
+        ReportTypeId = report.Type;
         ReportTitle = report.Title;
         ReportDescription = report.Description;
         ReportPeriod = $"{report.MachineName}   |   {report.From:yyyy-MM-dd HH:mm}  to  {report.To:yyyy-MM-dd HH:mm}";

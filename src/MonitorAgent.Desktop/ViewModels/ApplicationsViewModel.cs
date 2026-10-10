@@ -49,6 +49,18 @@ public sealed partial class ApplicationsViewModel : ObservableObject
 
     public bool IsServices => SelectedSection == ServicesSection;
 
+    public int ProgramsTotal => _programs.Count;
+    public int ProgramsNotRunning => _programs.Count(p => !p.IsRunning);
+    public int UsersTotal => _users.Count;
+    public int UsersSignedIn => _users.Count(u => u.IsSignedIn);
+    public int UsersDisabled => _users.Count(u => !u.Enabled);
+    public int UsersAdministrators => _users.Count(u => u.IsAdmin);
+    public int ServicesTotal => _services.Count;
+    public int ServicesRunning => _services.Count(s => s.State == "Running");
+    public int ServicesStopped => _services.Count(s => s.State == "Stopped");
+    public int ServicesProblems => _services.Count(s => s.Problem is not null);
+    public string SearchWatermark => IsServices ? "Search by service name..." : IsUsers ? "Search by username..." : "Search by name...";
+    public string VisibleRowsSummary => IsPrograms ? $"Showing {Programs.Count} of {ProgramsTotal} applications" : IsUsers ? $"Showing {Users.Count} of {UsersTotal} accounts" : $"Showing {Services.Count} of {ServicesTotal} services";
     public static readonly IReadOnlyList<string> Sections = [ProgramsSection, UsersSection, ServicesSection];
 
     partial void OnSelectedSectionChanged(string value)
@@ -56,6 +68,8 @@ public sealed partial class ApplicationsViewModel : ObservableObject
         OnPropertyChanged(nameof(IsPrograms));
         OnPropertyChanged(nameof(IsUsers));
         OnPropertyChanged(nameof(IsServices));
+        OnPropertyChanged(nameof(SearchWatermark));
+        OnPropertyChanged(nameof(VisibleRowsSummary));
         _ = RefreshSectionAsync(value);
     }
 
@@ -157,6 +171,7 @@ public sealed partial class ApplicationsViewModel : ObservableObject
             s => s.Name, s => new ServiceRowViewModel(s), (row, s) => row.Update(s));
 
         UpdateSummaries();
+        foreach (var property in new[] { nameof(ProgramsTotal), nameof(ProgramsNotRunning), nameof(UsersTotal), nameof(UsersSignedIn), nameof(UsersDisabled), nameof(UsersAdministrators), nameof(ServicesTotal), nameof(ServicesRunning), nameof(ServicesStopped), nameof(ServicesProblems), nameof(VisibleRowsSummary) }) OnPropertyChanged(property);
     }
 
     private void UpdateSummaries()

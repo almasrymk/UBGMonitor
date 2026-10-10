@@ -113,6 +113,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         TopNetworkCard = new ProcessListCardViewModel(_client, "Top 5 by Network", ProcessSortBy.Network, UiTheme.FromHex("#FFFFFF"));
         TopDiskCard = new ProcessListCardViewModel(_client, "Top 5 by Disk", ProcessSortBy.Disk, UiTheme.Resource("ProcessBarDiskBrush", "#AB47BC"));
         HardwareOs = new HardwareOsViewModel(_client);
+        HardwareOs.IsActive = () => SelectedTab == "Dashboard";
+        foreach (var card in new[] { TopCpuCard, TopRamCard, TopNetworkCard, TopDiskCard })
+            card.IsActive = () => SelectedTab == "Dashboard";
         _timer = new UiTimer(TimeSpan.FromSeconds(1));
         Settings.Saved += async (_, _) =>
         {
@@ -284,7 +287,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 ApplySavedRuntimeSettings();
             }
 
-            if (await _client.GetDiskActivityAsync() is { } diskActivity)
+            if (SelectedTab == "Dashboard" && await _client.GetDiskActivityAsync() is { } diskActivity)
             {
                 Disk.UpdateActivity(diskActivity);
             }
@@ -304,7 +307,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
             if (SelectedTab == ApplicationsTab)
             {
-                // All three sections are kept current, so the counts under each name are right before the section is opened.
+                // The visible section keeps its configured cadence; background counters refresh less often.
                 foreach (var section in ApplicationsViewModel.Sections)
                 {
                     if (now < _nextApplicationsUtc[section])
@@ -312,7 +315,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                         continue;
                     }
 
-                    _nextApplicationsUtc[section] = now.AddSeconds(AtLeastOne(section switch
+                    _nextApplicationsUtc[section] = now.AddSeconds(ApplicationsRefreshCadence.Seconds(section == Applications.SelectedSection, section switch
                     {
                         ApplicationsViewModel.ProgramsSection => Settings.ProgramsIntervalSeconds,
                         ApplicationsViewModel.UsersSection => Settings.UsersIntervalSeconds,
@@ -339,7 +342,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 }
             }
 
-            if (now >= _nextCpuUtc)
+            if (SelectedTab == "Dashboard" && now >= _nextCpuUtc)
             {
                 _nextCpuUtc = now.AddSeconds(AtLeastOne(Settings.CpuIntervalSeconds));
                 var cpu = await _client.GetCpuAsync();
@@ -350,7 +353,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 }
             }
 
-            if (now >= _nextRamUtc)
+            if (SelectedTab == "Dashboard" && now >= _nextRamUtc)
             {
                 _nextRamUtc = now.AddSeconds(AtLeastOne(Settings.RamIntervalSeconds));
                 var ram = await _client.GetRamAsync();
@@ -361,7 +364,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 }
             }
 
-            if (now >= _nextNetworkUtc)
+            if (SelectedTab == "Dashboard" && now >= _nextNetworkUtc)
             {
                 _nextNetworkUtc = now.AddSeconds(AtLeastOne(Settings.NetworkIntervalSeconds));
                 var network = await _client.GetNetworkAsync();
@@ -371,7 +374,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 }
             }
 
-            if (now >= _nextDiskUtc)
+            if (SelectedTab == "Dashboard" && now >= _nextDiskUtc)
             {
                 _nextDiskUtc = now.AddSeconds(AtLeastOne(Settings.DiskIntervalSeconds));
                 var partitions = await _client.GetPartitionsAsync();
@@ -382,7 +385,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 }
             }
 
-            if (now >= _nextHardwareUtc)
+            if (SelectedTab == "Dashboard" && now >= _nextHardwareUtc)
             {
                 _nextHardwareUtc = now.AddSeconds(AtLeastOne(Settings.HardwareOsIntervalSeconds));
                 var os = await _client.GetOsAsync();

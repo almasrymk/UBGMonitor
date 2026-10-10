@@ -36,9 +36,7 @@ public sealed class SystemInfoService : ISystemInfoService
     private readonly IHardwareService _hardware;
     private readonly ISensorsService _sensors;
     private readonly INetworkService _network;
-    private readonly object _networkLock = new();
-    private Dictionary<int, ulong> _lastNetworkBytes = [];
-    private long _lastNetworkTimestamp;
+    private readonly ProcessUsageSampler _usage;
     private ProcessorDetails? _processor;
 
     public SystemInfoService(
@@ -46,13 +44,15 @@ public sealed class SystemInfoService : ISystemInfoService
         ISystemProbe probe,
         IHardwareService hardware,
         ISensorsService sensors,
-        INetworkService network)
+        INetworkService network,
+        ProcessUsageSampler usage)
     {
         _logger = logger;
         _probe = probe;
         _hardware = hardware;
         _sensors = sensors;
         _network = network;
+        _usage = usage;
     }
 
     public Task<SystemSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default)
@@ -207,233 +207,17 @@ public sealed class SystemInfoService : ISystemInfoService
     }
 
     private List<ProcessInfo> GetTopProcessesInternal(int count)
-    {
-        try
-        {
-            return Process.GetProcesses()
-                .Select(p =>
-                {
-                    try
-                    {
-                        return new ProcessInfo
-                        {
-                            Name = p.ProcessName,
-                            Pid = p.Id,
-                            CpuPercent = 0,
-                            RamMB = Math.Round(p.WorkingSet64 / 1024d / 1024d, 1)
-                        };
-                    }
-                    catch
-                    {
-                        return null;
-                    }
-                })
-                .Where(p => p is not null)
-                .Cast<ProcessInfo>()
-                .OrderByDescending(p => p.RamMB)
-                .Take(Math.Max(1, count))
-                .ToList();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to collect process info");
-            return [];
-        }
-    }
+        => _usage.Read().OrderByDescending(p => p.RamMB).Take(Math.Max(1, count))
+            .Select(p => new ProcessInfo { Name = p.Name, Pid = p.Pid, CpuPercent = p.CpuPercent, RamMB = p.RamMB }).ToList();
 
     private List<ProcessTopDto> GetTopProcessesSortedInternal(int count, string sortBy)
     {
-        var take = Math.Max(1, count);
         var key = sortBy.ToLowerInvariant();
-        try
-        {
-            return key switch
-            {
-                "cpu" => CollectByCpu(take),
-                "network" => CollectByNetwork(take),
-                "disk" => CollectByDisk(take),
-                _ => CollectByRam(take)
-            };
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to collect sorted process info for {SortBy}", sortBy);
-            return [];
-        }
+        double Value(ProcessUsage p) => key switch { "cpu" => p.CpuPercent, "network" => p.NetworkKBps, "disk" => p.DiskKBps, _ => p.RamMB };
+        var unit = key == "cpu" ? "%" : key is "network" or "disk" ? "KB/s" : "MB";
+        return _usage.Read().OrderByDescending(Value).ThenByDescending(p => p.RamMB).Take(Math.Max(1, count))
+            .Select(p => new ProcessTopDto { Name = p.Name, Pid = p.Pid, Value = Math.Round(Value(p), 1), Unit = unit }).ToList();
     }
-
-    private List<ProcessTopDto> CollectByRam(int take)
-    {
-        return SnapshotProcesses()
-            .OrderByDescending(row => row.RamMb)
-            .Take(take)
-            .Select(row => new ProcessTopDto
-            {
-                Name = row.Name,
-                Pid = row.Pid,
-                Value = row.RamMb,
-                Unit = "MB"
-            })
-            .ToList();
-    }
-
-    private List<ProcessTopDto> CollectByCpu(int take)
-    {
-        var first = CaptureCpuTimes();
-        Thread.Sleep(200);
-        var cores = Math.Max(1, Environment.ProcessorCount);
-        var rows = new List<(string Name, int Pid, double Cpu, double RamMb)>(first.Count);
-        foreach (var (process, cpu0, ram) in first)
-        {
-            try
-            {
-                var deltaMs = (process.TotalProcessorTime - cpu0).TotalMilliseconds;
-                var cpuPercent = Math.Clamp(deltaMs / (200d * cores) * 100d, 0, 100);
-                rows.Add((process.ProcessName, process.Id, Math.Round(cpuPercent, 1), ram));
-            }
-            catch
-            {
-                // Process may have exited during sampling.
-            }
-            finally
-            {
-                process.Dispose();
-            }
-        }
-
-        return rows
-            .OrderByDescending(row => row.Cpu)
-            .ThenByDescending(row => row.RamMb)
-            .Take(take)
-            .Select(row => new ProcessTopDto
-            {
-                Name = row.Name,
-                Pid = row.Pid,
-                Value = row.Cpu,
-                Unit = "%"
-            })
-            .ToList();
-    }
-
-    private List<ProcessTopDto> CollectByNetwork(int take)
-    {
-        Dictionary<int, ulong> current = [];
-        try
-        {
-            current = _probe.ReadProcessNetworkBytes(TimeSpan.FromMilliseconds(1200));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "Failed to sample process network usage");
-        }
-
-        var rates = new Dictionary<int, double>();
-        lock (_networkLock)
-        {
-            var now = Stopwatch.GetTimestamp();
-            if (_lastNetworkTimestamp > 0)
-            {
-                var elapsedSec = (now - _lastNetworkTimestamp) / (double)Stopwatch.Frequency;
-                if (elapsedSec > 0.05)
-                {
-                    foreach (var (pid, bytes) in current)
-                    {
-                        var previous = _lastNetworkBytes.GetValueOrDefault(pid);
-                        var delta = bytes > previous ? bytes - previous : 0;
-                        rates[pid] = Math.Round(delta / elapsedSec / 1024d, 1);
-                    }
-                }
-            }
-
-            _lastNetworkBytes = current;
-            _lastNetworkTimestamp = now;
-        }
-
-        return SnapshotProcesses()
-            .Select(row => (row.Name, row.Pid, row.RamMb, Rate: rates.GetValueOrDefault(row.Pid)))
-            .OrderByDescending(row => row.Rate)
-            .ThenByDescending(row => row.RamMb)
-            .Take(take)
-            .Select(row => new ProcessTopDto
-            {
-                Name = row.Name,
-                Pid = row.Pid,
-                Value = row.Rate,
-                Unit = "KB/s"
-            })
-            .ToList();
-    }
-
-    private List<ProcessTopDto> CollectByDisk(int take)
-    {
-        const int sampleMs = 500;
-        var first = _probe.ReadProcessDiskBytes();
-        Thread.Sleep(sampleMs);
-        var second = _probe.ReadProcessDiskBytes();
-        var rates = new Dictionary<int, double>(second.Count);
-        foreach (var (pid, bytes) in second)
-        {
-            if (first.TryGetValue(pid, out var previous) && bytes > previous)
-            {
-                rates[pid] = Math.Round((bytes - previous) / (sampleMs / 1000d) / 1024d, 1);
-            }
-        }
-
-        return SnapshotProcesses()
-            .Select(row => (row.Name, row.Pid, row.RamMb, Rate: rates.GetValueOrDefault(row.Pid)))
-            .OrderByDescending(row => row.Rate)
-            .ThenByDescending(row => row.RamMb)
-            .Take(take)
-            .Select(row => new ProcessTopDto
-            {
-                Name = row.Name,
-                Pid = row.Pid,
-                Value = row.Rate,
-                Unit = "KB/s"
-            })
-            .ToList();
-    }
-
-    private static List<(Process Process, TimeSpan Cpu, double RamMb)> CaptureCpuTimes()
-    {
-        var samples = new List<(Process Process, TimeSpan Cpu, double RamMb)>();
-        foreach (var process in Process.GetProcesses())
-        {
-            try
-            {
-                samples.Add((process, process.TotalProcessorTime, Math.Round(process.WorkingSet64 / 1024d / 1024d, 1)));
-            }
-            catch
-            {
-                process.Dispose();
-            }
-        }
-
-        return samples;
-    }
-
-    private static List<(string Name, int Pid, double RamMb)> SnapshotProcesses()
-    {
-        var rows = new List<(string Name, int Pid, double RamMb)>();
-        foreach (var process in Process.GetProcesses())
-        {
-            try
-            {
-                rows.Add((process.ProcessName, process.Id, Math.Round(process.WorkingSet64 / 1024d / 1024d, 1)));
-            }
-            catch
-            {
-                // Ignore processes that cannot be inspected.
-            }
-            finally
-            {
-                process.Dispose();
-            }
-        }
-
-        return rows;
-    }
-
     private static double BytesToGb(long bytes) => Measure.BytesToGb(bytes);
 
     private static double Round(double value) => Measure.Round(value);
